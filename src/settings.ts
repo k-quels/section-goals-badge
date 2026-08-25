@@ -221,34 +221,58 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 		});
 
 		// 3. Bind direct event listeners to controls and inject enhancements
-		const allItems = Array.from(root.querySelectorAll<HTMLElement>('.setting-item'));
-		allItems.forEach((itemEl) => {
-			const nameText = itemEl.querySelector('.setting-item-name')?.textContent?.trim();
+		const allElements = Array.from(
+			root.querySelectorAll<HTMLElement>(
+				'.setting-group-heading, .setting-item-heading, .setting-item, h2, h3, h4',
+			),
+		);
+		let currentHeading = '';
+
+		allElements.forEach((el) => {
+			const isHeading =
+				el.classList.contains('setting-item-heading') ||
+				el.classList.contains('setting-group-heading') ||
+				['H2', 'H3', 'H4'].includes(el.tagName);
+
+			if (isHeading) {
+				const headingText = el.textContent?.trim() || '';
+				for (const knownHeading of Object.keys(iconMap)) {
+					if (headingText.includes(knownHeading)) {
+						currentHeading = knownHeading;
+						break;
+					}
+				}
+				return;
+			}
+
+			const nameText = el.querySelector('.setting-item-name')?.textContent?.trim();
 			if (!nameText) return;
 
+			const headingForThisItem = currentHeading;
+
 			// Toggle checkboxes
-			const toggleEl = itemEl.querySelector<HTMLElement>('.checkbox-container');
+			const toggleEl = el.querySelector<HTMLElement>('.checkbox-container');
 			if (toggleEl && !toggleEl.dataset.swgBound) {
 				toggleEl.dataset.swgBound = 'true';
 				toggleEl.addEventListener('click', () => {
 					window.setTimeout(() => {
 						const isEnabled = toggleEl.classList.contains('is-enabled');
-						this.syncSettingValue(nameText, isEnabled);
+						this.syncSettingValue(headingForThisItem, nameText, isEnabled);
 					}, 20);
 				});
 			}
 
 			// Select dropdowns
-			const selectEl = itemEl.querySelector<HTMLSelectElement>('select.dropdown');
+			const selectEl = el.querySelector<HTMLSelectElement>('select.dropdown');
 			if (selectEl && !selectEl.dataset.swgBound) {
 				selectEl.dataset.swgBound = 'true';
 				selectEl.addEventListener('change', () => {
-					this.syncSettingValue(nameText, selectEl.value);
+					this.syncSettingValue(headingForThisItem, nameText, selectEl.value);
 				});
 			}
 
 			// Text / Number inputs (exclude checkboxes and sliders)
-			const inputEl = itemEl.querySelector<HTMLInputElement>(
+			const inputEl = el.querySelector<HTMLInputElement>(
 				'input:not([type="checkbox"]):not([type="range"]):not(.slider)',
 			);
 			if (inputEl) {
@@ -259,19 +283,19 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 					inputEl.dataset.swgBound = 'true';
 					inputEl.addEventListener('input', () => {
 						const val = inputEl.type === 'number' ? parseFloat(inputEl.value) : inputEl.value;
-						this.syncSettingValue(nameText, val);
+						this.syncSettingValue(headingForThisItem, nameText, val);
 					});
 				}
 			}
 
 			// Sliders (real-time live update on dragging)
-			const sliderEl = itemEl.querySelector<HTMLInputElement>('input.slider, input[type="range"]');
+			const sliderEl = el.querySelector<HTMLInputElement>('input.slider, input[type="range"]');
 			if (sliderEl && !sliderEl.dataset.swgBound) {
 				sliderEl.dataset.swgBound = 'true';
 				const handleSliderInput = () => {
 					const val = parseFloat(sliderEl.value);
 					if (!isNaN(val)) {
-						this.syncSettingValue(nameText, val);
+						this.syncSettingValue(headingForThisItem, nameText, val);
 					}
 				};
 				sliderEl.addEventListener('input', handleSliderInput);
@@ -281,7 +305,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 			// Inject Reset to Default button for specific slider settings
 			const resetConfig = resetMap[nameText];
 			if (resetConfig) {
-				const controlEl = itemEl.querySelector<HTMLElement>('.setting-item-control');
+				const controlEl = el.querySelector<HTMLElement>('.setting-item-control');
 				if (controlEl && !controlEl.querySelector('.swg-reset-btn')) {
 					const resetBtn = controlEl.createDiv({
 						cls: 'clickable-icon extra-setting-button swg-reset-btn',
@@ -318,151 +342,244 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 		this.updateGroupVisibility(root);
 	}
 
-	private syncSettingValue(labelText: string, value: string | number | boolean): void {
+	private syncSettingValue(headingText: string, labelText: string, value: string | number | boolean): void {
 		let isPositionUpdate = false;
 		let isRecalculate = false;
 
-		switch (labelText) {
-			// Cumulative
-			case t('SETTINGS_CUMULATIVE_SHOW'):
-				this.plugin.settings.showCumulativeProgress = value as boolean;
-				this.updateGroupVisibility();
-				break;
-			case t('SETTINGS_CUMULATIVE_MODE'):
-				this.plugin.settings.cumulativeMode = value as CumulativeCountMode;
-				isRecalculate = true;
-				break;
-			case t('SETTINGS_CUMULATIVE_CURRENT'):
-				this.plugin.settings.showCumulativeCurrent = value as boolean;
-				break;
-			case t('SETTINGS_CUMULATIVE_GOAL'):
-				this.plugin.settings.showCumulativeGoal = value as boolean;
-				break;
-			case t('SETTINGS_CUMULATIVE_PERCENT'):
-				this.plugin.settings.showCumulativePercentage = value as boolean;
-				break;
-			case t('SETTINGS_CUMULATIVE_ICON'):
-				this.plugin.settings.showCumulativeIcon = value as boolean;
-				break;
-			case t('SETTINGS_CUMULATIVE_LABEL'):
-				this.plugin.settings.cumulativeLabel = String(value);
-				break;
-
-			// Section
-			case t('SETTINGS_SECTION_SHOW'):
-				this.plugin.settings.showSectionProgress = value as boolean;
-				this.updateGroupVisibility();
-				break;
-			case t('SETTINGS_SECTION_CURRENT'):
-				this.plugin.settings.showSectionCurrent = value as boolean;
-				break;
-			case t('SETTINGS_SECTION_GOAL'):
-				this.plugin.settings.showSectionGoal = value as boolean;
-				break;
-			case t('SETTINGS_SECTION_PERCENT'):
-				this.plugin.settings.showSectionPercentage = value as boolean;
-				break;
-			case t('SETTINGS_SECTION_ICON'):
-				this.plugin.settings.showSectionIcon = value as boolean;
-				break;
-			case t('SETTINGS_SECTION_LABEL'):
-				this.plugin.settings.sectionLabel = String(value);
-				break;
-
-			// Total
-			case t('SETTINGS_TOTAL_SHOW'):
-				this.plugin.settings.showTotalProgress = value as boolean;
-				this.updateGroupVisibility();
-				break;
-			case t('SETTINGS_TOTAL_CURRENT'):
-				this.plugin.settings.showTotalCurrent = value as boolean;
-				break;
-			case t('SETTINGS_TOTAL_GOAL'):
-				this.plugin.settings.showTotalGoal = value as boolean;
-				break;
-			case t('SETTINGS_TOTAL_PERCENT'):
-				this.plugin.settings.showTotalPercentage = value as boolean;
-				break;
-			case t('SETTINGS_TOTAL_ICON'):
-				this.plugin.settings.showTotalIcon = value as boolean;
-				break;
-			case t('SETTINGS_TOTAL_LABEL'):
-				this.plugin.settings.totalLabel = String(value);
-				break;
-
-			// Counting rules
-			case t('SETTINGS_COUNT_TYPE'):
-				this.plugin.settings.countType = value as CountType;
-				isRecalculate = true;
-				break;
-			case t('SETTINGS_EXCLUDE_WHITESPACE'):
-				this.plugin.settings.excludeWhitespace = value as boolean;
-				isRecalculate = true;
-				break;
-			case t('SETTINGS_EXCLUDE_RUBY'):
-				this.plugin.settings.excludeRuby = value as boolean;
-				isRecalculate = true;
-				break;
-			case t('SETTINGS_EXCLUDE_CHARACTERS'):
-				this.plugin.settings.excludeCharacters = String(value);
-				isRecalculate = true;
-				break;
-
-			// Appearance
-			case t('SETTINGS_BADGE_POS'):
-				this.plugin.settings.badgePosition = value as BadgePositionPreset;
-				isPositionUpdate = true;
-				break;
-			case t('SETTINGS_FONT_SIZE'): {
-				const val = typeof value === 'number' ? value : parseFloat(String(value));
-				if (!isNaN(val)) {
-					this.plugin.settings.fontSize = val;
+		if (headingText === t('SETTINGS_HEADING_CUMULATIVE')) {
+			switch (labelText) {
+				case t('SETTINGS_CUMULATIVE_SHOW'):
+					this.plugin.settings.showCumulativeProgress = value as boolean;
+					this.updateGroupVisibility();
+					break;
+				case t('SETTINGS_CUMULATIVE_MODE'):
+					this.plugin.settings.cumulativeMode = value as CumulativeCountMode;
+					isRecalculate = true;
+					break;
+				case t('SETTINGS_CUMULATIVE_CURRENT'):
+					this.plugin.settings.showCumulativeCurrent = value as boolean;
+					break;
+				case t('SETTINGS_CUMULATIVE_GOAL'):
+					this.plugin.settings.showCumulativeGoal = value as boolean;
+					break;
+				case t('SETTINGS_CUMULATIVE_PERCENT'):
+					this.plugin.settings.showCumulativePercentage = value as boolean;
+					break;
+				case t('SETTINGS_CUMULATIVE_ICON'):
+					this.plugin.settings.showCumulativeIcon = value as boolean;
+					break;
+				case t('SETTINGS_CUMULATIVE_LABEL'):
+					this.plugin.settings.cumulativeLabel = String(value);
+					break;
+			}
+		} else if (headingText === t('SETTINGS_HEADING_SECTION')) {
+			switch (labelText) {
+				case t('SETTINGS_SECTION_SHOW'):
+					this.plugin.settings.showSectionProgress = value as boolean;
+					this.updateGroupVisibility();
+					break;
+				case t('SETTINGS_SECTION_CURRENT'):
+					this.plugin.settings.showSectionCurrent = value as boolean;
+					break;
+				case t('SETTINGS_SECTION_GOAL'):
+					this.plugin.settings.showSectionGoal = value as boolean;
+					break;
+				case t('SETTINGS_SECTION_PERCENT'):
+					this.plugin.settings.showSectionPercentage = value as boolean;
+					break;
+				case t('SETTINGS_SECTION_ICON'):
+					this.plugin.settings.showSectionIcon = value as boolean;
+					break;
+				case t('SETTINGS_SECTION_LABEL'):
+					this.plugin.settings.sectionLabel = String(value);
+					break;
+			}
+		} else if (headingText === t('SETTINGS_HEADING_TOTAL')) {
+			switch (labelText) {
+				case t('SETTINGS_TOTAL_SHOW'):
+					this.plugin.settings.showTotalProgress = value as boolean;
+					this.updateGroupVisibility();
+					break;
+				case t('SETTINGS_TOTAL_CURRENT'):
+					this.plugin.settings.showTotalCurrent = value as boolean;
+					break;
+				case t('SETTINGS_TOTAL_GOAL'):
+					this.plugin.settings.showTotalGoal = value as boolean;
+					break;
+				case t('SETTINGS_TOTAL_PERCENT'):
+					this.plugin.settings.showTotalPercentage = value as boolean;
+					break;
+				case t('SETTINGS_TOTAL_ICON'):
+					this.plugin.settings.showTotalIcon = value as boolean;
+					break;
+				case t('SETTINGS_TOTAL_LABEL'):
+					this.plugin.settings.totalLabel = String(value);
+					break;
+			}
+		} else if (headingText === t('SETTINGS_HEADING_RULES')) {
+			switch (labelText) {
+				case t('SETTINGS_COUNT_TYPE'):
+					this.plugin.settings.countType = value as CountType;
+					isRecalculate = true;
+					break;
+				case t('SETTINGS_EXCLUDE_WHITESPACE'):
+					this.plugin.settings.excludeWhitespace = value as boolean;
+					isRecalculate = true;
+					break;
+				case t('SETTINGS_EXCLUDE_RUBY'):
+					this.plugin.settings.excludeRuby = value as boolean;
+					isRecalculate = true;
+					break;
+				case t('SETTINGS_EXCLUDE_CHARACTERS'):
+					this.plugin.settings.excludeCharacters = String(value);
+					isRecalculate = true;
+					break;
+			}
+		} else if (headingText === t('SETTINGS_HEADING_APPEARANCE')) {
+			switch (labelText) {
+				case t('SETTINGS_BADGE_POS'):
+					this.plugin.settings.badgePosition = value as BadgePositionPreset;
 					isPositionUpdate = true;
+					break;
+				case t('SETTINGS_FONT_SIZE'): {
+					const val = typeof value === 'number' ? value : parseFloat(String(value));
+					if (!isNaN(val)) {
+						this.plugin.settings.fontSize = val;
+						isPositionUpdate = true;
+					}
+					break;
 				}
-				break;
-			}
-			case t('SETTINGS_OFFSET_X'): {
-				const val = typeof value === 'number' && !isNaN(value) ? value : DEFAULT_SETTINGS.offsetX;
-				this.plugin.settings.offsetX = val;
-				isPositionUpdate = true;
-				break;
-			}
-			case t('SETTINGS_OFFSET_Y'): {
-				const val = typeof value === 'number' && !isNaN(value) ? value : DEFAULT_SETTINGS.offsetY;
-				this.plugin.settings.offsetY = val;
-				isPositionUpdate = true;
-				break;
-			}
-			case t('SETTINGS_OPACITY'): {
-				const val = typeof value === 'number' ? value : parseFloat(String(value));
-				if (!isNaN(val)) {
-					this.plugin.settings.badgeOpacity = val;
+				case t('SETTINGS_OFFSET_X'): {
+					const val = typeof value === 'number' && !isNaN(value) ? value : DEFAULT_SETTINGS.offsetX;
+					this.plugin.settings.offsetX = val;
 					isPositionUpdate = true;
+					break;
 				}
-				break;
+				case t('SETTINGS_OFFSET_Y'): {
+					const val = typeof value === 'number' && !isNaN(value) ? value : DEFAULT_SETTINGS.offsetY;
+					this.plugin.settings.offsetY = val;
+					isPositionUpdate = true;
+					break;
+				}
+				case t('SETTINGS_OPACITY'): {
+					const val = typeof value === 'number' ? value : parseFloat(String(value));
+					if (!isNaN(val)) {
+						this.plugin.settings.badgeOpacity = val;
+						isPositionUpdate = true;
+					}
+					break;
+				}
 			}
-
-			// Thresholds
-			case t('SETTINGS_THRESH_WARN'): {
-				const val = typeof value === 'number' && !isNaN(value) ? value : DEFAULT_SETTINGS.colorThresholdWarn;
-				this.plugin.settings.colorThresholdWarn = val;
-				break;
+		} else if (headingText === t('SETTINGS_HEADING_THRESHOLDS')) {
+			switch (labelText) {
+				case t('SETTINGS_THRESH_WARN'): {
+					const val = typeof value === 'number' && !isNaN(value) ? value : DEFAULT_SETTINGS.colorThresholdWarn;
+					this.plugin.settings.colorThresholdWarn = val;
+					break;
+				}
+				case t('SETTINGS_THRESH_GOOD'): {
+					const val = typeof value === 'number' && !isNaN(value) ? value : DEFAULT_SETTINGS.colorThresholdGood;
+					this.plugin.settings.colorThresholdGood = val;
+					break;
+				}
+				case t('SETTINGS_THRESH_DONE'): {
+					const val = typeof value === 'number' && !isNaN(value) ? value : DEFAULT_SETTINGS.colorThresholdDone;
+					this.plugin.settings.colorThresholdDone = val;
+					break;
+				}
 			}
-			case t('SETTINGS_THRESH_GOOD'): {
-				const val = typeof value === 'number' && !isNaN(value) ? value : DEFAULT_SETTINGS.colorThresholdGood;
-				this.plugin.settings.colorThresholdGood = val;
-				break;
+		} else if (headingText === t('SETTINGS_HEADING_INTERACTIONS')) {
+			switch (labelText) {
+				case t('SETTINGS_LONG_PRESS'):
+					this.plugin.settings.longPressToOpenModal = value as boolean;
+					break;
 			}
-			case t('SETTINGS_THRESH_DONE'): {
-				const val = typeof value === 'number' && !isNaN(value) ? value : DEFAULT_SETTINGS.colorThresholdDone;
-				this.plugin.settings.colorThresholdDone = val;
-				break;
+		} else {
+			// Fallback: match by unique label if heading is undetermined
+			switch (labelText) {
+				case t('SETTINGS_CUMULATIVE_SHOW'):
+					this.plugin.settings.showCumulativeProgress = value as boolean;
+					this.updateGroupVisibility();
+					break;
+				case t('SETTINGS_CUMULATIVE_MODE'):
+					this.plugin.settings.cumulativeMode = value as CumulativeCountMode;
+					isRecalculate = true;
+					break;
+				case t('SETTINGS_SECTION_SHOW'):
+					this.plugin.settings.showSectionProgress = value as boolean;
+					this.updateGroupVisibility();
+					break;
+				case t('SETTINGS_TOTAL_SHOW'):
+					this.plugin.settings.showTotalProgress = value as boolean;
+					this.updateGroupVisibility();
+					break;
+				case t('SETTINGS_COUNT_TYPE'):
+					this.plugin.settings.countType = value as CountType;
+					isRecalculate = true;
+					break;
+				case t('SETTINGS_EXCLUDE_WHITESPACE'):
+					this.plugin.settings.excludeWhitespace = value as boolean;
+					isRecalculate = true;
+					break;
+				case t('SETTINGS_EXCLUDE_RUBY'):
+					this.plugin.settings.excludeRuby = value as boolean;
+					isRecalculate = true;
+					break;
+				case t('SETTINGS_EXCLUDE_CHARACTERS'):
+					this.plugin.settings.excludeCharacters = String(value);
+					isRecalculate = true;
+					break;
+				case t('SETTINGS_BADGE_POS'):
+					this.plugin.settings.badgePosition = value as BadgePositionPreset;
+					isPositionUpdate = true;
+					break;
+				case t('SETTINGS_FONT_SIZE'): {
+					const val = typeof value === 'number' ? value : parseFloat(String(value));
+					if (!isNaN(val)) {
+						this.plugin.settings.fontSize = val;
+						isPositionUpdate = true;
+					}
+					break;
+				}
+				case t('SETTINGS_OFFSET_X'): {
+					const val = typeof value === 'number' && !isNaN(value) ? value : DEFAULT_SETTINGS.offsetX;
+					this.plugin.settings.offsetX = val;
+					isPositionUpdate = true;
+					break;
+				}
+				case t('SETTINGS_OFFSET_Y'): {
+					const val = typeof value === 'number' && !isNaN(value) ? value : DEFAULT_SETTINGS.offsetY;
+					this.plugin.settings.offsetY = val;
+					isPositionUpdate = true;
+					break;
+				}
+				case t('SETTINGS_OPACITY'): {
+					const val = typeof value === 'number' ? value : parseFloat(String(value));
+					if (!isNaN(val)) {
+						this.plugin.settings.badgeOpacity = val;
+						isPositionUpdate = true;
+					}
+					break;
+				}
+				case t('SETTINGS_THRESH_WARN'): {
+					const val = typeof value === 'number' && !isNaN(value) ? value : DEFAULT_SETTINGS.colorThresholdWarn;
+					this.plugin.settings.colorThresholdWarn = val;
+					break;
+				}
+				case t('SETTINGS_THRESH_GOOD'): {
+					const val = typeof value === 'number' && !isNaN(value) ? value : DEFAULT_SETTINGS.colorThresholdGood;
+					this.plugin.settings.colorThresholdGood = val;
+					break;
+				}
+				case t('SETTINGS_THRESH_DONE'): {
+					const val = typeof value === 'number' && !isNaN(value) ? value : DEFAULT_SETTINGS.colorThresholdDone;
+					this.plugin.settings.colorThresholdDone = val;
+					break;
+				}
+				case t('SETTINGS_LONG_PRESS'):
+					this.plugin.settings.longPressToOpenModal = value as boolean;
+					break;
 			}
-
-			// Interactions
-			case t('SETTINGS_LONG_PRESS'):
-				this.plugin.settings.longPressToOpenModal = value as boolean;
-				break;
 		}
 
 		void this.plugin.saveSettings();

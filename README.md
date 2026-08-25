@@ -10,7 +10,13 @@ A floating character counter and writing goal tracker per heading for Obsidian, 
 
 Display floating badges on your editor to keep track of character counts and progress rates for the active heading (section) or entire note in real time.
 
-<img src="./doc/images/badges.png" width="300">
+▼ Desktop
+
+<img src="./doc/images/badges.png" width="450">
+
+▼ Mobile
+
+<img src="./doc/images/badges-mobile.jpg" width="300">
 
 ---
 
@@ -23,7 +29,6 @@ Display floating badges on your editor to keep track of character counts and pro
   - **Active Section Progress**: Counts characters within the current heading block.
   - **Note Total Progress**: Counts characters for the entire note.
 - **Dynamic Badge Colors**: Visual status updates as you write.
-  - Fully customizable colors via the Style Settings plugin.
 - **Mobile-Friendly**: Works smoothly on smartphones even with massive documents.
 - **Character & Word Counting**: Switch between Character count and Word count freely.
 - **Exclusion Rules**: Exclude whitespace, Japanese novel ruby notation, and custom user-specified symbols.
@@ -58,26 +63,81 @@ Enter target counts directly in the modal (automatically saved to Frontmatter):
 The following features and options can be customized:
 
 ### 1. Badge Display Customization (Cursor / Section / Total)
+
 - **Toggle Visibility**: Enable or disable the 3 progress badges independently.
+  - e.g., Hide note total badge:
+    - <img src="doc/images/badge-hide-all.png" width="200">
 - **Display Content**: Toggle current count, target goal, and progress percentage.
+  - e.g., Show only count for cursor position, full details for section:
+    - <img src="doc/images/badge-hide-all.png" width="200">
 - **Icon / Label**: Toggle prefix icons and text labels.
+  - e.g., Hide both for cursor, icon only for section, full for total:
+    - <img src="doc/images/badge-icon-label.png" width="250">
 
 ### 2. Counting Rules
+
 - **Counting Method**: Switch between Character count and Word count.
 - **Exclusion Settings**: Exclude whitespace, Japanese novel ruby notation, and custom specified characters.
 
 ### 3. Appearance & Position
+
 - Configure badge position preset, opacity, and font size.
 
-### 4. Progress Color Thresholds
-- Customize the percentage thresholds (default: 50% / 80% / 100%) that trigger dynamic badge color changes.
-- *(Colors can be customized via the [Style Settings](https://github.com/mgmeyers/obsidian-style-settings) plugin)*
+### 4. Customizing Progress Colors
+
+- Customize percentage thresholds (default: 50% / 80% / 100%) that trigger dynamic badge and progress bar color changes.
+- Colors can be configured visually with the **[Style Settings](https://github.com/mgmeyers/obsidian-style-settings)** plugin or via **CSS Snippets**.
+
+#### CSS Snippet Color Customization
+
+Add a custom CSS file to your vault (**Settings → Appearance → CSS snippets**):
+
+```css
+/* Section Goals Badge - Custom Colors */
+body {
+    /* Progress threshold colors */
+    --swg-color-default: #8c8c8c; /* Initial progress (< 50%) */
+    --swg-color-warn: #e2b93b;    /* Mid progress (>= 50%) */
+    --swg-color-good: #ff7843;    /* High progress (>= 80%) */
+    --swg-color-done: #ff4d4f;    /* Goal reached (>= 100%) */
+}
+```
+
+#### Color Preset Samples
+
+##### ① Limit Goal Style: When staying within a strict word/char limit
+
+<img src="./doc/images/colorsample-style1.png" width="150">
+
+```css
+body {
+    --swg-color-default: #8c8c8c; /* Safe (< 50%): Gray */
+    --swg-color-warn: #e2b93b;    /* Halfway (>= 50%): Yellow */
+    --swg-color-good: #ff7843;    /* Approaching cap (>= 80%): Orange */
+    --swg-color-done: #ff4d4f;    /* Reached limit (>= 100%): Red */
+}
+```
+
+##### ② Minimum Target Style: When meeting minimum target goals
+
+<img src="./doc/images/colorsample-style2.png" width="150">
+
+```css
+body {
+    --swg-color-default: #8c8c8c; /* Starting (< 50%): Gray */
+    --swg-color-warn: #f09533;    /* In Progress (>= 50%): Orange */
+    --swg-color-good: #24b750;    /* Almost there (>= 80%): Green */
+    --swg-color-done: #207dff;    /* Completed (>= 100%): Blue */
+}
+```
 
 ---
 
 ## Frontmatter Format
 
-Target goals are stored in the note's YAML Frontmatter in the following format:
+- Target goals are stored in the note's YAML Frontmatter in the following format.
+- You can manage goals via the Goal Management modal or edit them directly.
+- Setting goals is completely optional.
 
 ```yaml
 ---
@@ -89,7 +149,7 @@ goals:
 ---
 ```
 
-If you want to clear all goals at once, simply delete these lines from the Frontmatter.
+- **Tips**: If you want to clear all goals at once, simply delete these lines from the Frontmatter.
 
 ---
 

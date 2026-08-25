@@ -46,32 +46,32 @@ settings:
         type: variable-themed-color
         opacity: false
         format: hex
-        default-light: '#fff790'
-        default-dark: '#fff790'
+        default-light: '#8c8c8c'
+        default-dark: '#8c8c8c'
     - 
         id: swg-color-warn
         title: Mid-Progress Color (>= 50%)
         type: variable-themed-color
         opacity: false
         format: hex
-        default-light: '#ffa94d'
-        default-dark: '#ffa94d'
+        default-light: '#e2b93b'
+        default-dark: '#e2b93b'
     - 
         id: swg-color-good
         title: High-Progress Color (>= 80%)
         type: variable-themed-color
         opacity: false
         format: hex
-        default-light: '#38a169'
-        default-dark: '#38a169'
+        default-light: '#ff7843'
+        default-dark: '#ff7843'
     - 
         id: swg-color-done
         title: Completed Progress Color (>= 100%)
         type: variable-themed-color
         opacity: false
         format: hex
-        default-light: '#ff5050'
-        default-dark: '#ff5050'
+        default-light: '#ff4d4f'
+        default-dark: '#ff4d4f'
 
 */
 
@@ -104,10 +104,10 @@ settings:
 	--swg-scrollbar-width: 0px;
 
 	/* Progress Colors */
-	--swg-color-default: #fff790;
-	--swg-color-warn: #ffa94d;
-	--swg-color-good: #38a169;
-	--swg-color-done: #ff5050;
+	--swg-color-default: #8c8c8c;
+	--swg-color-warn: #e2b93b;
+	--swg-color-good: #ff7843;
+	--swg-color-done: #ff4d4f;
 }
 
 .theme-light {
@@ -115,20 +115,12 @@ settings:
 	--swg-pill-bg: rgba(0, 0, 0, 0.06);
 	--swg-badge-text: #2e3338;
 	--swg-badge-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-	--swg-color-default: #fff790;
-	--swg-color-warn: #ffa94d;
-	--swg-color-good: #38a169;
-	--swg-color-done: #ff5050;
 }
 
 .theme-dark {
 	--swg-badge-bg: rgba(30, 30, 30, 0.85);
 	--swg-pill-bg: rgba(255, 255, 255, 0.08);
 	--swg-badge-text: #dcddde;
-	--swg-color-default: #fff790;
-	--swg-color-warn: #ffa94d;
-	--swg-color-good: #38a169;
-	--swg-color-done: #ff5050;
 }
 
 .swg-hidden {

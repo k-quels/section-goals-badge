@@ -316,7 +316,7 @@ export class SectionParser {
 	/**
 	 * Ultra-fast RegExp scan tracking exact line numbers and byte offsets with zero string allocations.
 	 */
-	private scanHeadingsFast(content: string): HeadingCache[] {
+	public scanHeadingsFast(content: string): HeadingCache[] {
 		const headings: HeadingCache[] = [];
 		const regex = /(?:^|\n)(#{1,6})[ \t]+([^\r\n]*)/g;
 		let match: RegExpExecArray | null;
