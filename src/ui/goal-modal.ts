@@ -100,7 +100,7 @@ export class GoalManagementModal extends Modal {
 				const vh = window.visualViewport.height;
 				const treeMaxHeight = Math.max(140, Math.min(380, vh - 220));
 				setCssProps(this.contentEl, {
-					'--swg-tree-max-height': `${treeMaxHeight}px`,
+					'--sgb-tree-max-height': `${treeMaxHeight}px`,
 				});
 			}
 			this.updateScrollbarOffset();
@@ -119,11 +119,11 @@ export class GoalManagementModal extends Modal {
 	 */
 	private updateScrollbarOffset(): void {
 		window.requestAnimationFrame(() => {
-			const treeEl = this.contentEl.querySelector<HTMLElement>('.swg-section-tree-container');
+			const treeEl = this.contentEl.querySelector<HTMLElement>('.sgb-section-tree-container');
 			if (treeEl) {
 				const scrollbarWidth = Math.max(0, treeEl.offsetWidth - treeEl.clientWidth);
 				setCssProps(this.contentEl, {
-					'--swg-scrollbar-width': `${scrollbarWidth}px`,
+					'--sgb-scrollbar-width': `${scrollbarWidth}px`,
 				});
 			}
 		});
@@ -135,41 +135,41 @@ export class GoalManagementModal extends Modal {
 		this.inputElements.clear();
 
 		const titleText = this.settings.countType === 'word' ? t('MODAL_TITLE_WORDS') : t('MODAL_TITLE');
-		contentEl.createEl('h2', { cls: 'swg-modal-header-title', text: titleText });
+		contentEl.createEl('h2', { cls: 'sgb-modal-header-title', text: titleText });
 
 		// --- Master Table Column Header (Labels all rows below) ---
-		const tableHeaderEl = contentEl.createDiv({ cls: 'swg-section-table-header' });
-		tableHeaderEl.createSpan({ cls: 'swg-header-title', text: '' });
-		const headerControlsEl = tableHeaderEl.createDiv({ cls: 'swg-header-controls' });
-		headerControlsEl.createSpan({ cls: 'swg-header-chars', text: t('MODAL_COL_CURRENT') });
-		headerControlsEl.createSpan({ cls: 'swg-header-goal', text: t('MODAL_COL_GOAL') });
-		headerControlsEl.createSpan({ cls: 'swg-header-progress', text: t('MODAL_COL_PROGRESS') });
+		const tableHeaderEl = contentEl.createDiv({ cls: 'sgb-section-table-header' });
+		tableHeaderEl.createSpan({ cls: 'sgb-header-title', text: '' });
+		const headerControlsEl = tableHeaderEl.createDiv({ cls: 'sgb-header-controls' });
+		headerControlsEl.createSpan({ cls: 'sgb-header-chars', text: t('MODAL_COL_CURRENT') });
+		headerControlsEl.createSpan({ cls: 'sgb-header-goal', text: t('MODAL_COL_GOAL') });
+		headerControlsEl.createSpan({ cls: 'sgb-header-progress', text: t('MODAL_COL_PROGRESS') });
 
 		// --- Section 1: Compact Top Configuration Card ---
-		const topCardEl = contentEl.createDiv({ cls: 'swg-modal-top-card' });
+		const topCardEl = contentEl.createDiv({ cls: 'sgb-modal-top-card' });
 		const totalChars = this.parsedData.totalCharCount;
 
 		// Row 1: Note Total Goal
-		const totalRowEl = topCardEl.createDiv({ cls: 'swg-modal-card-row' });
-		const totalLabelGroup = totalRowEl.createDiv({ cls: 'swg-card-label-group' });
-		const totalTitleEl = totalLabelGroup.createSpan({ cls: 'swg-card-title' });
-		const totalIconEl = totalTitleEl.createSpan({ cls: 'swg-card-title-icon' });
+		const totalRowEl = topCardEl.createDiv({ cls: 'sgb-modal-card-row' });
+		const totalLabelGroup = totalRowEl.createDiv({ cls: 'sgb-card-label-group' });
+		const totalTitleEl = totalLabelGroup.createSpan({ cls: 'sgb-card-title' });
+		const totalIconEl = totalTitleEl.createSpan({ cls: 'sgb-card-title-icon' });
 		setIcon(totalIconEl, 'book-text');
 		totalTitleEl.createSpan({ text: t('MODAL_TOTAL_GOAL_NAME') });
 
-		const totalControls = totalRowEl.createDiv({ cls: 'swg-card-controls' });
+		const totalControls = totalRowEl.createDiv({ cls: 'sgb-card-controls' });
 
 		// Col 1: Total character count
 		totalControls.createSpan({
-			cls: 'swg-section-chars',
+			cls: 'sgb-section-chars',
 			text: totalChars.toLocaleString(),
 		});
 
 		// Col 2: Total goal input
-		const totalInputWrapper = totalControls.createDiv({ cls: 'swg-goal-input-wrapper' });
+		const totalInputWrapper = totalControls.createDiv({ cls: 'sgb-goal-input-wrapper' });
 		const totalInput = totalInputWrapper.createEl('input', {
 			type: 'number',
-			cls: 'swg-goal-input',
+			cls: 'sgb-goal-input',
 			placeholder: t('MODAL_GOAL_PLACEHOLDER'),
 		});
 		if (this.fileGoalInput !== undefined && this.fileGoalInput > 0) {
@@ -178,10 +178,10 @@ export class GoalManagementModal extends Modal {
 		this.totalGoalInputElement = totalInput;
 
 		// Col 3: Stacked mini progress (% on top, bar on bottom)
-		const totalProgressWrapper = totalControls.createDiv({ cls: 'swg-mini-progress-wrapper' });
-		const totalPercentEl = totalProgressWrapper.createSpan({ cls: 'swg-mini-percent' });
-		const totalProgressEl = totalProgressWrapper.createDiv({ cls: 'swg-mini-progress' });
-		const totalProgressFill = totalProgressEl.createDiv({ cls: 'swg-mini-progress-fill' });
+		const totalProgressWrapper = totalControls.createDiv({ cls: 'sgb-mini-progress-wrapper' });
+		const totalPercentEl = totalProgressWrapper.createSpan({ cls: 'sgb-mini-percent' });
+		const totalProgressEl = totalProgressWrapper.createDiv({ cls: 'sgb-mini-progress' });
+		const totalProgressFill = totalProgressEl.createDiv({ cls: 'sgb-mini-progress-fill' });
 		this.updateMiniProgress(totalProgressFill, totalPercentEl, totalChars, this.fileGoalInput);
 
 		totalInput.addEventListener('input', () => {
@@ -192,24 +192,24 @@ export class GoalManagementModal extends Modal {
 		});
 
 		// Row 2: Default Section Goal
-		const defaultRowEl = topCardEl.createDiv({ cls: 'swg-modal-card-row' });
-		const defaultLabelGroup = defaultRowEl.createDiv({ cls: 'swg-card-label-group' });
-		const defaultTitleEl = defaultLabelGroup.createSpan({ cls: 'swg-card-title' });
-		const defaultIconEl = defaultTitleEl.createSpan({ cls: 'swg-card-title-icon' });
+		const defaultRowEl = topCardEl.createDiv({ cls: 'sgb-modal-card-row' });
+		const defaultLabelGroup = defaultRowEl.createDiv({ cls: 'sgb-card-label-group' });
+		const defaultTitleEl = defaultLabelGroup.createSpan({ cls: 'sgb-card-title' });
+		const defaultIconEl = defaultTitleEl.createSpan({ cls: 'sgb-card-title-icon' });
 		setIcon(defaultIconEl, 'hash');
 		defaultTitleEl.createSpan({ text: t('MODAL_DEFAULT_SECTION_GOAL_NAME') });
-		defaultLabelGroup.createSpan({ cls: 'swg-card-desc', text: t('MODAL_DEFAULT_SECTION_DESC') });
+		defaultLabelGroup.createSpan({ cls: 'sgb-card-desc', text: t('MODAL_DEFAULT_SECTION_DESC') });
 
-		const defaultControls = defaultRowEl.createDiv({ cls: 'swg-card-controls' });
+		const defaultControls = defaultRowEl.createDiv({ cls: 'sgb-card-controls' });
 
 		// Col 1: Empty spacer to match table column
-		defaultControls.createDiv({ cls: 'swg-spacer-chars' });
+		defaultControls.createDiv({ cls: 'sgb-spacer-chars' });
 
 		// Col 2: Default goal input
-		const defaultInputWrapper = defaultControls.createDiv({ cls: 'swg-goal-input-wrapper' });
+		const defaultInputWrapper = defaultControls.createDiv({ cls: 'sgb-goal-input-wrapper' });
 		const defaultInput = defaultInputWrapper.createEl('input', {
 			type: 'number',
-			cls: 'swg-goal-input',
+			cls: 'sgb-goal-input',
 			placeholder: t('MODAL_GOAL_PLACEHOLDER'),
 		});
 		if (this.defaultSectionGoalInput !== undefined && this.defaultSectionGoalInput > 0) {
@@ -218,7 +218,7 @@ export class GoalManagementModal extends Modal {
 		this.defaultSectionGoalInputElement = defaultInput;
 
 		// Col 3: Empty spacer to match table column
-		defaultControls.createDiv({ cls: 'swg-spacer-progress' });
+		defaultControls.createDiv({ cls: 'sgb-spacer-progress' });
 
 		defaultInput.addEventListener('input', () => {
 			const num = parseInt(defaultInput.value, 10);
@@ -228,12 +228,12 @@ export class GoalManagementModal extends Modal {
 		});
 
 		// --- Section 2: Headings tree goals & Set button ---
-		const sectionHeaderEl = contentEl.createDiv({ cls: 'swg-modal-section-header' });
+		const sectionHeaderEl = contentEl.createDiv({ cls: 'sgb-modal-section-header' });
 		sectionHeaderEl.createEl('h3', { text: t('MODAL_SECTIONS_HEADER') });
 
 		if (this.parsedData.flatSections.length > 0) {
 			const setBtn = sectionHeaderEl.createEl('button', {
-				cls: 'swg-reset-button',
+				cls: 'sgb-reset-button',
 				text: t('MODAL_SET_BUTTON'),
 			});
 			setBtn.addEventListener('click', () => {
@@ -246,19 +246,19 @@ export class GoalManagementModal extends Modal {
 		if (this.parsedData.sections.length === 0) {
 			contentEl.createEl('p', {
 				text: t('MODAL_NO_HEADINGS'),
-				cls: 'swg-empty-notice',
+				cls: 'sgb-empty-notice',
 			});
 			this.updateScrollbarOffset();
 			return;
 		}
 
-		const listContainer = contentEl.createDiv({ cls: 'swg-section-tree-container' });
+		const listContainer = contentEl.createDiv({ cls: 'sgb-section-tree-container' });
 
 		let activeItemEl: HTMLElement | null = null;
 
 		for (const section of this.parsedData.flatSections) {
 			const itemEl = listContainer.createDiv({
-				cls: `swg-section-tree-item swg-level-${section.level}`,
+				cls: `sgb-section-tree-item sgb-level-${section.level}`,
 			});
 
 			if (section.heading === this.activeSectionHeading) {
@@ -267,29 +267,29 @@ export class GoalManagementModal extends Modal {
 			}
 
 			// Heading title clickable to jump
-			const titleEl = itemEl.createDiv({ cls: 'swg-section-title' });
+			const titleEl = itemEl.createDiv({ cls: 'sgb-section-title' });
 			const headingIcon = '#'.repeat(section.level);
-			titleEl.createSpan({ cls: 'swg-heading-prefix', text: `${headingIcon} ` });
-			titleEl.createSpan({ cls: 'swg-heading-name', text: section.heading });
+			titleEl.createSpan({ cls: 'sgb-heading-prefix', text: `${headingIcon} ` });
+			titleEl.createSpan({ cls: 'sgb-heading-name', text: section.heading });
 
 			titleEl.addEventListener('click', () => {
 				this.jumpToSection(section);
 			});
 
 			// Info & Input Controls
-			const controlsEl = itemEl.createDiv({ cls: 'swg-section-controls' });
+			const controlsEl = itemEl.createDiv({ cls: 'sgb-section-controls' });
 			controlsEl.createSpan({
-				cls: 'swg-section-chars',
+				cls: 'sgb-section-chars',
 				text: section.charCount.toLocaleString(),
 			});
 
 			const explicitGoal = this.sectionGoalsMap.get(section.heading);
 			const effectiveGoal = explicitGoal ?? this.defaultSectionGoalInput;
 
-			const inputWrapperEl = controlsEl.createDiv({ cls: 'swg-goal-input-wrapper' });
+			const inputWrapperEl = controlsEl.createDiv({ cls: 'sgb-goal-input-wrapper' });
 			const inputEl = inputWrapperEl.createEl('input', {
 				type: 'number',
-				cls: 'swg-goal-input',
+				cls: 'sgb-goal-input',
 				placeholder: this.defaultSectionGoalInput ? String(this.defaultSectionGoalInput) : t('MODAL_GOAL_PLACEHOLDER'),
 			});
 			if (explicitGoal !== undefined && explicitGoal > 0) {
@@ -298,10 +298,10 @@ export class GoalManagementModal extends Modal {
 			this.inputElements.set(section.heading, inputEl);
 
 			// Stacked mini progress: percentage text on TOP, progress bar on BOTTOM
-			const miniProgressWrapper = controlsEl.createDiv({ cls: 'swg-mini-progress-wrapper' });
-			const miniPercentEl = miniProgressWrapper.createSpan({ cls: 'swg-mini-percent' });
-			const miniProgressEl = miniProgressWrapper.createDiv({ cls: 'swg-mini-progress' });
-			const miniFillEl = miniProgressEl.createDiv({ cls: 'swg-mini-progress-fill' });
+			const miniProgressWrapper = controlsEl.createDiv({ cls: 'sgb-mini-progress-wrapper' });
+			const miniPercentEl = miniProgressWrapper.createSpan({ cls: 'sgb-mini-percent' });
+			const miniProgressEl = miniProgressWrapper.createDiv({ cls: 'sgb-mini-progress' });
+			const miniFillEl = miniProgressEl.createDiv({ cls: 'sgb-mini-progress-fill' });
 			this.updateMiniProgress(miniFillEl, miniPercentEl, section.charCount, effectiveGoal);
 
 			const onGoalChange = () => {
@@ -349,8 +349,8 @@ export class GoalManagementModal extends Modal {
 			const effective = this.sectionGoalsMap.get(sec.heading) ?? this.defaultSectionGoalInput;
 			const inputEl = this.inputElements.get(sec.heading);
 			const rowControlsEl = inputEl?.parentElement?.parentElement;
-			const miniFillEl = rowControlsEl?.querySelector('.swg-mini-progress-fill') as HTMLElement | null;
-			const miniPercentEl = rowControlsEl?.querySelector('.swg-mini-percent') as HTMLElement | null;
+			const miniFillEl = rowControlsEl?.querySelector('.sgb-mini-progress-fill') as HTMLElement | null;
+			const miniPercentEl = rowControlsEl?.querySelector('.sgb-mini-percent') as HTMLElement | null;
 			if (miniFillEl && miniPercentEl) {
 				this.updateMiniProgress(miniFillEl, miniPercentEl, sec.charCount, effective);
 			}
@@ -378,12 +378,12 @@ export class GoalManagementModal extends Modal {
 		if (goal && goal > 0) {
 			const percent = Math.round((current / goal) * 100);
 			setCssProps(fillEl, {
-				'--swg-mini-fill-width': `${Math.min(100, Math.max(0, percent))}%`,
+				'--sgb-mini-fill-width': `${Math.min(100, Math.max(0, percent))}%`,
 			});
 			percentEl.setText(`${percent}%`);
 
-			fillEl.className = 'swg-mini-progress-fill';
-			percentEl.className = 'swg-mini-percent';
+			fillEl.className = 'sgb-mini-progress-fill';
+			percentEl.className = 'sgb-mini-percent';
 
 			if (percent >= this.settings.colorThresholdDone) {
 				fillEl.addClass('is-progress-done');
@@ -397,11 +397,11 @@ export class GoalManagementModal extends Modal {
 			}
 		} else {
 			setCssProps(fillEl, {
-				'--swg-mini-fill-width': '0%',
+				'--sgb-mini-fill-width': '0%',
 			});
 			percentEl.setText('-');
-			fillEl.className = 'swg-mini-progress-fill';
-			percentEl.className = 'swg-mini-percent';
+			fillEl.className = 'sgb-mini-progress-fill';
+			percentEl.className = 'sgb-mini-percent';
 		}
 	}
 
@@ -486,11 +486,11 @@ class ConfirmSetModal extends Modal {
 	onOpen(): void {
 		const { contentEl } = this;
 		contentEl.empty();
-		contentEl.addClass('swg-confirm-modal');
+		contentEl.addClass('sgb-confirm-modal');
 
 		contentEl.createEl('p', { text: t('MODAL_SET_CONFIRM_MSG') });
 
-		const buttonContainer = contentEl.createDiv({ cls: 'swg-confirm-buttons' });
+		const buttonContainer = contentEl.createDiv({ cls: 'sgb-confirm-buttons' });
 
 		const cancelBtn = buttonContainer.createEl('button', {
 			text: t('MODAL_CONFIRM_CANCEL'),

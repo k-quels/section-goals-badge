@@ -4,12 +4,12 @@ name: Section Goals Badge
 id: section-goals-badge
 settings:
     - 
-        id: swg-heading-badge
+        id: sgb-heading-badge
         title: Floating Badge Appearance
         type: heading
         level: 1
     - 
-        id: swg-badge-bg
+        id: sgb-badge-bg
         title: Badge Outer Container Background
         description: Background color of the main floating badge capsule
         type: variable-themed-color
@@ -18,7 +18,7 @@ settings:
         default-light: '#f5f5f5'
         default-dark: '#1e1e1e'
     - 
-        id: swg-pill-bg
+        id: sgb-pill-bg
         title: Pill Items Default Background
         description: Background color of each progress pill item
         type: variable-themed-color
@@ -27,7 +27,7 @@ settings:
         default-light: '#e6e6e6'
         default-dark: '#2a2a2a'
     - 
-        id: swg-badge-text
+        id: sgb-badge-text
         title: Badge Text Color
         description: Text color for pills without active progress color
         type: variable-themed-color
@@ -36,12 +36,12 @@ settings:
         default-light: '#2e3338'
         default-dark: '#dcddde'
     - 
-        id: swg-heading-progress
+        id: sgb-heading-progress
         title: Progress Threshold Colors
         type: heading
         level: 1
     - 
-        id: swg-color-default
+        id: sgb-color-default
         title: Initial Progress Color (< 50%)
         type: variable-themed-color
         opacity: false
@@ -49,7 +49,7 @@ settings:
         default-light: '#8c8c8c'
         default-dark: '#8c8c8c'
     - 
-        id: swg-color-warn
+        id: sgb-color-warn
         title: Mid-Progress Color (>= 50%)
         type: variable-themed-color
         opacity: false
@@ -57,7 +57,7 @@ settings:
         default-light: '#e2b93b'
         default-dark: '#e2b93b'
     - 
-        id: swg-color-good
+        id: sgb-color-good
         title: High-Progress Color (>= 80%)
         type: variable-themed-color
         opacity: false
@@ -65,7 +65,7 @@ settings:
         default-light: '#ff7843'
         default-dark: '#ff7843'
     - 
-        id: swg-color-done
+        id: sgb-color-done
         title: Completed Progress Color (>= 100%)
         type: variable-themed-color
         opacity: false
@@ -81,71 +81,71 @@ settings:
 
 /* --- CSS Variables for Customization (Compatible with Style Settings) --- */
 :root {
-	--swg-badge-bg: rgba(30, 30, 30, 0.85);
-	--swg-pill-bg: rgba(255, 255, 255, 0.08);
-	--swg-badge-text: var(--text-normal, #dcddde);
-	--swg-badge-font-size: 11px;
-	--swg-badge-border: var(--background-modifier-border);
-	--swg-badge-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-	--swg-badge-radius: 20px;
+	--sgb-badge-bg: rgba(30, 30, 30, 0.85);
+	--sgb-pill-bg: rgba(255, 255, 255, 0.08);
+	--sgb-badge-text: var(--text-normal, #dcddde);
+	--sgb-badge-font-size: 11px;
+	--sgb-badge-border: var(--background-modifier-border);
+	--sgb-badge-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+	--sgb-badge-radius: 20px;
 	
 	/* Dynamic positioning variables */
-	--swg-badge-top: auto;
-	--swg-badge-bottom: auto;
-	--swg-badge-left: auto;
-	--swg-badge-right: auto;
-	--swg-badge-opacity: 1;
+	--sgb-badge-top: auto;
+	--sgb-badge-bottom: auto;
+	--sgb-badge-left: auto;
+	--sgb-badge-right: auto;
+	--sgb-badge-opacity: 1;
 
 	/* Progress fill variables */
-	--swg-fill-width: 0%;
-	--swg-mini-fill-width: 0%;
+	--sgb-fill-width: 0%;
+	--sgb-mini-fill-width: 0%;
 
 	/* Scrollbar offset variable */
-	--swg-scrollbar-width: 0px;
+	--sgb-scrollbar-width: 0px;
 
 	/* Progress Colors */
-	--swg-color-default: #8c8c8c;
-	--swg-color-warn: #e2b93b;
-	--swg-color-good: #ff7843;
-	--swg-color-done: #ff4d4f;
+	--sgb-color-default: #8c8c8c;
+	--sgb-color-warn: #e2b93b;
+	--sgb-color-good: #ff7843;
+	--sgb-color-done: #ff4d4f;
 }
 
 .theme-light {
-	--swg-badge-bg: rgba(245, 245, 245, 0.9);
-	--swg-pill-bg: rgba(0, 0, 0, 0.06);
-	--swg-badge-text: #2e3338;
-	--swg-badge-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+	--sgb-badge-bg: rgba(245, 245, 245, 0.9);
+	--sgb-pill-bg: rgba(0, 0, 0, 0.06);
+	--sgb-badge-text: #2e3338;
+	--sgb-badge-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .theme-dark {
-	--swg-badge-bg: rgba(30, 30, 30, 0.85);
-	--swg-pill-bg: rgba(255, 255, 255, 0.08);
-	--swg-badge-text: #dcddde;
+	--sgb-badge-bg: rgba(30, 30, 30, 0.85);
+	--sgb-pill-bg: rgba(255, 255, 255, 0.08);
+	--sgb-badge-text: #dcddde;
 }
 
-.swg-hidden {
+.sgb-hidden {
 	display: none !important;
 }
 
 /* --- Settings Tab Natural Styling --- */
-.setting-item.swg-setting-disabled {
+.setting-item.sgb-setting-disabled {
 	display: none !important;
 }
 
-.swg-settings-divider {
+.sgb-settings-divider {
 	border: none;
 	border-top: 1px solid var(--background-modifier-border);
 	margin: 24px 0 16px 0;
 }
 
-.swg-setting-heading {
+.sgb-setting-heading {
 	display: inline-flex !important;
 	align-items: center;
 	gap: 6px;
 	font-weight: 600;
 }
 
-.swg-heading-icon {
+.sgb-heading-icon {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -155,7 +155,7 @@ settings:
 	flex-shrink: 0;
 }
 
-.swg-heading-icon svg {
+.sgb-heading-icon svg {
 	width: 100%;
 	height: 100%;
 	stroke-width: 2.2px;
@@ -163,7 +163,7 @@ settings:
 }
 
 /* Color Preview Swatches for Settings */
-.swg-color-preview-circle {
+.sgb-color-preview-circle {
 	display: inline-block;
 	width: 13px;
 	height: 13px;
@@ -175,20 +175,20 @@ settings:
 	flex-shrink: 0;
 }
 
-.swg-color-preview-warn {
-	background-color: var(--swg-color-warn);
+.sgb-color-preview-warn {
+	background-color: var(--sgb-color-warn, #e2b93b);
 }
 
-.swg-color-preview-good {
-	background-color: var(--swg-color-good);
+.sgb-color-preview-good {
+	background-color: var(--sgb-color-good, #ff7843);
 }
 
-.swg-color-preview-done {
-	background-color: var(--swg-color-done);
+.sgb-color-preview-done {
+	background-color: var(--sgb-color-done, #ff4d4f);
 }
 
-.swg-color-preview-default {
-	background-color: var(--swg-color-default);
+.sgb-color-preview-default {
+	background-color: var(--sgb-color-default, #8c8c8c);
 }
 
 /* ==========================================================================
@@ -196,21 +196,21 @@ settings:
    ========================================================================== */
 .section-goals-badge {
 	position: absolute;
-	top: var(--swg-badge-top);
-	bottom: var(--swg-badge-bottom);
-	left: var(--swg-badge-left);
-	right: var(--swg-badge-right);
-	opacity: var(--swg-badge-opacity);
+	top: var(--sgb-badge-top);
+	bottom: var(--sgb-badge-bottom);
+	left: var(--sgb-badge-left);
+	right: var(--sgb-badge-right);
+	opacity: var(--sgb-badge-opacity);
 	z-index: var(--layer-popover, 100);
 	display: flex;
 	align-items: center;
 	gap: 6px;
 	padding: 4px 8px;
-	border-radius: var(--swg-badge-radius);
-	background: var(--swg-badge-bg);
-	color: var(--swg-badge-text);
-	border: 1px solid var(--swg-badge-border);
-	box-shadow: var(--swg-badge-shadow);
+	border-radius: var(--sgb-badge-radius);
+	background: var(--sgb-badge-bg);
+	color: var(--sgb-badge-text);
+	border: 1px solid var(--sgb-badge-border);
+	box-shadow: var(--sgb-badge-shadow);
 	backdrop-filter: blur(8px);
 	-webkit-backdrop-filter: blur(8px);
 	user-select: none;
@@ -229,42 +229,42 @@ settings:
 }
 
 /* --- Pill Items --- */
-.swg-pill {
+.sgb-pill {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	gap: 5px;
 	padding: 3px 8px;
 	border-radius: 12px;
-	font-size: var(--swg-badge-font-size, 11px);
+	font-size: var(--sgb-badge-font-size, 11px);
 	font-weight: 500;
 	line-height: 1.2;
-	color: var(--swg-badge-text);
-	background: var(--swg-pill-bg);
+	color: var(--sgb-badge-text);
+	background: var(--sgb-pill-bg);
 	transition: background-color 0.25s ease, color 0.25s ease, font-size 0.15s ease;
 	white-space: nowrap;
 	box-sizing: border-box;
 }
 
-.swg-pill-icon {
+.sgb-pill-icon {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: calc(var(--swg-badge-font-size, 11px) * 1.15);
-	height: calc(var(--swg-badge-font-size, 11px) * 1.15);
+	width: calc(var(--sgb-badge-font-size, 11px) * 1.15);
+	height: calc(var(--sgb-badge-font-size, 11px) * 1.15);
 	opacity: 0.85;
 	flex-shrink: 0;
 	align-self: center;
 }
 
-.swg-pill-icon svg {
+.sgb-pill-icon svg {
 	width: 100%;
 	height: 100%;
 	stroke-width: 2.2px;
 	display: block;
 }
 
-.swg-pill-prefix {
+.sgb-pill-prefix {
 	display: inline-flex;
 	align-items: center;
 	font-weight: 700;
@@ -273,7 +273,7 @@ settings:
 	align-self: center;
 }
 
-.swg-pill-text {
+.sgb-pill-text {
 	display: inline-flex;
 	align-items: center;
 	font-variant-numeric: tabular-nums;
@@ -282,24 +282,24 @@ settings:
 }
 
 /* --- Progress Color Modifiers (Dynamic tint with color-mix) --- */
-.swg-pill.is-progress-default {
-	color: var(--swg-color-default);
-	background-color: color-mix(in srgb, var(--swg-color-default) 18%, transparent);
+.sgb-pill.is-progress-default {
+	color: var(--sgb-color-default, #8c8c8c);
+	background-color: color-mix(in srgb, var(--sgb-color-default, #8c8c8c) 18%, transparent);
 }
 
-.swg-pill.is-progress-warn {
-	color: var(--swg-color-warn);
-	background-color: color-mix(in srgb, var(--swg-color-warn) 18%, transparent);
+.sgb-pill.is-progress-warn {
+	color: var(--sgb-color-warn, #e2b93b);
+	background-color: color-mix(in srgb, var(--sgb-color-warn, #e2b93b) 18%, transparent);
 }
 
-.swg-pill.is-progress-good {
-	color: var(--swg-color-good);
-	background-color: color-mix(in srgb, var(--swg-color-good) 18%, transparent);
+.sgb-pill.is-progress-good {
+	color: var(--sgb-color-good, #ff7843);
+	background-color: color-mix(in srgb, var(--sgb-color-good, #ff7843) 18%, transparent);
 }
 
-.swg-pill.is-progress-done {
-	color: var(--swg-color-done);
-	background-color: color-mix(in srgb, var(--swg-color-done) 18%, transparent);
+.sgb-pill.is-progress-done {
+	color: var(--sgb-color-done, #ff4d4f);
+	background-color: color-mix(in srgb, var(--sgb-color-done, #ff4d4f) 18%, transparent);
 	font-weight: 600;
 }
 
@@ -308,18 +308,18 @@ settings:
    ========================================================================== */
 .section-goals-badge-modal {
 	padding: 4px 2px;
-	max-height: var(--swg-modal-max-height, 80vh);
+	max-height: var(--sgb-modal-max-height, 80vh);
 	display: flex;
 	flex-direction: column;
 }
 
-.swg-modal-header-title {
+.sgb-modal-header-title {
 	margin: 0 0 8px 0;
 	font-size: 1.2em;
 }
 
 /* Table Column Header (Placed at the top to label all rows) */
-.swg-section-table-header {
+.sgb-section-table-header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -329,12 +329,12 @@ settings:
 	color: var(--text-muted);
 	border-bottom: 1px solid var(--background-modifier-border);
 	margin-bottom: 6px;
-	margin-right: var(--swg-scrollbar-width, 0px);
+	margin-right: var(--sgb-scrollbar-width, 0px);
 	transition: margin-right 0.15s ease;
 	flex-shrink: 0;
 }
 
-.swg-header-title {
+.sgb-header-title {
 	flex: 1;
 	margin-right: 8px;
 	overflow: hidden;
@@ -342,38 +342,38 @@ settings:
 	white-space: nowrap;
 }
 
-.swg-header-controls {
+.sgb-header-controls {
 	display: flex;
 	align-items: center;
 	gap: 6px;
 	flex-shrink: 0;
 }
 
-.swg-header-chars {
+.sgb-header-chars {
 	width: 52px;
 	text-align: center;
 	white-space: nowrap;
 }
 
-.swg-header-goal {
+.sgb-header-goal {
 	width: 64px;
 	text-align: center;
 	white-space: nowrap;
 }
 
-.swg-header-progress {
+.sgb-header-progress {
 	width: 40px;
 	text-align: center;
 	white-space: nowrap;
 }
 
 /* Compact Top Configuration Card */
-.swg-modal-top-card {
+.sgb-modal-top-card {
 	background: var(--background-secondary);
 	border-radius: var(--radius-m);
 	padding: 6px 10px;
 	margin-bottom: 8px;
-	margin-right: var(--swg-scrollbar-width, 0px);
+	margin-right: var(--sgb-scrollbar-width, 0px);
 	transition: margin-right 0.15s ease;
 	border: 1px solid var(--background-modifier-border);
 	display: flex;
@@ -382,13 +382,13 @@ settings:
 	flex-shrink: 0;
 }
 
-.swg-modal-card-row {
+.sgb-modal-card-row {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 }
 
-.swg-card-label-group {
+.sgb-card-label-group {
 	display: flex;
 	flex-direction: column;
 	gap: 1px;
@@ -397,7 +397,7 @@ settings:
 	margin-right: 8px;
 }
 
-.swg-card-title {
+.sgb-card-title {
 	font-size: 12px;
 	font-weight: 600;
 	color: var(--text-normal);
@@ -407,7 +407,7 @@ settings:
 	gap: 4px;
 }
 
-.swg-card-title-icon {
+.sgb-card-title-icon {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -418,70 +418,70 @@ settings:
 	color: var(--interactive-accent);
 }
 
-.swg-card-title-icon svg {
+.sgb-card-title-icon svg {
 	width: 100%;
 	height: 100%;
 	stroke-width: 2.2px;
 	display: block;
 }
 
-.swg-card-desc {
+.sgb-card-desc {
 	font-size: 10px;
 	color: var(--text-muted);
 	line-height: 1.2;
 }
 
-.swg-card-controls {
+.sgb-card-controls {
 	display: flex;
 	align-items: center;
 	gap: 6px;
 	flex-shrink: 0;
 }
 
-.swg-spacer-chars {
+.sgb-spacer-chars {
 	width: 52px;
 }
 
-.swg-spacer-progress {
+.sgb-spacer-progress {
 	width: 40px;
 }
 
 /* Section Header & Reset Controls */
-.swg-modal-section-header {
+.sgb-modal-section-header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	margin-top: 4px;
 	margin-bottom: 6px;
-	margin-right: var(--swg-scrollbar-width, 0px);
+	margin-right: var(--sgb-scrollbar-width, 0px);
 	transition: margin-right 0.15s ease;
 	flex-shrink: 0;
 }
 
-.swg-modal-section-header h3 {
+.sgb-modal-section-header h3 {
 	margin: 0;
 	font-size: 1.05em;
 }
 
-.swg-reset-button {
+.sgb-reset-button {
 	font-size: 11px;
 	padding: 2px 8px;
 }
 
 /* Section Tree Container */
-.swg-section-tree-container {
+.sgb-section-tree-container {
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
 	flex: 1;
-	max-height: var(--swg-tree-max-height, 46vh);
+	max-height: var(--sgb-tree-max-height, 46vh);
 	overflow-y: auto;
 	padding-right: 0px;
 	padding-bottom: 80px; /* Generous bottom spacing for mobile virtual keyboard */
 	overscroll-behavior: contain;
 }
 
-.swg-section-tree-item {
+.sgb-section-tree-item {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -493,24 +493,24 @@ settings:
 	box-sizing: border-box;
 }
 
-.swg-section-tree-item:hover {
+.sgb-section-tree-item:hover {
 	background: var(--background-modifier-hover);
 }
 
-.swg-section-tree-item.is-active-section {
+.sgb-section-tree-item.is-active-section {
 	border-color: var(--interactive-accent);
 	background: var(--background-primary-alt);
 }
 
 /* Indent levels */
-.swg-level-1 { margin-left: 0px; }
-.swg-level-2 { margin-left: 10px; }
-.swg-level-3 { margin-left: 20px; }
-.swg-level-4 { margin-left: 30px; }
-.swg-level-5 { margin-left: 40px; }
-.swg-level-6 { margin-left: 50px; }
+.sgb-level-1 { margin-left: 0px; }
+.sgb-level-2 { margin-left: 10px; }
+.sgb-level-3 { margin-left: 20px; }
+.sgb-level-4 { margin-left: 30px; }
+.sgb-level-5 { margin-left: 40px; }
+.sgb-level-6 { margin-left: 50px; }
 
-.swg-section-title {
+.sgb-section-title {
 	display: flex;
 	align-items: center;
 	flex: 1;
@@ -521,27 +521,27 @@ settings:
 	margin-right: 8px;
 }
 
-.swg-heading-prefix {
+.sgb-heading-prefix {
 	color: var(--interactive-accent);
 	font-weight: bold;
 	font-size: 11px;
 	margin-right: 4px;
 }
 
-.swg-heading-name {
+.sgb-heading-name {
 	font-weight: 500;
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
 
-.swg-section-controls {
+.sgb-section-controls {
 	display: flex;
 	align-items: center;
 	gap: 6px;
 	flex-shrink: 0;
 }
 
-.swg-section-chars {
+.sgb-section-chars {
 	font-size: 12px;
 	color: var(--text-muted);
 	font-variant-numeric: tabular-nums;
@@ -551,13 +551,13 @@ settings:
 	box-sizing: border-box;
 }
 
-.swg-goal-input-wrapper {
+.sgb-goal-input-wrapper {
 	width: 64px;
 	display: flex;
 	justify-content: center;
 }
 
-.swg-goal-input {
+.sgb-goal-input {
 	width: 100%;
 	padding: 2px 4px;
 	font-size: 12px;
@@ -567,7 +567,7 @@ settings:
 }
 
 /* Mini Progress & Percentage Label (Stacked vertically for maximum width efficiency) */
-.swg-mini-progress-wrapper {
+.sgb-mini-progress-wrapper {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -577,7 +577,7 @@ settings:
 	box-sizing: border-box;
 }
 
-.swg-mini-percent {
+.sgb-mini-percent {
 	font-size: 9px;
 	font-weight: 600;
 	line-height: 1.1;
@@ -587,19 +587,19 @@ settings:
 	width: 100%;
 }
 
-.swg-mini-percent.is-progress-warn {
-	color: var(--swg-color-warn);
+.sgb-mini-percent.is-progress-warn {
+	color: var(--sgb-color-warn, #e2b93b);
 }
 
-.swg-mini-percent.is-progress-good {
-	color: var(--swg-color-good);
+.sgb-mini-percent.is-progress-good {
+	color: var(--sgb-color-good, #ff7843);
 }
 
-.swg-mini-percent.is-progress-done {
-	color: var(--swg-color-done);
+.sgb-mini-percent.is-progress-done {
+	color: var(--sgb-color-done, #ff4d4f);
 }
 
-.swg-mini-progress {
+.sgb-mini-progress {
 	width: 100%;
 	height: 4px;
 	background: var(--background-modifier-border);
@@ -607,26 +607,26 @@ settings:
 	overflow: hidden;
 }
 
-.swg-mini-progress-fill {
+.sgb-mini-progress-fill {
 	height: 100%;
-	width: var(--swg-mini-fill-width, 0%);
-	background: var(--swg-color-default);
+	width: var(--sgb-mini-fill-width, 0%);
+	background: var(--sgb-color-default, #8c8c8c);
 	transition: width 0.2s ease;
 }
 
-.swg-mini-progress-fill.is-progress-warn {
-	background: var(--swg-color-warn);
+.sgb-mini-progress-fill.is-progress-warn {
+	background: var(--sgb-color-warn, #e2b93b);
 }
 
-.swg-mini-progress-fill.is-progress-good {
-	background: var(--swg-color-good);
+.sgb-mini-progress-fill.is-progress-good {
+	background: var(--sgb-color-good, #ff7843);
 }
 
-.swg-mini-progress-fill.is-progress-done {
-	background: var(--swg-color-done);
+.sgb-mini-progress-fill.is-progress-done {
+	background: var(--sgb-color-done, #ff4d4f);
 }
 
-.swg-empty-notice {
+.sgb-empty-notice {
 	color: var(--text-muted);
 	font-style: italic;
 	text-align: center;
@@ -634,11 +634,11 @@ settings:
 }
 
 /* Confirm Dialog Modal */
-.swg-confirm-modal {
+.sgb-confirm-modal {
 	padding: 12px 8px;
 }
 
-.swg-confirm-buttons {
+.sgb-confirm-buttons {
 	display: flex;
 	justify-content: flex-end;
 	gap: 8px;

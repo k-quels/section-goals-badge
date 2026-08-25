@@ -39,23 +39,23 @@ export class FloatingBadge {
 
 		this.containerEl = createDiv({ cls: 'section-goals-badge' });
 		setCssProps(this.containerEl, {
-			'--swg-badge-opacity': `${this.settings.badgeOpacity}`,
-			'--swg-badge-font-size': `${this.settings.fontSize || 11}px`,
+			'--sgb-badge-opacity': `${this.settings.badgeOpacity}`,
+			'--sgb-badge-font-size': `${this.settings.fontSize || 11}px`,
 		});
 
 		// 1. Cumulative progress pill (Leftmost)
 		this.cumulativePillEl = this.containerEl.createDiv({
-			cls: 'swg-pill swg-cumulative-pill swg-hidden',
+			cls: 'sgb-pill sgb-cumulative-pill sgb-hidden',
 		});
 
 		// 2. Section progress pill (Center)
 		this.sectionPillEl = this.containerEl.createDiv({
-			cls: 'swg-pill swg-section-pill swg-hidden',
+			cls: 'sgb-pill sgb-section-pill sgb-hidden',
 		});
 
 		// 3. Total progress pill (Right)
 		this.totalPillEl = this.containerEl.createDiv({
-			cls: 'swg-pill swg-total-pill swg-hidden',
+			cls: 'sgb-pill sgb-total-pill sgb-hidden',
 		});
 
 		this.applyPosition();
@@ -244,7 +244,7 @@ export class FloatingBadge {
 
 		// 1. Cumulative progress (Leftmost)
 		if (this.settings.showCumulativeProgress) {
-			this.cumulativePillEl.removeClass('swg-hidden');
+			this.cumulativePillEl.removeClass('sgb-hidden');
 			this.renderPill(
 				this.cumulativePillEl,
 				this.settings.cumulativeLabel !== undefined ? this.settings.cumulativeLabel : 'Cur:',
@@ -259,12 +259,12 @@ export class FloatingBadge {
 				t('BADGE_TOOLTIP_CUMULATIVE'),
 			);
 		} else {
-			this.cumulativePillEl.addClass('swg-hidden');
+			this.cumulativePillEl.addClass('sgb-hidden');
 		}
 
 		// 2. Section progress (Center)
 		if (this.settings.showSectionProgress && progress.currentSection) {
-			this.sectionPillEl.removeClass('swg-hidden');
+			this.sectionPillEl.removeClass('sgb-hidden');
 			this.renderPill(
 				this.sectionPillEl,
 				this.settings.sectionLabel !== undefined ? this.settings.sectionLabel : 'Sec:',
@@ -279,12 +279,12 @@ export class FloatingBadge {
 				t('BADGE_TOOLTIP_SECTION', { heading: progress.currentSection.heading }),
 			);
 		} else {
-			this.sectionPillEl.addClass('swg-hidden');
+			this.sectionPillEl.addClass('sgb-hidden');
 		}
 
 		// 3. Total progress (Right)
 		if (this.settings.showTotalProgress) {
-			this.totalPillEl.removeClass('swg-hidden');
+			this.totalPillEl.removeClass('sgb-hidden');
 			this.renderPill(
 				this.totalPillEl,
 				this.settings.totalLabel !== undefined ? this.settings.totalLabel : 'All:',
@@ -299,7 +299,7 @@ export class FloatingBadge {
 				t('BADGE_TOOLTIP_TOTAL'),
 			);
 		} else {
-			this.totalPillEl.addClass('swg-hidden');
+			this.totalPillEl.addClass('sgb-hidden');
 		}
 
 		// If all pills are hidden, hide the outer badge capsule as well
@@ -309,9 +309,9 @@ export class FloatingBadge {
 			this.settings.showTotalProgress;
 
 		if (!hasVisiblePill) {
-			this.containerEl.addClass('swg-hidden');
+			this.containerEl.addClass('sgb-hidden');
 		} else {
-			this.containerEl.removeClass('swg-hidden');
+			this.containerEl.removeClass('sgb-hidden');
 		}
 	}
 
@@ -329,10 +329,10 @@ export class FloatingBadge {
 		titleTooltip?: string,
 	): void {
 		const stateKey = `${prefix}|${current}|${goal ?? ''}|${percentage ?? ''}|${showCurrent}|${showPercent}|${showGoal}|${showIcon}|${iconName ?? ''}|${titleTooltip ?? ''}`;
-		if (el.dataset.swgState === stateKey) {
+		if (el.dataset.sgbState === stateKey) {
 			return;
 		}
-		el.dataset.swgState = stateKey;
+		el.dataset.sgbState = stateKey;
 
 		el.empty();
 		if (titleTooltip) {
@@ -341,13 +341,13 @@ export class FloatingBadge {
 
 		// Render Lucide Icon if enabled
 		if (showIcon && iconName) {
-			const iconEl = el.createSpan({ cls: 'swg-pill-icon' });
+			const iconEl = el.createSpan({ cls: 'sgb-pill-icon' });
 			setIcon(iconEl, iconName);
 		}
 
 		// Render Prefix Text if configured
 		if (prefix && prefix.trim().length > 0) {
-			el.createSpan({ cls: 'swg-pill-prefix', text: prefix });
+			el.createSpan({ cls: 'sgb-pill-prefix', text: prefix });
 		}
 
 		// Format count text
@@ -374,7 +374,7 @@ export class FloatingBadge {
 		}
 
 		if (text.length > 0) {
-			el.createSpan({ cls: 'swg-pill-text', text });
+			el.createSpan({ cls: 'sgb-pill-text', text });
 		}
 
 		if (percentage !== undefined) {
@@ -401,19 +401,19 @@ export class FloatingBadge {
 		}
 
 		setCssProps(el, {
-			'--swg-progress-ratio': `${Math.min(100, Math.max(0, percentage)) / 100}`,
+			'--sgb-progress-ratio': `${Math.min(100, Math.max(0, percentage)) / 100}`,
 		});
 	}
 
 	public applyPosition(): void {
 		if (this.customPosition) {
 			setCssProps(this.containerEl, {
-				'--swg-badge-left': `${this.customPosition.x}px`,
-				'--swg-badge-top': `${this.customPosition.y}px`,
-				'--swg-badge-right': 'auto',
-				'--swg-badge-bottom': 'auto',
-				'--swg-badge-opacity': `${this.settings.badgeOpacity}`,
-				'--swg-badge-font-size': `${this.settings.fontSize || 11}px`,
+				'--sgb-badge-left': `${this.customPosition.x}px`,
+				'--sgb-badge-top': `${this.customPosition.y}px`,
+				'--sgb-badge-right': 'auto',
+				'--sgb-badge-bottom': 'auto',
+				'--sgb-badge-opacity': `${this.settings.badgeOpacity}`,
+				'--sgb-badge-font-size': `${this.settings.fontSize || 11}px`,
 			});
 		} else {
 			const { badgePosition, offsetX, offsetY } = this.settings;
@@ -423,22 +423,22 @@ export class FloatingBadge {
 			const isRight = badgePosition.includes('right');
 
 			setCssProps(this.containerEl, {
-				'--swg-badge-left': isRight ? 'auto' : `${offsetX}px`,
-				'--swg-badge-right': isRight ? `${offsetX}px` : 'auto',
-				'--swg-badge-top': isBottom ? 'auto' : `${offsetY}px`,
-				'--swg-badge-bottom': isBottom ? `${offsetY + bottomOffset}px` : 'auto',
-				'--swg-badge-opacity': `${this.settings.badgeOpacity}`,
-				'--swg-badge-font-size': `${this.settings.fontSize || 11}px`,
+				'--sgb-badge-left': isRight ? 'auto' : `${offsetX}px`,
+				'--sgb-badge-right': isRight ? `${offsetX}px` : 'auto',
+				'--sgb-badge-top': isBottom ? 'auto' : `${offsetY}px`,
+				'--sgb-badge-bottom': isBottom ? `${offsetY + bottomOffset}px` : 'auto',
+				'--sgb-badge-opacity': `${this.settings.badgeOpacity}`,
+				'--sgb-badge-font-size': `${this.settings.fontSize || 11}px`,
 			});
 		}
 	}
 
 	public show(): void {
-		this.containerEl.removeClass('swg-hidden');
+		this.containerEl.removeClass('sgb-hidden');
 	}
 
 	public hide(): void {
-		this.containerEl.addClass('swg-hidden');
+		this.containerEl.addClass('sgb-hidden');
 	}
 
 	public destroy(): void {

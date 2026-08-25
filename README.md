@@ -96,10 +96,10 @@ Add a custom CSS file to your vault (**Settings → Appearance → CSS snippets*
 /* Section Goals Badge - Custom Colors */
 body {
     /* Progress threshold colors */
-    --swg-color-default: #8c8c8c; /* Initial progress (< 50%) */
-    --swg-color-warn: #e2b93b;    /* Mid progress (>= 50%) */
-    --swg-color-good: #ff7843;    /* High progress (>= 80%) */
-    --swg-color-done: #ff4d4f;    /* Goal reached (>= 100%) */
+    --sgb-color-default: #8c8c8c; /* Initial progress (< 50%) */
+    --sgb-color-warn: #e2b93b;    /* Mid progress (>= 50%) */
+    --sgb-color-good: #ff7843;    /* High progress (>= 80%) */
+    --sgb-color-done: #ff4d4f;    /* Goal reached (>= 100%) */
 }
 ```
 
@@ -111,10 +111,10 @@ body {
 
 ```css
 body {
-    --swg-color-default: #8c8c8c; /* Safe (< 50%): Gray */
-    --swg-color-warn: #e2b93b;    /* Halfway (>= 50%): Yellow */
-    --swg-color-good: #ff7843;    /* Approaching cap (>= 80%): Orange */
-    --swg-color-done: #ff4d4f;    /* Reached limit (>= 100%): Red */
+    --sgb-color-default: #8c8c8c; /* Safe (< 50%): Gray */
+    --sgb-color-warn: #e2b93b;    /* Halfway (>= 50%): Yellow */
+    --sgb-color-good: #ff7843;    /* Approaching cap (>= 80%): Orange */
+    --sgb-color-done: #ff4d4f;    /* Reached limit (>= 100%): Red */
 }
 ```
 
@@ -124,10 +124,10 @@ body {
 
 ```css
 body {
-    --swg-color-default: #8c8c8c; /* Starting (< 50%): Gray */
-    --swg-color-warn: #f09533;    /* In Progress (>= 50%): Orange */
-    --swg-color-good: #24b750;    /* Almost there (>= 80%): Green */
-    --swg-color-done: #207dff;    /* Completed (>= 100%): Blue */
+    --sgb-color-default: #8c8c8c; /* Starting (< 50%): Gray */
+    --sgb-color-warn: #f09533;    /* In Progress (>= 50%): Orange */
+    --sgb-color-good: #24b750;    /* Almost there (>= 80%): Green */
+    --sgb-color-done: #207dff;    /* Completed (>= 100%): Blue */
 }
 ```
 

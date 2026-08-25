@@ -119,10 +119,10 @@ Obsidianの **設定 → 外観 → CSSスニペット** に以下のCSSを追�
 /* Section Goals Badge - カスタムカラー設定 */
 body {
     /* 進捗しきい値カラー */
-    --swg-color-default: #8c8c8c; /* 初期カラー (< 50%) */
-    --swg-color-warn: #e2b93b;    /* 中間カラー (>= 50%) */
-    --swg-color-good: #ff7843;    /* 高進捗カラー (>= 80%) */
-    --swg-color-done: #ff4d4f;    /* 達成・完了カラー (>= 100%) */
+    --sgb-color-default: #8c8c8c; /* 初期カラー (< 50%) */
+    --sgb-color-warn: #e2b93b;    /* 中間カラー (>= 50%) */
+    --sgb-color-good: #ff7843;    /* 高進捗カラー (>= 80%) */
+    --sgb-color-done: #ff4d4f;    /* 達成・完了カラー (>= 100%) */
 }
 ```
 
@@ -134,10 +134,10 @@ body {
 
 ```css
 body {
-    --swg-color-default: #8c8c8c; /* 余裕あり (< 50%)  : 灰 */
-    --swg-color-warn: #e2b93b;    /* 半分経過 (>= 50%) : 黄 */
-    --swg-color-good: #ff7843;    /* 上限間近 (>= 80%) : 橙 */
-    --swg-color-done: #ff4d4f;    /* 上限到達 (>= 100%): 赤 */
+    --sgb-color-default: #8c8c8c; /* 余裕あり (< 50%)  : 灰 */
+    --sgb-color-warn: #e2b93b;    /* 半分経過 (>= 50%) : 黄 */
+    --sgb-color-good: #ff7843;    /* 上限間近 (>= 80%) : 橙 */
+    --sgb-color-done: #ff4d4f;    /* 上限到達 (>= 100%): 赤 */
 }
 ```
 
@@ -147,10 +147,10 @@ body {
 
 ```css
 body {
-    --swg-color-default: #8c8c8c; /* 書き始め (< 50%)   : 灰 */
-    --swg-color-warn: #f09533;    /* 進行中 (>= 50%)    : 橙 */
-    --swg-color-good: #24b750;    /* あと一息 (>= 80%)  : 緑 */
-    --swg-color-done: #207dff;    /* 目標達成 (>= 100%) : 青 */
+    --sgb-color-default: #8c8c8c; /* 書き始め (< 50%)   : 灰 */
+    --sgb-color-warn: #f09533;    /* 進行中 (>= 50%)    : 橙 */
+    --sgb-color-good: #24b750;    /* あと一息 (>= 80%)  : 緑 */
+    --sgb-color-done: #207dff;    /* 目標達成 (>= 100%) : 青 */
 }
 ```
 

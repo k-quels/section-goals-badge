@@ -173,9 +173,9 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 		};
 
 		const swatchMap: Record<string, string> = {
-			[t('SETTINGS_THRESH_WARN')]: 'swg-color-preview-warn',
-			[t('SETTINGS_THRESH_GOOD')]: 'swg-color-preview-good',
-			[t('SETTINGS_THRESH_DONE')]: 'swg-color-preview-done',
+			[t('SETTINGS_THRESH_WARN')]: 'sgb-color-preview-warn',
+			[t('SETTINGS_THRESH_GOOD')]: 'sgb-color-preview-good',
+			[t('SETTINGS_THRESH_DONE')]: 'sgb-color-preview-done',
 		};
 
 		const placeholderMap: Record<string, string> = {
@@ -196,13 +196,13 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 			'.setting-group-heading, .setting-item-heading, h2, h3, h4',
 		);
 		headingEls.forEach((el) => {
-			if (el.querySelector('.swg-heading-icon')) return;
+			if (el.querySelector('.sgb-heading-icon')) return;
 			const text = el.textContent?.trim();
 			if (text && iconMap[text]) {
 				const iconName = iconMap[text];
 				el.empty();
-				el.addClass('swg-setting-heading');
-				const iconSpan = el.createSpan({ cls: 'swg-heading-icon' });
+				el.addClass('sgb-setting-heading');
+				const iconSpan = el.createSpan({ cls: 'sgb-heading-icon' });
 				setIcon(iconSpan, iconName);
 				el.createSpan({ text });
 			}
@@ -211,11 +211,11 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 		// 2. Inject Color Swatches
 		const nameEls = root.querySelectorAll<HTMLElement>('.setting-item-name');
 		nameEls.forEach((el) => {
-			if (el.querySelector('.swg-color-preview-circle')) return;
+			if (el.querySelector('.sgb-color-preview-circle')) return;
 			const text = el.textContent?.trim();
 			if (text && swatchMap[text]) {
 				const swatchClass = swatchMap[text];
-				const circle = createSpan({ cls: `swg-color-preview-circle ${swatchClass}` });
+				const circle = createSpan({ cls: `sgb-color-preview-circle ${swatchClass}` });
 				el.prepend(circle);
 			}
 		});
@@ -252,8 +252,8 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 
 			// Toggle checkboxes
 			const toggleEl = el.querySelector<HTMLElement>('.checkbox-container');
-			if (toggleEl && !toggleEl.dataset.swgBound) {
-				toggleEl.dataset.swgBound = 'true';
+			if (toggleEl && !toggleEl.dataset.sgbBound) {
+				toggleEl.dataset.sgbBound = 'true';
 				toggleEl.addEventListener('click', () => {
 					window.setTimeout(() => {
 						const isEnabled = toggleEl.classList.contains('is-enabled');
@@ -264,8 +264,8 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 
 			// Select dropdowns
 			const selectEl = el.querySelector<HTMLSelectElement>('select.dropdown');
-			if (selectEl && !selectEl.dataset.swgBound) {
-				selectEl.dataset.swgBound = 'true';
+			if (selectEl && !selectEl.dataset.sgbBound) {
+				selectEl.dataset.sgbBound = 'true';
 				selectEl.addEventListener('change', () => {
 					this.syncSettingValue(headingForThisItem, nameText, selectEl.value);
 				});
@@ -279,8 +279,8 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 				if (placeholderMap[nameText] && !inputEl.placeholder) {
 					inputEl.placeholder = placeholderMap[nameText];
 				}
-				if (!inputEl.dataset.swgBound) {
-					inputEl.dataset.swgBound = 'true';
+				if (!inputEl.dataset.sgbBound) {
+					inputEl.dataset.sgbBound = 'true';
 					inputEl.addEventListener('input', () => {
 						const val = inputEl.type === 'number' ? parseFloat(inputEl.value) : inputEl.value;
 						this.syncSettingValue(headingForThisItem, nameText, val);
@@ -290,8 +290,8 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 
 			// Sliders (real-time live update on dragging)
 			const sliderEl = el.querySelector<HTMLInputElement>('input.slider, input[type="range"]');
-			if (sliderEl && !sliderEl.dataset.swgBound) {
-				sliderEl.dataset.swgBound = 'true';
+			if (sliderEl && !sliderEl.dataset.sgbBound) {
+				sliderEl.dataset.sgbBound = 'true';
 				const handleSliderInput = () => {
 					const val = parseFloat(sliderEl.value);
 					if (!isNaN(val)) {
@@ -306,9 +306,9 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 			const resetConfig = resetMap[nameText];
 			if (resetConfig) {
 				const controlEl = el.querySelector<HTMLElement>('.setting-item-control');
-				if (controlEl && !controlEl.querySelector('.swg-reset-btn')) {
+				if (controlEl && !controlEl.querySelector('.sgb-reset-btn')) {
 					const resetBtn = controlEl.createDiv({
-						cls: 'clickable-icon extra-setting-button swg-reset-btn',
+						cls: 'clickable-icon extra-setting-button sgb-reset-btn',
 					});
 					resetBtn.setAttribute('aria-label', t('SETTINGS_RESET_DEFAULT'));
 					setIcon(resetBtn, 'rotate-ccw');
