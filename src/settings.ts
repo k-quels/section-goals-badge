@@ -178,6 +178,19 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 			[t('SETTINGS_THRESH_DONE')]: 'swg-color-preview-done',
 		};
 
+		const placeholderMap: Record<string, string> = {
+			[t('SETTINGS_OFFSET_X')]: String(DEFAULT_SETTINGS.offsetX),
+			[t('SETTINGS_OFFSET_Y')]: String(DEFAULT_SETTINGS.offsetY),
+			[t('SETTINGS_THRESH_WARN')]: String(DEFAULT_SETTINGS.colorThresholdWarn),
+			[t('SETTINGS_THRESH_GOOD')]: String(DEFAULT_SETTINGS.colorThresholdGood),
+			[t('SETTINGS_THRESH_DONE')]: String(DEFAULT_SETTINGS.colorThresholdDone),
+		};
+
+		const resetMap: Record<string, { key: 'fontSize' | 'badgeOpacity'; defaultVal: number }> = {
+			[t('SETTINGS_FONT_SIZE')]: { key: 'fontSize', defaultVal: DEFAULT_SETTINGS.fontSize },
+			[t('SETTINGS_OPACITY')]: { key: 'badgeOpacity', defaultVal: DEFAULT_SETTINGS.badgeOpacity },
+		};
+
 		// 1. Inject Heading Icons
 		const headingEls = root.querySelectorAll<HTMLElement>(
 			'.setting-group-heading, .setting-item-heading, h2, h3, h4',
@@ -207,7 +220,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 			}
 		});
 
-		// 3. Bind direct event listeners to controls if needed for immediate reactivity
+		// 3. Bind direct event listeners to controls and inject enhancements
 		const allItems = Array.from(root.querySelectorAll<HTMLElement>('.setting-item'));
 		allItems.forEach((itemEl) => {
 			const nameText = itemEl.querySelector('.setting-item-name')?.textContent?.trim();
@@ -234,23 +247,70 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 				});
 			}
 
-			// Text / Number inputs
-			const inputEl = itemEl.querySelector<HTMLInputElement>('input:not([type="checkbox"])');
-			if (inputEl && !inputEl.dataset.swgBound) {
-				inputEl.dataset.swgBound = 'true';
-				inputEl.addEventListener('input', () => {
-					const val = inputEl.type === 'number' ? parseFloat(inputEl.value) : inputEl.value;
-					this.syncSettingValue(nameText, val);
-				});
+			// Text / Number inputs (exclude checkboxes and sliders)
+			const inputEl = itemEl.querySelector<HTMLInputElement>(
+				'input:not([type="checkbox"]):not([type="range"]):not(.slider)',
+			);
+			if (inputEl) {
+				if (placeholderMap[nameText] && !inputEl.placeholder) {
+					inputEl.placeholder = placeholderMap[nameText];
+				}
+				if (!inputEl.dataset.swgBound) {
+					inputEl.dataset.swgBound = 'true';
+					inputEl.addEventListener('input', () => {
+						const val = inputEl.type === 'number' ? parseFloat(inputEl.value) : inputEl.value;
+						this.syncSettingValue(nameText, val);
+					});
+				}
 			}
 
-			// Sliders
-			const sliderEl = itemEl.querySelector<HTMLInputElement>('input.slider');
+			// Sliders (real-time live update on dragging)
+			const sliderEl = itemEl.querySelector<HTMLInputElement>('input.slider, input[type="range"]');
 			if (sliderEl && !sliderEl.dataset.swgBound) {
 				sliderEl.dataset.swgBound = 'true';
-				sliderEl.addEventListener('input', () => {
-					this.syncSettingValue(nameText, parseFloat(sliderEl.value));
-				});
+				const handleSliderInput = () => {
+					const val = parseFloat(sliderEl.value);
+					if (!isNaN(val)) {
+						this.syncSettingValue(nameText, val);
+					}
+				};
+				sliderEl.addEventListener('input', handleSliderInput);
+				sliderEl.addEventListener('change', handleSliderInput);
+			}
+
+			// Inject Reset to Default button for specific slider settings
+			const resetConfig = resetMap[nameText];
+			if (resetConfig) {
+				const controlEl = itemEl.querySelector<HTMLElement>('.setting-item-control');
+				if (controlEl && !controlEl.querySelector('.swg-reset-btn')) {
+					const resetBtn = controlEl.createDiv({
+						cls: 'clickable-icon extra-setting-button swg-reset-btn',
+					});
+					resetBtn.setAttribute('aria-label', t('SETTINGS_RESET_DEFAULT'));
+					setIcon(resetBtn, 'rotate-ccw');
+					resetBtn.addEventListener('click', (e) => {
+						e.preventDefault();
+						e.stopPropagation();
+						void (async () => {
+							const { key, defaultVal } = resetConfig;
+							if (key === 'fontSize') {
+								this.plugin.settings.fontSize = defaultVal;
+							} else if (key === 'badgeOpacity') {
+								this.plugin.settings.badgeOpacity = defaultVal;
+							}
+							await this.plugin.saveSettings();
+							this.plugin.updateBadgePosition();
+							this.plugin.refreshBadgeUI();
+
+							const sEl = controlEl.querySelector<HTMLInputElement>('input.slider, input[type="range"]');
+							if (sEl) {
+								sEl.value = String(defaultVal);
+								sEl.dispatchEvent(new Event('input', { bubbles: true }));
+								sEl.dispatchEvent(new Event('change', { bubbles: true }));
+							}
+						})();
+					});
+				}
 			}
 		});
 
@@ -353,47 +413,51 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 				this.plugin.settings.badgePosition = value as BadgePositionPreset;
 				isPositionUpdate = true;
 				break;
-			case t('SETTINGS_FONT_SIZE'):
-				if (typeof value === 'number' && !isNaN(value)) {
-					this.plugin.settings.fontSize = value;
+			case t('SETTINGS_FONT_SIZE'): {
+				const val = typeof value === 'number' ? value : parseFloat(String(value));
+				if (!isNaN(val)) {
+					this.plugin.settings.fontSize = val;
 					isPositionUpdate = true;
 				}
 				break;
-			case t('SETTINGS_OFFSET_X'):
-				if (typeof value === 'number' && !isNaN(value)) {
-					this.plugin.settings.offsetX = value;
+			}
+			case t('SETTINGS_OFFSET_X'): {
+				const val = typeof value === 'number' && !isNaN(value) ? value : DEFAULT_SETTINGS.offsetX;
+				this.plugin.settings.offsetX = val;
+				isPositionUpdate = true;
+				break;
+			}
+			case t('SETTINGS_OFFSET_Y'): {
+				const val = typeof value === 'number' && !isNaN(value) ? value : DEFAULT_SETTINGS.offsetY;
+				this.plugin.settings.offsetY = val;
+				isPositionUpdate = true;
+				break;
+			}
+			case t('SETTINGS_OPACITY'): {
+				const val = typeof value === 'number' ? value : parseFloat(String(value));
+				if (!isNaN(val)) {
+					this.plugin.settings.badgeOpacity = val;
 					isPositionUpdate = true;
 				}
 				break;
-			case t('SETTINGS_OFFSET_Y'):
-				if (typeof value === 'number' && !isNaN(value)) {
-					this.plugin.settings.offsetY = value;
-					isPositionUpdate = true;
-				}
-				break;
-			case t('SETTINGS_OPACITY'):
-				if (typeof value === 'number' && !isNaN(value)) {
-					this.plugin.settings.badgeOpacity = value;
-					isPositionUpdate = true;
-				}
-				break;
+			}
 
 			// Thresholds
-			case t('SETTINGS_THRESH_WARN'):
-				if (typeof value === 'number' && !isNaN(value)) {
-					this.plugin.settings.colorThresholdWarn = value;
-				}
+			case t('SETTINGS_THRESH_WARN'): {
+				const val = typeof value === 'number' && !isNaN(value) ? value : DEFAULT_SETTINGS.colorThresholdWarn;
+				this.plugin.settings.colorThresholdWarn = val;
 				break;
-			case t('SETTINGS_THRESH_GOOD'):
-				if (typeof value === 'number' && !isNaN(value)) {
-					this.plugin.settings.colorThresholdGood = value;
-				}
+			}
+			case t('SETTINGS_THRESH_GOOD'): {
+				const val = typeof value === 'number' && !isNaN(value) ? value : DEFAULT_SETTINGS.colorThresholdGood;
+				this.plugin.settings.colorThresholdGood = val;
 				break;
-			case t('SETTINGS_THRESH_DONE'):
-				if (typeof value === 'number' && !isNaN(value)) {
-					this.plugin.settings.colorThresholdDone = value;
-				}
+			}
+			case t('SETTINGS_THRESH_DONE'): {
+				const val = typeof value === 'number' && !isNaN(value) ? value : DEFAULT_SETTINGS.colorThresholdDone;
+				this.plugin.settings.colorThresholdDone = val;
 				break;
+			}
 
 			// Interactions
 			case t('SETTINGS_LONG_PRESS'):
@@ -805,12 +869,11 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						control: {
 							type: 'number',
 							key: 'offsetX',
+							placeholder: String(DEFAULT_SETTINGS.offsetX),
 							onChange: async (val: number) => {
-								if (!isNaN(val)) {
-									this.plugin.settings.offsetX = val;
-									await this.plugin.saveSettings();
-									this.plugin.updateBadgePosition();
-								}
+								this.plugin.settings.offsetX = !isNaN(val) ? val : DEFAULT_SETTINGS.offsetX;
+								await this.plugin.saveSettings();
+								this.plugin.updateBadgePosition();
 							},
 						},
 					},
@@ -820,12 +883,11 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						control: {
 							type: 'number',
 							key: 'offsetY',
+							placeholder: String(DEFAULT_SETTINGS.offsetY),
 							onChange: async (val: number) => {
-								if (!isNaN(val)) {
-									this.plugin.settings.offsetY = val;
-									await this.plugin.saveSettings();
-									this.plugin.updateBadgePosition();
-								}
+								this.plugin.settings.offsetY = !isNaN(val) ? val : DEFAULT_SETTINGS.offsetY;
+								await this.plugin.saveSettings();
+								this.plugin.updateBadgePosition();
 							},
 						},
 					},
@@ -859,12 +921,12 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						control: {
 							type: 'number',
 							key: 'colorThresholdWarn',
+							placeholder: String(DEFAULT_SETTINGS.colorThresholdWarn),
 							onChange: async (val: number) => {
-								if (!isNaN(val)) {
-									this.plugin.settings.colorThresholdWarn = val;
-									await this.plugin.saveSettings();
-									this.plugin.refreshBadgeUI();
-								}
+								this.plugin.settings.colorThresholdWarn =
+									!isNaN(val) ? val : DEFAULT_SETTINGS.colorThresholdWarn;
+								await this.plugin.saveSettings();
+								this.plugin.refreshBadgeUI();
 							},
 						},
 					},
@@ -874,12 +936,12 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						control: {
 							type: 'number',
 							key: 'colorThresholdGood',
+							placeholder: String(DEFAULT_SETTINGS.colorThresholdGood),
 							onChange: async (val: number) => {
-								if (!isNaN(val)) {
-									this.plugin.settings.colorThresholdGood = val;
-									await this.plugin.saveSettings();
-									this.plugin.refreshBadgeUI();
-								}
+								this.plugin.settings.colorThresholdGood =
+									!isNaN(val) ? val : DEFAULT_SETTINGS.colorThresholdGood;
+								await this.plugin.saveSettings();
+								this.plugin.refreshBadgeUI();
 							},
 						},
 					},
@@ -889,12 +951,12 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						control: {
 							type: 'number',
 							key: 'colorThresholdDone',
+							placeholder: String(DEFAULT_SETTINGS.colorThresholdDone),
 							onChange: async (val: number) => {
-								if (!isNaN(val)) {
-									this.plugin.settings.colorThresholdDone = val;
-									await this.plugin.saveSettings();
-									this.plugin.refreshBadgeUI();
-								}
+								this.plugin.settings.colorThresholdDone =
+									!isNaN(val) ? val : DEFAULT_SETTINGS.colorThresholdDone;
+								await this.plugin.saveSettings();
+								this.plugin.refreshBadgeUI();
 							},
 						},
 					},

@@ -102,6 +102,7 @@ const ja: typeof en = {
 	SETTINGS_OPACITY_DESC: 'バッジの背景透過レベルを指定します。',
 	SETTINGS_FONT_SIZE: 'フォントサイズ (px)',
 	SETTINGS_FONT_SIZE_DESC: 'バッジの文字サイズを指定します。（9 〜 20 px）',
+	SETTINGS_RESET_DEFAULT: 'デフォルトに戻す',
 
 	SETTINGS_THRESH_WARN: '中間カラーの閾値 (%)',
 	SETTINGS_THRESH_WARN_DESC: '進捗カラーを中間色に切り替える進捗率です（例: 50%）。',

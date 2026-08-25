@@ -100,6 +100,7 @@ export default {
 	SETTINGS_OPACITY_DESC: 'Specify the background opacity level of the badge.',
 	SETTINGS_FONT_SIZE: 'Font size (px)',
 	SETTINGS_FONT_SIZE_DESC: 'Specify the font size of the badge (9 - 20 px).',
+	SETTINGS_RESET_DEFAULT: 'Reset to default',
 
 	SETTINGS_THRESH_WARN: 'Medium color threshold (%)',
 	SETTINGS_THRESH_WARN_DESC: 'Progress percentage to switch to the medium color (e.g. 50%).',
