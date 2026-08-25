@@ -34,6 +34,8 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 		this.performFullRecalculation();
 	}, 300);
 
+	private settingTab!: SectionGoalsBadgeSettingTab;
+
 	async onload(): Promise<void> {
 		await this.loadSettings();
 
@@ -60,7 +62,8 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 		});
 
 		// Settings Tab
-		this.addSettingTab(new SectionGoalsBadgeSettingTab(this.app, this));
+		this.settingTab = new SectionGoalsBadgeSettingTab(this.app, this);
+		this.addSettingTab(this.settingTab);
 
 		// Commands
 		this.addCommand({
@@ -121,25 +124,21 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 		this.registerDomEvent(activeDocument, 'compositionend', () => {
 			window.setTimeout(() => {
 				this.isComposing = false;
-				this.onSelectionOrCursorChanged();
+				this.requestCursorUpdate();
 			}, 30);
 		});
 
-		// DOM Events for cursor movement and heading focus-out detection
+		// DOM Events for cursor movement and heading focus-out detection (throttled via requestAnimationFrame)
 		this.registerDomEvent(activeDocument, 'selectionchange', () => {
-			if (!this.isComposing) {
-				this.onSelectionOrCursorChanged();
-			}
+			this.requestCursorUpdate();
 		});
 
 		this.registerDomEvent(activeDocument, 'keyup', () => {
-			if (!this.isComposing) {
-				this.onSelectionOrCursorChanged();
-			}
+			this.requestCursorUpdate();
 		});
 
 		this.registerDomEvent(activeDocument, 'click', () => {
-			this.onSelectionOrCursorChanged();
+			this.requestCursorUpdate();
 		});
 
 		// Notify Style Settings plugin to parse styles.css
@@ -153,6 +152,7 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 	}
 
 	onunload(): void {
+		this.settingTab?.destroy();
 		this.viewportTracker.destroy();
 		this.badge.destroy();
 		// Notify Style Settings plugin on unload
@@ -232,12 +232,27 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 
 		const content = view.editor.getValue();
 		this.currentParsedDoc = this.parser.parseDocument(view.file, content, {
+			countType: this.settings.countType,
 			excludeWhitespace: this.settings.excludeWhitespace,
 			excludeRuby: this.settings.excludeRuby,
 			excludeCharacters: this.settings.excludeCharacters,
 		});
 
 		this.updateBadgeWithCursor(view, true);
+	}
+
+	private rafCursorUpdatePending = false;
+
+	/**
+	 * Throttles selection and cursor updates to animation frames, preventing redundant executions during rapid typing.
+	 */
+	private requestCursorUpdate(): void {
+		if (this.rafCursorUpdatePending || this.isComposing) return;
+		this.rafCursorUpdatePending = true;
+		window.requestAnimationFrame(() => {
+			this.rafCursorUpdatePending = false;
+			this.onSelectionOrCursorChanged();
+		});
 	}
 
 	/**
@@ -274,6 +289,7 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 			goalData,
 			this.settings.cumulativeMode,
 			{
+				countType: this.settings.countType,
 				excludeWhitespace: this.settings.excludeWhitespace,
 				excludeRuby: this.settings.excludeRuby,
 				excludeCharacters: this.settings.excludeCharacters,

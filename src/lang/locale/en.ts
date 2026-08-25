@@ -80,10 +80,14 @@ export default {
 	SETTINGS_TOTAL_LABEL_DESC: 'Display a custom prefix string on the badge (e.g. All:).',
 
 	// Settings - Rules & Appearance
+	SETTINGS_COUNT_TYPE: 'Counting method',
+	SETTINGS_COUNT_TYPE_DESC: 'Choose whether to count characters or words.',
+	COUNT_TYPE_CHARACTER: 'Characters',
+	COUNT_TYPE_WORD: 'Words',
 	SETTINGS_EXCLUDE_WHITESPACE: 'Exclude whitespace',
 	SETTINGS_EXCLUDE_WHITESPACE_DESC: 'Exclude half-width spaces, full-width spaces, and tabs from the character count.',
 	SETTINGS_EXCLUDE_RUBY: 'Exclude Japanese novel ruby',
-	SETTINGS_EXCLUDE_RUBY_DESC: 'Exclude standard Japanese novel ruby notation (《...》, "|", and "｜") from the character count.',
+	SETTINGS_EXCLUDE_RUBY_DESC: 'Exclude standard Japanese novel ruby notation (《...》, "|", and "｜") from the count.',
 	SETTINGS_EXCLUDE_CHARACTERS: 'Exclude specific characters',
 	SETTINGS_EXCLUDE_CHARACTERS_DESC: 'Enter characters to exclude from the count (e.g. 「」).',
 	SETTINGS_BADGE_POS: 'Badge position',
@@ -120,6 +124,7 @@ export default {
 
 	// Modal
 	MODAL_TITLE: 'Writing goals (character count)',
+	MODAL_TITLE_WORDS: 'Writing goals (word count)',
 	MODAL_TOTAL_GOAL_NAME: 'Note total goal',
 	MODAL_DEFAULT_SECTION_GOAL_NAME: 'Section goal',
 	MODAL_DEFAULT_SECTION_DESC: 'Used when individual section goals are not set.',

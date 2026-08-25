@@ -65,6 +65,7 @@ export class GoalManagementModal extends Modal {
 		// Re-read file content and frontmatter to ensure freshness
 		const docContent = this.view.editor.getValue();
 		this.parsedData = this.parser.parseDocument(this.file, docContent, {
+			countType: this.settings.countType,
 			excludeWhitespace: this.settings.excludeWhitespace,
 			excludeRuby: this.settings.excludeRuby,
 			excludeCharacters: this.settings.excludeCharacters,
@@ -133,7 +134,8 @@ export class GoalManagementModal extends Modal {
 		contentEl.empty();
 		this.inputElements.clear();
 
-		contentEl.createEl('h2', { cls: 'swg-modal-header-title', text: t('MODAL_TITLE') });
+		const titleText = this.settings.countType === 'word' ? t('MODAL_TITLE_WORDS') : t('MODAL_TITLE');
+		contentEl.createEl('h2', { cls: 'swg-modal-header-title', text: titleText });
 
 		// --- Master Table Column Header (Labels all rows below) ---
 		const tableHeaderEl = contentEl.createDiv({ cls: 'swg-section-table-header' });

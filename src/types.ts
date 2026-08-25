@@ -1,3 +1,5 @@
+export type CountType = 'character' | 'word';
+
 export interface HeadingGoalItem {
 	[heading: string]: number;
 }
@@ -15,6 +17,7 @@ export interface SectionNode {
 	startOffset: number;
 	endOffset: number;
 	charCount: number;
+	count?: number;
 	goalCount?: number;
 	isDefaultGoal?: boolean;
 	children: SectionNode[];
@@ -81,6 +84,7 @@ export interface PluginSettings {
 	colorThresholdDone: number; // e.g. 100%
 
 	// Counter options
+	countType: CountType;
 	excludeWhitespace: boolean;
 	excludeRuby: boolean;
 	excludeCharacters: string;
@@ -88,3 +92,4 @@ export interface PluginSettings {
 	// Interaction
 	longPressToOpenModal: boolean;
 }
+

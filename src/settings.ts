@@ -1,7 +1,7 @@
 import { App, PluginSettingTab, setIcon, Setting } from 'obsidian';
 import { t } from './lang/helpers';
 import type SectionGoalsBadgePlugin from './main';
-import { BadgePositionPreset, CumulativeCountMode, PluginSettings } from './types';
+import { BadgePositionPreset, CountType, CumulativeCountMode, PluginSettings } from './types';
 
 export const DEFAULT_SETTINGS: PluginSettings = {
 	// Section options
@@ -41,7 +41,8 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	colorThresholdGood: 80,
 	colorThresholdDone: 100,
 
-	// Counting rules (exclusions)
+	// Counting rules
+	countType: 'character',
 	excludeWhitespace: true,
 	excludeRuby: false,
 	excludeCharacters: '',
@@ -57,33 +58,69 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 	constructor(app: App, plugin: SectionGoalsBadgePlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
+		this.initObserver();
 	}
 
 	display(): void {
-		// Handled declaratively by getSettingDefinitions() in Obsidian 1.13+
-		this.applyEnhancements();
+		this.initObserver();
+		this.scheduleEnhancements();
 	}
 
 	hide(): void {
+		// When settings tab is closed on mobile/desktop, immediately refresh badge with saved settings
+		this.plugin.refreshBadgeUI();
+		this.plugin.recalculateCounts();
+	}
+
+	public destroy(): void {
 		if (this.observer) {
 			this.observer.disconnect();
 			this.observer = null;
 		}
-		// When settings tab is closed on mobile/desktop, immediately refresh badge with saved settings
-		this.plugin.refreshBadgeUI();
-		this.plugin.recalculateCounts();
+	}
+
+	private initObserver(): void {
+		if (this.observer) return;
+		this.observer = new MutationObserver(() => {
+			this.runEnhancements();
+		});
+
+		// Observe containerEl
+		this.observer.observe(this.containerEl, { childList: true, subtree: true });
+
+		// Also observe parent/modal if available
+		const targetRoot = this.getTargetRoot();
+		if (targetRoot && targetRoot !== this.containerEl) {
+			this.observer.observe(targetRoot, { childList: true, subtree: true });
+		}
 	}
 
 	private getTargetRoot(): HTMLElement {
 		return (
 			(this.containerEl.closest(
 				'.modal, .modal-content, .vertical-tab-content-container, .vertical-tab-content, .mobile-settings-tab, .app-container',
-			) as HTMLElement) || document.body
+			) as HTMLElement) || this.containerEl
 		);
 	}
 
-	public updateGroupVisibility(): void {
-		const target = this.getTargetRoot();
+	private scheduleEnhancements(): void {
+		[0, 30, 80, 150, 300, 600].forEach((delay) => {
+			window.setTimeout(() => {
+				this.runEnhancements();
+			}, delay);
+		});
+	}
+
+	private runEnhancements(): void {
+		this.applyEnhancements(this.containerEl);
+		const targetRoot = this.getTargetRoot();
+		if (targetRoot && targetRoot !== this.containerEl) {
+			this.applyEnhancements(targetRoot);
+		}
+	}
+
+	public updateGroupVisibility(targetRoot?: HTMLElement): void {
+		const target = targetRoot || this.getTargetRoot();
 
 		const groups = [
 			{
@@ -123,7 +160,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 		});
 	}
 
-	private applyEnhancements(): void {
+	private applyEnhancements(root: HTMLElement): void {
 		const iconMap: Record<string, string> = {
 			[t('SETTINGS_HEADING_CUMULATIVE')]: 'text-cursor',
 			[t('SETTINGS_HEADING_SECTION')]: 'hash',
@@ -141,97 +178,84 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 			[t('SETTINGS_THRESH_DONE')]: 'swg-color-preview-done',
 		};
 
-		const inject = (root: HTMLElement) => {
-			// 1. Inject Heading Icons and Color Swatches
-			const candidates = root.querySelectorAll<HTMLElement>(
-				'.setting-group-heading, .setting-item-heading, .setting-item-name, h2, h3, h4, div',
-			);
-
-			candidates.forEach((el) => {
-				if (el.children.length <= 1) {
-					const text = el.textContent?.trim();
-					if (text && iconMap[text] && !el.querySelector('.swg-heading-icon')) {
-						const iconName = iconMap[text];
-						el.empty();
-						el.addClass('swg-setting-heading');
-						const iconSpan = el.createSpan({ cls: 'swg-heading-icon' });
-						setIcon(iconSpan, iconName);
-						el.createSpan({ text });
-					} else if (text && swatchMap[text] && !el.querySelector('.swg-color-preview-circle')) {
-						const swatchClass = swatchMap[text];
-						el.empty();
-						el.createSpan({ cls: `swg-color-preview-circle ${swatchClass}` });
-						el.createSpan({ text });
-					}
-				}
-			});
-
-			// 2. Bind Direct Event Listeners on ALL setting items for 100% instant real-time sync
-			const allItems = Array.from(root.querySelectorAll<HTMLElement>('.setting-item'));
-			allItems.forEach((itemEl) => {
-				const nameText = itemEl.querySelector('.setting-item-name')?.textContent?.trim();
-				if (!nameText) return;
-
-				// Toggle checkboxes
-				const toggleEl = itemEl.querySelector<HTMLElement>('.checkbox-container');
-				if (toggleEl && !toggleEl.dataset.swgBound) {
-					toggleEl.dataset.swgBound = 'true';
-					toggleEl.addEventListener('click', () => {
-						window.setTimeout(() => {
-							const isEnabled = toggleEl.classList.contains('is-enabled');
-							this.syncSettingValue(nameText, isEnabled);
-						}, 20);
-					});
-				}
-
-				// Select dropdowns
-				const selectEl = itemEl.querySelector<HTMLSelectElement>('select.dropdown');
-				if (selectEl && !selectEl.dataset.swgBound) {
-					selectEl.dataset.swgBound = 'true';
-					selectEl.addEventListener('change', () => {
-						this.syncSettingValue(nameText, selectEl.value);
-					});
-				}
-
-				// Text / Number inputs
-				const inputEl = itemEl.querySelector<HTMLInputElement>('input:not([type="checkbox"])');
-				if (inputEl && !inputEl.dataset.swgBound) {
-					inputEl.dataset.swgBound = 'true';
-					inputEl.addEventListener('input', () => {
-						const val = inputEl.type === 'number' ? parseFloat(inputEl.value) : inputEl.value;
-						this.syncSettingValue(nameText, val);
-					});
-				}
-
-				// Sliders
-				const sliderEl = itemEl.querySelector<HTMLInputElement>('input.slider');
-				if (sliderEl && !sliderEl.dataset.swgBound) {
-					sliderEl.dataset.swgBound = 'true';
-					sliderEl.addEventListener('input', () => {
-						this.syncSettingValue(nameText, parseFloat(sliderEl.value));
-					});
-				}
-			});
-
-			// 3. Update Child Visibility
-			this.updateGroupVisibility();
-		};
-
-		// Run delayed passes to catch declarative renders
-		[0, 40, 120, 250, 500].forEach((delay) => {
-			window.setTimeout(() => {
-				inject(this.getTargetRoot());
-			}, delay);
+		// 1. Inject Heading Icons
+		const headingEls = root.querySelectorAll<HTMLElement>(
+			'.setting-group-heading, .setting-item-heading, h2, h3, h4',
+		);
+		headingEls.forEach((el) => {
+			if (el.querySelector('.swg-heading-icon')) return;
+			const text = el.textContent?.trim();
+			if (text && iconMap[text]) {
+				const iconName = iconMap[text];
+				el.empty();
+				el.addClass('swg-setting-heading');
+				const iconSpan = el.createSpan({ cls: 'swg-heading-icon' });
+				setIcon(iconSpan, iconName);
+				el.createSpan({ text });
+			}
 		});
 
-		// Attach MutationObserver to handle dynamic tabs
-		if (!this.observer) {
-			this.observer = new MutationObserver(() => {
-				inject(this.getTargetRoot());
-			});
-			const observeTarget = this.getTargetRoot();
-			this.observer.observe(observeTarget, { childList: true, subtree: true });
-		}
+		// 2. Inject Color Swatches
+		const nameEls = root.querySelectorAll<HTMLElement>('.setting-item-name');
+		nameEls.forEach((el) => {
+			if (el.querySelector('.swg-color-preview-circle')) return;
+			const text = el.textContent?.trim();
+			if (text && swatchMap[text]) {
+				const swatchClass = swatchMap[text];
+				const circle = createSpan({ cls: `swg-color-preview-circle ${swatchClass}` });
+				el.prepend(circle);
+			}
+		});
+
+		// 3. Bind direct event listeners to controls if needed for immediate reactivity
+		const allItems = Array.from(root.querySelectorAll<HTMLElement>('.setting-item'));
+		allItems.forEach((itemEl) => {
+			const nameText = itemEl.querySelector('.setting-item-name')?.textContent?.trim();
+			if (!nameText) return;
+
+			// Toggle checkboxes
+			const toggleEl = itemEl.querySelector<HTMLElement>('.checkbox-container');
+			if (toggleEl && !toggleEl.dataset.swgBound) {
+				toggleEl.dataset.swgBound = 'true';
+				toggleEl.addEventListener('click', () => {
+					window.setTimeout(() => {
+						const isEnabled = toggleEl.classList.contains('is-enabled');
+						this.syncSettingValue(nameText, isEnabled);
+					}, 20);
+				});
+			}
+
+			// Select dropdowns
+			const selectEl = itemEl.querySelector<HTMLSelectElement>('select.dropdown');
+			if (selectEl && !selectEl.dataset.swgBound) {
+				selectEl.dataset.swgBound = 'true';
+				selectEl.addEventListener('change', () => {
+					this.syncSettingValue(nameText, selectEl.value);
+				});
+			}
+
+			// Text / Number inputs
+			const inputEl = itemEl.querySelector<HTMLInputElement>('input:not([type="checkbox"])');
+			if (inputEl && !inputEl.dataset.swgBound) {
+				inputEl.dataset.swgBound = 'true';
+				inputEl.addEventListener('input', () => {
+					const val = inputEl.type === 'number' ? parseFloat(inputEl.value) : inputEl.value;
+					this.syncSettingValue(nameText, val);
+				});
+			}
+
+			// Sliders
+			const sliderEl = itemEl.querySelector<HTMLInputElement>('input.slider');
+			if (sliderEl && !sliderEl.dataset.swgBound) {
+				sliderEl.dataset.swgBound = 'true';
+				sliderEl.addEventListener('input', () => {
+					this.syncSettingValue(nameText, parseFloat(sliderEl.value));
+				});
+			}
+		});
+
+		// 4. Update Child Visibility
+		this.updateGroupVisibility(root);
 	}
 
 	private syncSettingValue(labelText: string, value: string | number | boolean): void {
@@ -307,6 +331,10 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 				break;
 
 			// Counting rules
+			case t('SETTINGS_COUNT_TYPE'):
+				this.plugin.settings.countType = value as CountType;
+				isRecalculate = true;
+				break;
 			case t('SETTINGS_EXCLUDE_WHITESPACE'):
 				this.plugin.settings.excludeWhitespace = value as boolean;
 				isRecalculate = true;
@@ -386,7 +414,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 	}
 
 	getSettingDefinitions(): Record<string, unknown>[] {
-		this.applyEnhancements();
+		this.scheduleEnhancements();
 
 		return [
 			// Group 1: Cumulative Progress (Cur)
@@ -672,6 +700,23 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 				type: 'group',
 				heading: t('SETTINGS_HEADING_RULES'),
 				items: [
+					{
+						name: t('SETTINGS_COUNT_TYPE'),
+						desc: t('SETTINGS_COUNT_TYPE_DESC'),
+						control: {
+							type: 'dropdown',
+							key: 'countType',
+							options: {
+								character: t('COUNT_TYPE_CHARACTER'),
+								word: t('COUNT_TYPE_WORD'),
+							},
+							onChange: async (val: string) => {
+								this.plugin.settings.countType = val as CountType;
+								await this.plugin.saveSettings();
+								this.plugin.recalculateCounts();
+							},
+						},
+					},
 					{
 						name: t('SETTINGS_EXCLUDE_WHITESPACE'),
 						desc: t('SETTINGS_EXCLUDE_WHITESPACE_DESC'),

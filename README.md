@@ -16,7 +16,7 @@ Display floating badges on your editor to keep track of character counts and pro
 
 ## Key Features
 
-- **Goal Tracking per Section (Heading)**: Set target character counts for each chapter or section.
+- **Goal Tracking per Section (Heading)**: Set target counts for each chapter or section.
 - **Unobtrusive Floating Badge**: Position at any corner of the editor, with drag-and-drop movement and opacity adjustments.
 - **3 Configurable Progress Badges**:
   - **Progress to Cursor**: Counts characters from note top (or section top) up to cursor position.
@@ -25,6 +25,7 @@ Display floating badges on your editor to keep track of character counts and pro
 - **Dynamic Badge Colors**: Visual status updates as you write.
   - Fully customizable colors via the Style Settings plugin.
 - **Mobile-Friendly**: Works smoothly on smartphones even with massive documents.
+- **Character & Word Counting**: Switch between Character count and Word count freely.
 - **Exclusion Rules**: Exclude whitespace, Japanese novel ruby notation, and custom user-specified symbols.
 - **Fast & Battery Efficient (1M+ characters)**: Optimized to minimize typing latency and reduce mobile battery drain.
 - **Self-Contained in Note**: Goal values are saved directly into the note's Frontmatter.
@@ -61,8 +62,9 @@ The following features and options can be customized:
 - **Display Content**: Toggle current count, target goal, and progress percentage.
 - **Icon / Label**: Toggle prefix icons and text labels.
 
-### 2. Counting Rules (Exclusions)
-- Exclude whitespace, Japanese novel ruby notation, and custom specified characters.
+### 2. Counting Rules
+- **Counting Method**: Switch between Character count and Word count.
+- **Exclusion Settings**: Exclude whitespace, Japanese novel ruby notation, and custom specified characters.
 
 ### 3. Appearance & Position
 - Configure badge position preset, opacity, and font size.

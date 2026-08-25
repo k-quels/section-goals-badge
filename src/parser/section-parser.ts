@@ -1,5 +1,5 @@
 import { App, HeadingCache, TFile } from 'obsidian';
-import { countCharacters, CounterOptions } from '../counter/counter';
+import { countText, CounterOptions } from '../counter/counter';
 import { FileGoalData, FrontmatterManager } from '../frontmatter/frontmatter-manager';
 import { CumulativeCountMode, SectionNode, WritingProgress } from '../types';
 
@@ -32,7 +32,7 @@ export class SectionParser {
 		const { defaultSectionGoal, sectionGoals } = this.fmManager.getGoalData(file);
 
 		if (rawHeadings.length === 0) {
-			const totalCharCount = countCharacters(content.slice(frontmatterEndOffset), options);
+			const totalCharCount = countText(content.slice(frontmatterEndOffset), options.countType, options);
 			return {
 				sections: [],
 				flatSections: [],
@@ -99,6 +99,7 @@ export class SectionParser {
 				startOffset: heading.position.start.offset,
 				endOffset,
 				charCount,
+				count: charCount,
 				goalCount,
 				isDefaultGoal,
 				children: [],
@@ -107,7 +108,7 @@ export class SectionParser {
 			flatSections.push(node);
 		}
 
-		// Calculate total character count (excluding frontmatter and heading lines)
+		// Calculate total character/word count (excluding frontmatter and heading lines)
 		const totalCharCount = this.calculateTotalContentChars(content, rawHeadings, frontmatterEndOffset, options);
 
 		// Build hierarchical tree
@@ -121,6 +122,7 @@ export class SectionParser {
 			frontmatterEndOffset,
 		};
 	}
+
 
 	/**
 	 * Compute writing progress based on current cursor offset and cursor line.
@@ -166,7 +168,7 @@ export class SectionParser {
 				const targetEnd = Math.min(cursorOffset, currentSectionNode.endOffset);
 				const rawContent = docText.slice(secStart, targetEnd);
 				const stripped = rawContent.replace(/^#{1,6}\s+.*$/gm, '');
-				cumulativeChars = countCharacters(stripped, options);
+				cumulativeChars = countText(stripped, options.countType, options);
 			}
 			cumulativeGoal = currentSectionNode.goalCount ?? defaultSectionGoal;
 		} else {
@@ -247,7 +249,7 @@ export class SectionParser {
 
 		if (subHeadings.length === 0) {
 			const scopeText = content.slice(startOffset, endOffset);
-			return countCharacters(scopeText, options);
+			return countText(scopeText, options.countType, options);
 		}
 
 		let charCount = 0;
@@ -255,13 +257,13 @@ export class SectionParser {
 		for (const sub of subHeadings) {
 			if (sub.position.start.offset > cur) {
 				const chunk = content.slice(cur, sub.position.start.offset);
-				charCount += countCharacters(chunk, options);
+				charCount += countText(chunk, options.countType, options);
 			}
 			cur = sub.position.end.offset;
 		}
 		if (cur < endOffset) {
 			const chunk = content.slice(cur, endOffset);
-			charCount += countCharacters(chunk, options);
+			charCount += countText(chunk, options.countType, options);
 		}
 
 		return charCount;
@@ -275,7 +277,7 @@ export class SectionParser {
 	): number {
 		if (rawHeadings.length === 0) {
 			const text = content.slice(frontmatterEndOffset);
-			return countCharacters(text, options);
+			return countText(text, options.countType, options);
 		}
 
 		let total = 0;
@@ -284,14 +286,14 @@ export class SectionParser {
 		for (const h of rawHeadings) {
 			if (h.position.start.offset > cur) {
 				const chunk = content.slice(cur, h.position.start.offset);
-				total += countCharacters(chunk, options);
+				total += countText(chunk, options.countType, options);
 			}
 			cur = h.position.end.offset;
 		}
 
 		if (cur < content.length) {
 			const chunk = content.slice(cur);
-			total += countCharacters(chunk, options);
+			total += countText(chunk, options.countType, options);
 		}
 
 		return total;
@@ -308,7 +310,7 @@ export class SectionParser {
 
 		const rawContent = content.slice(frontmatterEndOffset, targetEnd);
 		const stripped = rawContent.replace(/^#{1,6}\s+.*$/gm, '');
-		return countCharacters(stripped, options);
+		return countText(stripped, options.countType, options);
 	}
 
 	/**

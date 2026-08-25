@@ -82,6 +82,10 @@ const ja: typeof en = {
 	SETTINGS_TOTAL_LABEL_DESC: 'バッジの先頭に指定文字列を表示します。（例: All:）',
 
 	// Settings - Rules & Appearance
+	SETTINGS_COUNT_TYPE: 'カウント方式',
+	SETTINGS_COUNT_TYPE_DESC: '文字数または単語数のどちらでカウントするかを選択します。',
+	COUNT_TYPE_CHARACTER: '文字数',
+	COUNT_TYPE_WORD: '単語数',
 	SETTINGS_EXCLUDE_WHITESPACE: '空白文字を除外する',
 	SETTINGS_EXCLUDE_WHITESPACE_DESC: '半角スペース、全角スペース、タブ文字をカウント対象外にします。',
 	SETTINGS_EXCLUDE_RUBY: '日本語小説用ルビを除外する',
@@ -122,13 +126,14 @@ const ja: typeof en = {
 
 	// Modal
 	MODAL_TITLE: '執筆目標（文字数）',
+	MODAL_TITLE_WORDS: '執筆目標（単語数）',
 	MODAL_TOTAL_GOAL_NAME: 'ノート全体目標',
 	MODAL_DEFAULT_SECTION_GOAL_NAME: 'セクション目標',
-	MODAL_DEFAULT_SECTION_DESC: '個別の目標値が未設定の場合に使われます',
+	MODAL_DEFAULT_SECTION_DESC: '個別目標が未設定の項目に適用',
 	MODAL_SECTIONS_HEADER: 'セクション一覧',
 	MODAL_NO_HEADINGS: 'ノート内に見出しがありません',
 	MODAL_GOAL_PLACEHOLDER: '目標',
-	MODAL_SET_BUTTON: '現在の文字数を全目標に設定',
+	MODAL_SET_BUTTON: '現在値を全目標に設定',
 	MODAL_SET_CONFIRM_MSG: '全セクションの目標値を現在執筆済みの数値に設定します。よろしいですか？',
 	MODAL_CONFIRM_OK: '設定する',
 	MODAL_CONFIRM_CANCEL: 'キャンセル',
