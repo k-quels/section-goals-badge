@@ -1,11 +1,11 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "section-goals-badge",
+	"name": "Section Goals Badge",
 	"version": "1.0.0",
-	"minAppVersion": "1.0.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"minAppVersion": "1.8.7",
+	"description": "Mobile-friendly floating character counter for Obsidian to set and track writing goals per section.",
+	"author": "quels <@k-quels>",
+	"authorUrl": "https://kuma.quels.net/",
+	"fundingUrl": "https://buymeacoffee.com/quels",
 	"isDesktopOnly": false
 }

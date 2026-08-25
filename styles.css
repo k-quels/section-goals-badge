@@ -1,8 +1,654 @@
-/*
+/* @settings
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
-
-If your plugin does not need CSS, delete this file.
+name: Section Goals Badge
+id: section-goals-badge
+settings:
+    - 
+        id: swg-heading-badge
+        title: Floating Badge Appearance
+        type: heading
+        level: 1
+    - 
+        id: swg-badge-bg
+        title: Badge Outer Container Background
+        description: Background color of the main floating badge capsule
+        type: variable-themed-color
+        opacity: true
+        format: hex
+        default-light: '#f5f5f5'
+        default-dark: '#1e1e1e'
+    - 
+        id: swg-pill-bg
+        title: Pill Items Default Background
+        description: Background color of each progress pill item
+        type: variable-themed-color
+        opacity: true
+        format: hex
+        default-light: '#e6e6e6'
+        default-dark: '#2a2a2a'
+    - 
+        id: swg-badge-text
+        title: Badge Text Color
+        description: Text color for pills without active progress color
+        type: variable-themed-color
+        opacity: false
+        format: hex
+        default-light: '#2e3338'
+        default-dark: '#dcddde'
+    - 
+        id: swg-heading-progress
+        title: Progress Threshold Colors
+        type: heading
+        level: 1
+    - 
+        id: swg-color-default
+        title: Initial Progress Color (< 50%)
+        type: variable-themed-color
+        opacity: false
+        format: hex
+        default-light: '#fff790'
+        default-dark: '#fff790'
+    - 
+        id: swg-color-warn
+        title: Mid-Progress Color (>= 50%)
+        type: variable-themed-color
+        opacity: false
+        format: hex
+        default-light: '#ffa94d'
+        default-dark: '#ffa94d'
+    - 
+        id: swg-color-good
+        title: High-Progress Color (>= 80%)
+        type: variable-themed-color
+        opacity: false
+        format: hex
+        default-light: '#38a169'
+        default-dark: '#38a169'
+    - 
+        id: swg-color-done
+        title: Completed Progress Color (>= 100%)
+        type: variable-themed-color
+        opacity: false
+        format: hex
+        default-light: '#ff5050'
+        default-dark: '#ff5050'
 
 */
+
+/* ==========================================================================
+   Section Goals Badge Plugin Styles
+   ========================================================================== */
+
+/* --- CSS Variables for Customization (Compatible with Style Settings) --- */
+:root {
+	--swg-badge-bg: rgba(30, 30, 30, 0.85);
+	--swg-pill-bg: rgba(255, 255, 255, 0.08);
+	--swg-badge-text: var(--text-normal, #dcddde);
+	--swg-badge-font-size: 11px;
+	--swg-badge-border: var(--background-modifier-border);
+	--swg-badge-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+	--swg-badge-radius: 20px;
+	
+	/* Dynamic positioning variables */
+	--swg-badge-top: auto;
+	--swg-badge-bottom: auto;
+	--swg-badge-left: auto;
+	--swg-badge-right: auto;
+	--swg-badge-opacity: 1;
+
+	/* Progress fill variables */
+	--swg-fill-width: 0%;
+	--swg-mini-fill-width: 0%;
+
+	/* Scrollbar offset variable */
+	--swg-scrollbar-width: 0px;
+
+	/* Progress Colors */
+	--swg-color-default: #fff790;
+	--swg-color-warn: #ffa94d;
+	--swg-color-good: #38a169;
+	--swg-color-done: #ff5050;
+}
+
+.theme-light {
+	--swg-badge-bg: rgba(245, 245, 245, 0.9);
+	--swg-pill-bg: rgba(0, 0, 0, 0.06);
+	--swg-badge-text: #2e3338;
+	--swg-badge-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+	--swg-color-default: #fff790;
+	--swg-color-warn: #ffa94d;
+	--swg-color-good: #38a169;
+	--swg-color-done: #ff5050;
+}
+
+.theme-dark {
+	--swg-badge-bg: rgba(30, 30, 30, 0.85);
+	--swg-pill-bg: rgba(255, 255, 255, 0.08);
+	--swg-badge-text: #dcddde;
+	--swg-color-default: #fff790;
+	--swg-color-warn: #ffa94d;
+	--swg-color-good: #38a169;
+	--swg-color-done: #ff5050;
+}
+
+.swg-hidden {
+	display: none !important;
+}
+
+/* --- Settings Tab Natural Styling --- */
+.setting-item.swg-setting-disabled {
+	display: none !important;
+}
+
+.swg-settings-divider {
+	border: none;
+	border-top: 1px solid var(--background-modifier-border);
+	margin: 24px 0 16px 0;
+}
+
+.swg-setting-heading {
+	display: inline-flex !important;
+	align-items: center;
+	gap: 6px;
+	font-weight: 600;
+}
+
+.swg-heading-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 17px;
+	height: 17px;
+	color: var(--interactive-accent);
+	flex-shrink: 0;
+}
+
+.swg-heading-icon svg {
+	width: 100%;
+	height: 100%;
+	stroke-width: 2.2px;
+	display: block;
+}
+
+/* Color Preview Swatches for Settings */
+.swg-color-preview-circle {
+	display: inline-block;
+	width: 13px;
+	height: 13px;
+	border-radius: 50%;
+	margin-right: 6px;
+	vertical-align: -1px;
+	border: 1.5px solid var(--background-modifier-border);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+	flex-shrink: 0;
+}
+
+.swg-color-preview-warn {
+	background-color: var(--swg-color-warn);
+}
+
+.swg-color-preview-good {
+	background-color: var(--swg-color-good);
+}
+
+.swg-color-preview-done {
+	background-color: var(--swg-color-done);
+}
+
+.swg-color-preview-default {
+	background-color: var(--swg-color-default);
+}
+
+/* ==========================================================================
+   Floating Badge UI
+   ========================================================================== */
+.section-goals-badge {
+	position: absolute;
+	top: var(--swg-badge-top);
+	bottom: var(--swg-badge-bottom);
+	left: var(--swg-badge-left);
+	right: var(--swg-badge-right);
+	opacity: var(--swg-badge-opacity);
+	z-index: var(--layer-popover, 100);
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 8px;
+	border-radius: var(--swg-badge-radius);
+	background: var(--swg-badge-bg);
+	color: var(--swg-badge-text);
+	border: 1px solid var(--swg-badge-border);
+	box-shadow: var(--swg-badge-shadow);
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
+	user-select: none;
+	cursor: pointer;
+	touch-action: none;
+	transition: box-shadow 0.2s ease, transform 0.1s ease, background-color 0.2s ease;
+}
+
+.section-goals-badge:hover {
+	box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+	transform: translateY(-1px);
+}
+
+.section-goals-badge:active {
+	cursor: grabbing;
+}
+
+/* --- Pill Items --- */
+.swg-pill {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 5px;
+	padding: 3px 8px;
+	border-radius: 12px;
+	font-size: var(--swg-badge-font-size, 11px);
+	font-weight: 500;
+	line-height: 1.2;
+	color: var(--swg-badge-text);
+	background: var(--swg-pill-bg);
+	transition: background-color 0.25s ease, color 0.25s ease, font-size 0.15s ease;
+	white-space: nowrap;
+	box-sizing: border-box;
+}
+
+.swg-pill-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: calc(var(--swg-badge-font-size, 11px) * 1.15);
+	height: calc(var(--swg-badge-font-size, 11px) * 1.15);
+	opacity: 0.85;
+	flex-shrink: 0;
+	align-self: center;
+}
+
+.swg-pill-icon svg {
+	width: 100%;
+	height: 100%;
+	stroke-width: 2.2px;
+	display: block;
+}
+
+.swg-pill-prefix {
+	display: inline-flex;
+	align-items: center;
+	font-weight: 700;
+	opacity: 0.8;
+	line-height: 1.2;
+	align-self: center;
+}
+
+.swg-pill-text {
+	display: inline-flex;
+	align-items: center;
+	font-variant-numeric: tabular-nums;
+	line-height: 1.2;
+	align-self: center;
+}
+
+/* --- Progress Color Modifiers (Dynamic tint with color-mix) --- */
+.swg-pill.is-progress-default {
+	color: var(--swg-color-default);
+	background-color: color-mix(in srgb, var(--swg-color-default) 18%, transparent);
+}
+
+.swg-pill.is-progress-warn {
+	color: var(--swg-color-warn);
+	background-color: color-mix(in srgb, var(--swg-color-warn) 18%, transparent);
+}
+
+.swg-pill.is-progress-good {
+	color: var(--swg-color-good);
+	background-color: color-mix(in srgb, var(--swg-color-good) 18%, transparent);
+}
+
+.swg-pill.is-progress-done {
+	color: var(--swg-color-done);
+	background-color: color-mix(in srgb, var(--swg-color-done) 18%, transparent);
+	font-weight: 600;
+}
+
+/* ==========================================================================
+   Goal Management Modal
+   ========================================================================== */
+.section-goals-badge-modal {
+	padding: 4px 2px;
+	max-height: var(--swg-modal-max-height, 80vh);
+	display: flex;
+	flex-direction: column;
+}
+
+.swg-modal-header-title {
+	margin: 0 0 8px 0;
+	font-size: 1.2em;
+}
+
+/* Table Column Header (Placed at the top to label all rows) */
+.swg-section-table-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 4px 10px;
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--text-muted);
+	border-bottom: 1px solid var(--background-modifier-border);
+	margin-bottom: 6px;
+	margin-right: var(--swg-scrollbar-width, 0px);
+	transition: margin-right 0.15s ease;
+	flex-shrink: 0;
+}
+
+.swg-header-title {
+	flex: 1;
+	margin-right: 8px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.swg-header-controls {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-shrink: 0;
+}
+
+.swg-header-chars {
+	width: 52px;
+	text-align: center;
+	white-space: nowrap;
+}
+
+.swg-header-goal {
+	width: 64px;
+	text-align: center;
+	white-space: nowrap;
+}
+
+.swg-header-progress {
+	width: 40px;
+	text-align: center;
+	white-space: nowrap;
+}
+
+/* Compact Top Configuration Card */
+.swg-modal-top-card {
+	background: var(--background-secondary);
+	border-radius: var(--radius-m);
+	padding: 6px 10px;
+	margin-bottom: 8px;
+	margin-right: var(--swg-scrollbar-width, 0px);
+	transition: margin-right 0.15s ease;
+	border: 1px solid var(--background-modifier-border);
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	flex-shrink: 0;
+}
+
+.swg-modal-card-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.swg-card-label-group {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	flex: 1;
+	overflow: hidden;
+	margin-right: 8px;
+}
+
+.swg-card-title {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-normal);
+	white-space: nowrap;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.swg-card-title-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 13px;
+	height: 13px;
+	opacity: 0.8;
+	flex-shrink: 0;
+	color: var(--interactive-accent);
+}
+
+.swg-card-title-icon svg {
+	width: 100%;
+	height: 100%;
+	stroke-width: 2.2px;
+	display: block;
+}
+
+.swg-card-desc {
+	font-size: 10px;
+	color: var(--text-muted);
+	line-height: 1.2;
+}
+
+.swg-card-controls {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-shrink: 0;
+}
+
+.swg-spacer-chars {
+	width: 52px;
+}
+
+.swg-spacer-progress {
+	width: 40px;
+}
+
+/* Section Header & Reset Controls */
+.swg-modal-section-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-top: 4px;
+	margin-bottom: 6px;
+	margin-right: var(--swg-scrollbar-width, 0px);
+	transition: margin-right 0.15s ease;
+	flex-shrink: 0;
+}
+
+.swg-modal-section-header h3 {
+	margin: 0;
+	font-size: 1.05em;
+}
+
+.swg-reset-button {
+	font-size: 11px;
+	padding: 2px 8px;
+}
+
+/* Section Tree Container */
+.swg-section-tree-container {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	flex: 1;
+	max-height: var(--swg-tree-max-height, 46vh);
+	overflow-y: auto;
+	padding-right: 0px;
+	padding-bottom: 80px; /* Generous bottom spacing for mobile virtual keyboard */
+	overscroll-behavior: contain;
+}
+
+.swg-section-tree-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 5px 10px;
+	border-radius: var(--radius-s);
+	background: var(--background-secondary);
+	border: 1px solid transparent;
+	transition: background-color 0.15s ease, border-color 0.15s ease;
+	box-sizing: border-box;
+}
+
+.swg-section-tree-item:hover {
+	background: var(--background-modifier-hover);
+}
+
+.swg-section-tree-item.is-active-section {
+	border-color: var(--interactive-accent);
+	background: var(--background-primary-alt);
+}
+
+/* Indent levels */
+.swg-level-1 { margin-left: 0px; }
+.swg-level-2 { margin-left: 10px; }
+.swg-level-3 { margin-left: 20px; }
+.swg-level-4 { margin-left: 30px; }
+.swg-level-5 { margin-left: 40px; }
+.swg-level-6 { margin-left: 50px; }
+
+.swg-section-title {
+	display: flex;
+	align-items: center;
+	flex: 1;
+	cursor: pointer;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	margin-right: 8px;
+}
+
+.swg-heading-prefix {
+	color: var(--interactive-accent);
+	font-weight: bold;
+	font-size: 11px;
+	margin-right: 4px;
+}
+
+.swg-heading-name {
+	font-weight: 500;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.swg-section-controls {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-shrink: 0;
+}
+
+.swg-section-chars {
+	font-size: 12px;
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+	width: 52px;
+	text-align: right;
+	white-space: nowrap;
+	box-sizing: border-box;
+}
+
+.swg-goal-input-wrapper {
+	width: 64px;
+	display: flex;
+	justify-content: center;
+}
+
+.swg-goal-input {
+	width: 100%;
+	padding: 2px 4px;
+	font-size: 12px;
+	border-radius: var(--radius-s);
+	text-align: right;
+	box-sizing: border-box;
+}
+
+/* Mini Progress & Percentage Label (Stacked vertically for maximum width efficiency) */
+.swg-mini-progress-wrapper {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 2px;
+	width: 40px;
+	box-sizing: border-box;
+}
+
+.swg-mini-percent {
+	font-size: 9px;
+	font-weight: 600;
+	line-height: 1.1;
+	font-variant-numeric: tabular-nums;
+	color: var(--text-muted);
+	text-align: center;
+	width: 100%;
+}
+
+.swg-mini-percent.is-progress-warn {
+	color: var(--swg-color-warn);
+}
+
+.swg-mini-percent.is-progress-good {
+	color: var(--swg-color-good);
+}
+
+.swg-mini-percent.is-progress-done {
+	color: var(--swg-color-done);
+}
+
+.swg-mini-progress {
+	width: 100%;
+	height: 4px;
+	background: var(--background-modifier-border);
+	border-radius: 2px;
+	overflow: hidden;
+}
+
+.swg-mini-progress-fill {
+	height: 100%;
+	width: var(--swg-mini-fill-width, 0%);
+	background: var(--swg-color-default);
+	transition: width 0.2s ease;
+}
+
+.swg-mini-progress-fill.is-progress-warn {
+	background: var(--swg-color-warn);
+}
+
+.swg-mini-progress-fill.is-progress-good {
+	background: var(--swg-color-good);
+}
+
+.swg-mini-progress-fill.is-progress-done {
+	background: var(--swg-color-done);
+}
+
+.swg-empty-notice {
+	color: var(--text-muted);
+	font-style: italic;
+	text-align: center;
+	padding: 16px 0;
+}
+
+/* Confirm Dialog Modal */
+.swg-confirm-modal {
+	padding: 12px 8px;
+}
+
+.swg-confirm-buttons {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 16px;
+}

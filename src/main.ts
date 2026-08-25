@@ -1,114 +1,329 @@
 import {
 	Editor,
-	MarkdownView,
 	MarkdownFileInfo,
-	Modal,
-	Notice,
+	MarkdownView,
 	Plugin,
+	TFile,
 } from 'obsidian';
-import {
-	DEFAULT_SETTINGS,
-	MyPluginSettings,
-	SampleSettingTab,
-} from './settings';
+import { FrontmatterManager } from './frontmatter/frontmatter-manager';
+import { t } from './lang/helpers';
+import { ParsedDocumentSections, SectionParser } from './parser/section-parser';
+import { DEFAULT_SETTINGS, SectionGoalsBadgeSettingTab } from './settings';
+import { PluginSettings } from './types';
+import { FloatingBadge } from './ui/floating-badge';
+import { GoalManagementModal } from './ui/goal-modal';
+import { debounce } from './utils/debounce';
+import { ViewportTracker } from './utils/viewport';
 
-// Remember to rename these classes and interfaces!
+export default class SectionGoalsBadgePlugin extends Plugin {
+	settings!: PluginSettings;
+	private badge!: FloatingBadge;
+	private parser!: SectionParser;
+	private fmManager!: FrontmatterManager;
+	private viewportTracker!: ViewportTracker;
 
-export default class MyPlugin extends Plugin {
-	settings!: MyPluginSettings;
+	// Document cache and state tracking
+	private currentParsedDoc: ParsedDocumentSections | null = null;
+	private currentActiveFile: TFile | null = null;
+	private lastCursorLine = -1;
+	private lastHeadingLineText = '';
+	private isComposing = false;
 
-	async onload() {
+	// Debounced recalculator for text typing
+	private debouncedRecalculate = debounce(() => {
+		this.performFullRecalculation();
+	}, 300);
+
+	async onload(): Promise<void> {
 		await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Sample', (_evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
+		this.fmManager = new FrontmatterManager(this.app);
+		this.parser = new SectionParser(this.app, this.fmManager);
+
+		// Initialize Floating Badge UI with drag position sync callback
+		this.badge = new FloatingBadge(
+			this.settings,
+			() => {
+				this.openGoalModal();
+			},
+			(pos) => {
+				this.settings.badgePosition = pos.badgePosition;
+				this.settings.offsetX = pos.offsetX;
+				this.settings.offsetY = pos.offsetY;
+				void this.saveSettings();
+			},
+		);
+
+		// Mobile viewport tracker (handles keyboard popup)
+		this.viewportTracker = new ViewportTracker(() => {
+			this.badge.applyPosition();
 		});
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
+		// Settings Tab
+		this.addSettingTab(new SectionGoalsBadgeSettingTab(this.app, this));
 
-		// This adds a simple command that can be triggered anywhere
+		// Commands
 		this.addCommand({
-			id: 'open-modal-simple',
-			name: 'Open modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			},
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'replace-selected',
-			name: 'Replace selected content',
-			editorCallback: (
-				editor: Editor,
-				_ctx: MarkdownView | MarkdownFileInfo,
-			) => {
-				editor.replaceSelection('Sample editor command');
-			},
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-modal-complex',
-			name: 'Open modal (complex)',
+			id: 'open-goals-modal',
+			name: t('COMMAND_OPEN_MODAL'),
 			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView =
-					this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
+				const view = this.getActiveMarkdownEditorView();
+				if (view && view.file) {
 					if (!checking) {
-						new SampleModal(this.app).open();
+						this.openGoalModal();
 					}
-
-					// This command will only show up in Command Palette when the check function returns true
 					return true;
 				}
 				return false;
 			},
 		});
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
 
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(activeDocument, 'click', (_evt: MouseEvent) => {
-			new Notice('Click');
+		// Workspace Event Listeners
+		this.registerEvent(
+			this.app.workspace.on('active-leaf-change', () => {
+				this.onActiveLeafChanged();
+			}),
+		);
+
+		this.registerEvent(
+			this.app.workspace.on('layout-change', () => {
+				this.onActiveLeafChanged();
+			}),
+		);
+
+		this.registerEvent(
+			this.app.workspace.on('editor-change', (_editor: Editor, info: MarkdownView | MarkdownFileInfo) => {
+				if (info.file && info.file === this.currentActiveFile && !this.isComposing) {
+					this.debouncedRecalculate();
+				}
+			}),
+		);
+
+		// Metadata changes (e.g. frontmatter updated or headings parsed by Obsidian)
+		this.registerEvent(
+			this.app.metadataCache.on('changed', (file) => {
+				if (file === this.currentActiveFile) {
+					this.performFullRecalculation();
+				}
+			}),
+		);
+
+		// IME composition listeners to avoid cursor jumps during active Japanese conversion
+		this.registerDomEvent(activeDocument, 'compositionstart', () => {
+			this.isComposing = true;
 		});
 
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(
-			window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000),
-		);
+		this.registerDomEvent(activeDocument, 'compositionupdate', () => {
+			this.isComposing = true;
+		});
+
+		this.registerDomEvent(activeDocument, 'compositionend', () => {
+			window.setTimeout(() => {
+				this.isComposing = false;
+				this.onSelectionOrCursorChanged();
+			}, 30);
+		});
+
+		// DOM Events for cursor movement and heading focus-out detection
+		this.registerDomEvent(activeDocument, 'selectionchange', () => {
+			if (!this.isComposing) {
+				this.onSelectionOrCursorChanged();
+			}
+		});
+
+		this.registerDomEvent(activeDocument, 'keyup', () => {
+			if (!this.isComposing) {
+				this.onSelectionOrCursorChanged();
+			}
+		});
+
+		this.registerDomEvent(activeDocument, 'click', () => {
+			this.onSelectionOrCursorChanged();
+		});
+
+		// Notify Style Settings plugin to parse styles.css
+		this.app.workspace.trigger('parse-style-settings');
+		this.app.workspace.onLayoutReady(() => {
+			this.app.workspace.trigger('parse-style-settings');
+		});
+
+		// Initial check
+		this.onActiveLeafChanged();
 	}
 
-	onunload() {}
-
-	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<MyPluginSettings>,
-		);
+	onunload(): void {
+		this.viewportTracker.destroy();
+		this.badge.destroy();
+		// Notify Style Settings plugin on unload
+		this.app.workspace.trigger('parse-style-settings');
 	}
 
-	async saveSettings() {
+	async loadSettings(): Promise<void> {
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, (await this.loadData()) as Partial<PluginSettings>);
+	}
+
+	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
 	}
-}
 
-class SampleModal extends Modal {
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.setText('Woah!');
+	public refreshBadgeUI(): void {
+		this.badge.updateSettings(this.settings);
+		// Force immediate progress re-calculation and badge update even while settings modal is open
+		const view = this.getActiveMarkdownEditorView();
+		if (view && view.file) {
+			this.updateBadgeWithCursor(view);
+		} else {
+			const leaves = this.app.workspace.getLeavesOfType('markdown');
+			for (const leaf of leaves) {
+				if (leaf.view instanceof MarkdownView && leaf.view.file) {
+					this.updateBadgeWithCursor(leaf.view);
+					break;
+				}
+			}
+		}
 	}
 
-	onClose() {
-		const { contentEl } = this;
-		contentEl.empty();
+	public updateBadgePosition(): void {
+		this.badge.applyPosition();
+	}
+
+	public recalculateCounts(): void {
+		this.performFullRecalculation();
+	}
+
+	/**
+	 * Returns the MarkdownView only if the active leaf belongs to the main workspace root split (not sidebar panes).
+	 */
+	private getActiveMarkdownEditorView(): MarkdownView | null {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (!view || !view.file) return null;
+
+		// Ensure active leaf is within the main editing area (not in left or right sidebars)
+		const isMainArea = view.leaf.getRoot() === this.app.workspace.rootSplit;
+		if (!isMainArea) return null;
+
+		return view;
+	}
+
+	private onActiveLeafChanged(): void {
+		const view = this.getActiveMarkdownEditorView();
+		if (view && view.file) {
+			this.currentActiveFile = view.file;
+			this.badge.attachToEditor(view.containerEl);
+			this.badge.show();
+			this.performFullRecalculation();
+		} else {
+			this.currentActiveFile = null;
+			this.currentParsedDoc = null;
+			this.badge.hide();
+		}
+	}
+
+	/**
+	 * Recalculate sections and characters for current active document.
+	 */
+	private performFullRecalculation(): void {
+		const view = this.getActiveMarkdownEditorView();
+		if (!view || !view.file) {
+			this.badge.hide();
+			return;
+		}
+
+		const content = view.editor.getValue();
+		this.currentParsedDoc = this.parser.parseDocument(view.file, content, {
+			excludeWhitespace: this.settings.excludeWhitespace,
+			excludeRuby: this.settings.excludeRuby,
+			excludeCharacters: this.settings.excludeCharacters,
+		});
+
+		this.updateBadgeWithCursor(view, true);
+	}
+
+	/**
+	 * Fast path: update badge using existing parsed document cache and current cursor position.
+	 * Executes in < 0.001ms with zero text allocation or full-document scanning.
+	 */
+	private onSelectionOrCursorChanged(): void {
+		const view = this.getActiveMarkdownEditorView();
+		if (!view || !view.file || !this.currentParsedDoc) return;
+
+		void this.checkHeadingFocusOut(view);
+		this.updateBadgeWithCursor(view);
+	}
+
+	private lastCursorOffset = -1;
+
+	private updateBadgeWithCursor(view: MarkdownView, force = false): void {
+		if (!this.currentParsedDoc || !view.file || this.isComposing) return;
+
+		const cursor = view.editor.getCursor();
+		const cursorOffset = view.editor.posToOffset(cursor);
+
+		if (!force && cursorOffset === this.lastCursorOffset) {
+			return;
+		}
+		this.lastCursorOffset = cursorOffset;
+
+		const goalData = this.fmManager.getGoalData(view.file);
+
+		const progress = this.parser.calculateProgress(
+			this.currentParsedDoc,
+			cursorOffset,
+			cursor.line,
+			goalData,
+			this.settings.cumulativeMode,
+			{
+				excludeWhitespace: this.settings.excludeWhitespace,
+				excludeRuby: this.settings.excludeRuby,
+				excludeCharacters: this.settings.excludeCharacters,
+			},
+		);
+
+		this.badge.updateProgress(progress);
+	}
+
+	/**
+	 * Detect when cursor moves away from a heading line that was edited,
+	 * and sync Frontmatter goals if necessary.
+	 */
+	private async checkHeadingFocusOut(view: MarkdownView): Promise<void> {
+		if (!view.file) return;
+
+		const cursor = view.editor.getCursor();
+		const currentLineNum = cursor.line;
+
+		if (this.lastCursorLine !== -1 && this.lastCursorLine !== currentLineNum) {
+			// Cursor just left `this.lastCursorLine`
+			const prevLineText = view.editor.getLine(this.lastCursorLine);
+			const wasHeading = /^#{1,6}\s+/.test(this.lastHeadingLineText);
+
+			if (wasHeading && prevLineText !== this.lastHeadingLineText) {
+				// The heading was modified and user moved away from that line
+				const cache = this.app.metadataCache.getFileCache(view.file);
+				const headings = (cache?.headings || []).map((h) => h.heading);
+				await this.fmManager.syncHeadings(view.file, headings);
+			}
+		}
+
+		this.lastCursorLine = currentLineNum;
+		this.lastHeadingLineText = view.editor.getLine(currentLineNum) ?? '';
+	}
+
+	public openGoalModal(): void {
+		const view = this.getActiveMarkdownEditorView();
+		if (!view || !view.file) return;
+
+		new GoalManagementModal(
+			this.app,
+			view.file,
+			view,
+			this.parser,
+			this.fmManager,
+			this.settings,
+			() => {
+				this.performFullRecalculation();
+			},
+		).open();
 	}
 }

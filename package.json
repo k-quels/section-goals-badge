@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
+	"name": "section-goals-badge",
 	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "Mobile-friendly floating character counter for Obsidian to set and track writing goals per section.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {

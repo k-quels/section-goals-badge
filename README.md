@@ -1,92 +1,104 @@
-# Obsidian Sample Plugin
+# Section Goals Badge
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+English | [日本語](README_ja.md)
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+[![Obsidian Downloads](https://img.shields.io/badge/Obsidian-Community%20Plugin-7C3AED?logo=obsidian&logoColor=white)](https://obsidian.md/plugins?id=section-goals-badge)
+[![GitHub release](https://img.shields.io/github/v/release/k-quels/section-goals-badge?include_prereleases&color=blue)](https://github.com/k-quels/section-goals-badge/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
+A floating character counter and writing goal tracker per heading for Obsidian, designed for novel writers and long-form document creators.
 
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and outputs a Notice on click.
-- Registers a global interval which logs 'setInterval' to the console.
+Display floating badges on your editor to keep track of character counts and progress rates for the active heading (section) or entire note in real time.
 
-## First time developing plugins?
+<img src="./doc/images/badges.png" width="300">
 
-Quick starting guide for new plugin devs:
+---
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `src/main.ts` to `main.js`.
-- Make changes to `src/main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+## Key Features
 
-## Releasing new releases
+- **Goal Tracking per Section (Heading)**: Set target character counts for each chapter or section.
+- **Unobtrusive Floating Badge**: Position at any corner of the editor, with drag-and-drop movement and opacity adjustments.
+- **3 Configurable Progress Badges**:
+  - **Progress to Cursor**: Counts characters from note top (or section top) up to cursor position.
+  - **Active Section Progress**: Counts characters within the current heading block.
+  - **Note Total Progress**: Counts characters for the entire note.
+- **Dynamic Badge Colors**: Visual status updates as you write.
+  - Fully customizable colors via the Style Settings plugin.
+- **Mobile-Friendly**: Works smoothly on smartphones even with massive documents.
+- **Exclusion Rules**: Exclude whitespace, Japanese novel ruby notation, and custom user-specified symbols.
+- **Fast & Battery Efficient (1M+ characters)**: Optimized to minimize typing latency and reduce mobile battery drain.
+- **Self-Contained in Note**: Goal values are saved directly into the note's Frontmatter.
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+---
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+## Usage
 
-## Adding your plugin to the community plugin list
+### 1. Open Goal Management Window
+- Tap or click the badge on the editor to open the goal management window.
+  - *(Can be changed to "Long press to open" in settings to avoid accidental taps)*
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+<img src="./doc/images/goal-modal-ja.png" width="450">
 
-## How to use
+### 2. Set Target Counts
+Enter target counts directly in the modal (automatically saved to Frontmatter):
+- **Note Total Goal**: Target count for the entire note.
+- **Section Goal (Default)**: Default target applied to headings without individual goals.
+- **Individual Section Goals**: Set specific targets per heading row in the list.
+- **"Set current count as all goals" Button**: Batch-assigns written character counts as goals for all sections.
 
-- Clone this repo.
-- Make sure your NodeJS is at least v18 (`node --version`).
-- `npm i` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+### 3. Adjust Badge Position & Appearance
+- **Drag and drop** the badge to place it anywhere on your editor.
+  - You can also specify exact offsets in the settings tab (synced with drag-and-drop values).
 
-## Manually installing the plugin
+---
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+## Settings
 
-## Improve code quality with eslint
+The following features and options can be customized:
 
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code.
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/obsidianmd/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
+### 1. Badge Display Customization (Cursor / Section / Total)
+- **Toggle Visibility**: Enable or disable the 3 progress badges independently.
+- **Display Content**: Toggle current count, target goal, and progress percentage.
+- **Icon / Label**: Toggle prefix icons and text labels.
 
-## Funding URL
+### 2. Counting Rules (Exclusions)
+- Exclude whitespace, Japanese novel ruby notation, and custom specified characters.
 
-You can include funding URLs where people who use your plugin can financially support it.
+### 3. Appearance & Position
+- Configure badge position preset, opacity, and font size.
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+### 4. Progress Color Thresholds
+- Customize the percentage thresholds (default: 50% / 80% / 100%) that trigger dynamic badge color changes.
+- *(Colors can be customized via the [Style Settings](https://github.com/mgmeyers/obsidian-style-settings) plugin)*
 
-```json
-{
-	"fundingUrl": "https://buymeacoffee.com"
-}
+---
+
+## Frontmatter Format
+
+Target goals are stored in the note's YAML Frontmatter in the following format:
+
+```yaml
+---
+goal-file: 10000    # Target count for the entire note
+goal-section: 2000  # Default target count for sections
+goals:
+  - Chapter 1: 2500 # Target count for specific section
+  - Chapter 2: 3000
+---
 ```
 
-If you have multiple URLs, you can also do:
+If you want to clear all goals at once, simply delete these lines from the Frontmatter.
 
-```json
-{
-	"fundingUrl": {
-		"Buy Me a Coffee": "https://buymeacoffee.com",
-		"GitHub Sponsor": "https://github.com/sponsors",
-		"Patreon": "https://www.patreon.com/"
-	}
-}
-```
+---
 
-## API Documentation
+## Support & Donation
 
-See https://docs.obsidian.md
+If you enjoy Section Goals Badge, your support is greatly appreciated!
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-%E3%81%8A%E3%81%AB%E3%81%98%E3%82%8A%E3%81%84%E3%81%A3%E3%81%93%E3%81%8A%E3%81%94%E3%82%8B-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/quels)
+
+---
+
+## License
+
+This software is released under the [MIT License](LICENSE).
