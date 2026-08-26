@@ -143,10 +143,11 @@ body {
 
 ```yaml
 ---
-goal-file: 10000    # Target count for the entire note
-goal-section: 2000  # Default target count for sections
+goal-file: 10000       # Target count for the entire note
+goal-section: 2000     # Default target count for sections
+goal-section-h1: 3000  # Default target count for H1 (H1–H6 supported)
 goals:
-  - Chapter 1: 2500 # Target count for specific section
+  - Chapter 1: 2500    # Target count for specific section
   - Chapter 2: 3000
 ---
 ```
