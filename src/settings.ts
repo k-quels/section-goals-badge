@@ -202,7 +202,6 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 			[t('SETTINGS_HEADING_RULES')]: 'calculator',
 			[t('SETTINGS_HEADING_APPEARANCE')]: 'layout',
 			[t('SETTINGS_HEADING_THRESHOLDS')]: 'gauge',
-			[t('SETTINGS_HEADING_INTERACTIONS')]: 'mouse-pointer',
 			[t('SETTINGS_HEADING_SUPPORT')]: 'heart',
 		};
 
@@ -572,12 +571,6 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 					break;
 				}
 			}
-		} else if (headingText === t('SETTINGS_HEADING_INTERACTIONS')) {
-			switch (labelText) {
-				case t('SETTINGS_LONG_PRESS'):
-					this.plugin.settings.longPressToOpenModal = value as boolean;
-					break;
-			}
 		} else {
 			// Fallback: match by unique label if heading is undetermined
 			switch (labelText) {
@@ -682,6 +675,26 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 		this.scheduleEnhancements();
 
 		return [
+			// General (No heading at top per Obsidian guidelines)
+			{
+				type: 'group',
+				items: [
+					{
+						name: t('SETTINGS_LONG_PRESS'),
+						desc: t('SETTINGS_LONG_PRESS_DESC'),
+						control: {
+							type: 'toggle',
+							key: 'longPressToOpenModal',
+							onChange: async (val: boolean) => {
+								this.plugin.settings.longPressToOpenModal = val;
+								await this.plugin.saveSettings();
+								this.plugin.refreshBadgeUI();
+							},
+						},
+					},
+				],
+			},
+
 			// Group 1: Cumulative Progress (Cur)
 			{
 				type: 'group',
@@ -1242,28 +1255,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 				],
 			},
 
-			// Group 7: Interactions
-			{
-				type: 'group',
-				heading: t('SETTINGS_HEADING_INTERACTIONS'),
-				items: [
-					{
-						name: t('SETTINGS_LONG_PRESS'),
-						desc: t('SETTINGS_LONG_PRESS_DESC'),
-						control: {
-							type: 'toggle',
-							key: 'longPressToOpenModal',
-							onChange: async (val: boolean) => {
-								this.plugin.settings.longPressToOpenModal = val;
-								await this.plugin.saveSettings();
-								this.plugin.refreshBadgeUI();
-							},
-						},
-					},
-				],
-			},
-
-			// Group 8: Support
+			// Group 7: Support
 			{
 				type: 'group',
 				heading: t('SETTINGS_HEADING_SUPPORT'),

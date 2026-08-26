@@ -11,7 +11,6 @@ const ja: typeof en = {
 	SETTINGS_HEADING_RULES: 'カウントルール',
 	SETTINGS_HEADING_APPEARANCE: '外観と配置',
 	SETTINGS_HEADING_THRESHOLDS: '進捗カラーの閾値',
-	SETTINGS_HEADING_INTERACTIONS: '操作設定',
 	SETTINGS_HEADING_SUPPORT: 'サポート',
 
 	// Settings - Support
@@ -153,7 +152,7 @@ const ja: typeof en = {
 	MODAL_NO_HEADINGS: 'ノート内に見出しがありません',
 	MODAL_GOAL_PLACEHOLDER: '目標',
 	MODAL_SET_BUTTON: '現在値を全目標に設定',
-	MODAL_SET_CONFIRM_MSG: '全セクションの目標値を現在執筆済みの数値に設定します。よろしいですか？',
+	MODAL_SET_CONFIRM_MSG: '全セクションの目標値を現在執筆済みの数値に設定します。\nよろしいですか？',
 	MODAL_CONFIRM_OK: '設定する',
 	MODAL_CONFIRM_CANCEL: 'キャンセル',
 

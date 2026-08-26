@@ -9,7 +9,6 @@ export default {
 	SETTINGS_HEADING_RULES: 'Counting rules',
 	SETTINGS_HEADING_APPEARANCE: 'Appearance and position',
 	SETTINGS_HEADING_THRESHOLDS: 'Progress color thresholds',
-	SETTINGS_HEADING_INTERACTIONS: 'Interactions',
 	SETTINGS_HEADING_SUPPORT: 'Support',
 
 	// Settings - Support
@@ -151,7 +150,7 @@ export default {
 	MODAL_NO_HEADINGS: 'No headings found in note',
 	MODAL_GOAL_PLACEHOLDER: 'Goal',
 	MODAL_SET_BUTTON: 'Set current count as all goals',
-	MODAL_SET_CONFIRM_MSG: 'Set the target values for all sections to the currently written counts. Are you sure?',
+	MODAL_SET_CONFIRM_MSG: 'Set the target values for all sections to the currently written counts.\nAre you sure?',
 	MODAL_CONFIRM_OK: 'Set goals',
 	MODAL_CONFIRM_CANCEL: 'Cancel',
 

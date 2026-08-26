@@ -1,27 +1,35 @@
-name: Node.js build
+name: Lint workflows
 
 on:
-    push:
-        branches: ['**']
-    pull_request:
-        branches: ['**']
+  push:
+    branches:
+      - "**"
+    paths:
+      - ".github/workflows/*.yml"
+  pull_request:
+    paths:
+      - ".github/workflows/*.yml"
 
 jobs:
-    build:
-        runs-on: ubuntu-latest
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      security-events: write
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
 
-        strategy:
-            matrix:
-                node-version: [20.x, 22.x, 24.x]
-                # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+      - name: Run actionlint
+        uses: reviewdog/action-actionlint@6fb7acc99f4a1008869fa8a0f09cfca740837d9d # v1.72.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-pr-review
 
-        steps:
-            - uses: actions/checkout@v6
-            - name: Use Node.js ${{ matrix.node-version }}
-              uses: actions/setup-node@v6
-              with:
-                  node-version: ${{ matrix.node-version }}
-                  cache: 'npm'
-            - run: npm ci
-            - run: npm run build --if-present
-            - run: npm run lint
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@5f14fd08f7cf1cb1609c1e344975f152c7ee938d # v0.5.6
+        with:
+          inputs: ".github/workflows/"
+          token: ${{ secrets.GITHUB_TOKEN }}

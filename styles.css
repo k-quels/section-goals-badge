@@ -823,6 +823,10 @@ settings:
 	padding: 12px 8px;
 }
 
+.sgb-confirm-modal p {
+	white-space: pre-line;
+}
+
 .sgb-confirm-buttons {
 	display: flex;
 	justify-content: flex-end;
