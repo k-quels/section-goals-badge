@@ -1,7 +1,53 @@
-import { App, PluginSettingTab, setIcon, Setting } from 'obsidian';
+import { App, PluginSettingTab, requireApiVersion, setIcon, Setting } from 'obsidian';
 import { t } from './lang/helpers';
 import type SectionGoalsBadgePlugin from './main';
 import { BadgePositionPreset, CountType, CumulativeCountMode, PluginSettings } from './types';
+
+type SettingControlDefinition =
+	| {
+		type: 'toggle';
+		key: keyof PluginSettings;
+		onChange?: (val: boolean) => Promise<void> | void;
+	}
+	| {
+		type: 'dropdown';
+		key: keyof PluginSettings;
+		options: Record<string, string>;
+		onChange?: (val: string) => Promise<void> | void;
+	}
+	| {
+		type: 'text';
+		key: keyof PluginSettings;
+		placeholder?: string;
+		onChange?: (val: string) => Promise<void> | void;
+	}
+	| {
+		type: 'number';
+		key: keyof PluginSettings;
+		placeholder?: string;
+		onChange?: (val: number) => Promise<void> | void;
+	}
+	| {
+		type: 'slider';
+		key: keyof PluginSettings;
+		min: number;
+		max: number;
+		step: number;
+		onChange?: (val: number) => Promise<void> | void;
+	};
+
+interface SettingItemDefinition {
+	name?: string;
+	desc?: string;
+	control?: SettingControlDefinition;
+	render?: (setting: Setting) => void;
+}
+
+interface SettingGroupDefinition {
+	type: 'group';
+	heading?: string;
+	items: SettingItemDefinition[];
+}
 
 export const DEFAULT_SETTINGS: PluginSettings = {
 	// Section options
@@ -36,9 +82,9 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	totalLabel: '',
 
 	// Badge Appearance
-	badgePosition: 'bottom-right',
-	offsetX: 24,
-	offsetY: 24,
+	badgePosition: 'top-right',
+	offsetX: 20,
+	offsetY: 40,
 	badgeOpacity: 0.9,
 	fontSize: 12,
 
@@ -69,8 +115,97 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 	}
 
 	display(): void {
+		// Dual support: Fall back to imperative rendering on Obsidian < 1.13.0
+		if (typeof requireApiVersion !== 'function' || !requireApiVersion('1.13.0')) {
+			this.renderLegacySettings(this.containerEl);
+		}
+
 		this.initObserver();
 		this.scheduleEnhancements();
+	}
+
+	private renderLegacySettings(containerEl: HTMLElement): void {
+		containerEl.empty();
+		const definitions = this.getSettingDefinitions();
+
+		for (const def of definitions) {
+			if (def.type === 'group') {
+				const group = def;
+				if (group.heading) {
+					new Setting(containerEl).setName(group.heading).setHeading();
+				}
+				for (const item of group.items) {
+					const setting = new Setting(containerEl);
+					if (item.name) setting.setName(item.name);
+					if (item.desc) setting.setDesc(item.desc);
+
+					if (item.render) {
+						item.render(setting);
+					} else if (item.control) {
+						const control = item.control;
+						switch (control.type) {
+							case 'toggle': {
+								const val = Boolean(this.plugin.settings[control.key]);
+								setting.addToggle((toggle) =>
+									toggle.setValue(val).onChange((newVal) => {
+										if (control.onChange) void control.onChange(newVal);
+									}),
+								);
+								break;
+							}
+							case 'dropdown': {
+								const val = String(this.plugin.settings[control.key]);
+								setting.addDropdown((dropdown) => {
+									if (control.options) dropdown.addOptions(control.options);
+									dropdown.setValue(val).onChange((newVal) => {
+										if (control.onChange) void control.onChange(newVal);
+									});
+								});
+								break;
+							}
+							case 'text': {
+								const val = String(this.plugin.settings[control.key] ?? '');
+								setting.addText((text) =>
+									text
+										.setPlaceholder(control.placeholder || '')
+										.setValue(val)
+										.onChange((newVal) => {
+											if (control.onChange) void control.onChange(newVal);
+										}),
+								);
+								break;
+							}
+							case 'number': {
+								const val = this.plugin.settings[control.key];
+								setting.addText((text) => {
+									text.inputEl.type = 'number';
+									if (control.placeholder) text.setPlaceholder(control.placeholder);
+									text.setValue(val !== undefined && val !== null ? String(val) : '');
+									text.onChange((newVal) => {
+										const num = parseFloat(newVal);
+										if (control.onChange) void control.onChange(num);
+									});
+								});
+								break;
+							}
+							case 'slider': {
+								const val = Number(this.plugin.settings[control.key]);
+								setting.addSlider((slider) =>
+									slider
+										.setLimits(control.min, control.max, control.step)
+										.setValue(val)
+										.setDynamicTooltip()
+										.onChange((newVal) => {
+											if (control.onChange) void control.onChange(newVal);
+										}),
+								);
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 
 	hide(): void {
@@ -671,7 +806,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 		}
 	}
 
-	getSettingDefinitions(): Record<string, unknown>[] {
+	getSettingDefinitions(): SettingGroupDefinition[] {
 		this.scheduleEnhancements();
 
 		return [
@@ -1263,7 +1398,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 					{
 						name: t('SETTINGS_DONATE'),
 						desc: t('SETTINGS_DONATE_DESC'),
-						render: (setting: Setting) =>
+						render: (setting: Setting) => {
 							setting.addButton((button) =>
 								button
 									.setButtonText(t('SETTINGS_DONATE_BUTTON'))
@@ -1274,7 +1409,8 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 											'https://buymeacoffee.com/quels';
 										window.open(fundingUrl, '_blank');
 									}),
-							),
+							);
+						},
 					},
 				],
 			},
