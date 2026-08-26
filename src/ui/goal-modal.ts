@@ -18,6 +18,8 @@ export class GoalManagementModal extends Modal {
 
 	private fileGoalInput: number | undefined;
 	private defaultSectionGoalInput: number | undefined;
+	private headingLevelGoalsInput: Record<number, number> = {};
+	private isHeadingLevelGoalsOpen = false;
 	private sectionGoalsMap: Map<string, number> = new Map();
 	private activeSectionHeading: string | null = null;
 	private inputElements: Map<string, HTMLInputElement> = new Map();
@@ -71,9 +73,10 @@ export class GoalManagementModal extends Modal {
 			excludeCharacters: this.settings.excludeCharacters,
 		});
 
-		const { fileGoal, defaultSectionGoal, sectionGoals } = this.fmManager.getGoalData(this.file);
+		const { fileGoal, defaultSectionGoal, headingLevelGoals, sectionGoals } = this.fmManager.getGoalData(this.file);
 		this.fileGoalInput = fileGoal;
 		this.defaultSectionGoalInput = defaultSectionGoal;
+		this.headingLevelGoalsInput = headingLevelGoals ? { ...headingLevelGoals } : {};
 
 		// Build map of explicitly set goals
 		this.sectionGoalsMap.clear();
@@ -236,6 +239,67 @@ export class GoalManagementModal extends Modal {
 			this.debouncedSaveGoals();
 		});
 
+		// Row 3: Collapsible Level-specific default goals
+		const accordionContainer = topCardEl.createDiv({ cls: 'sgb-accordion-container' });
+		const accordionHeader = accordionContainer.createDiv({
+			cls: `sgb-accordion-header ${this.isHeadingLevelGoalsOpen ? 'is-open' : ''}`,
+		});
+		const accordionChevron = accordionHeader.createSpan({ cls: 'sgb-accordion-chevron' });
+		setIcon(accordionChevron, this.isHeadingLevelGoalsOpen ? 'chevron-down' : 'chevron-right');
+		accordionHeader.createSpan({
+			cls: 'sgb-accordion-title',
+			text: t('MODAL_HEADING_LEVEL_GOALS_TOGGLE'),
+		});
+
+		const accordionBody = accordionContainer.createDiv({
+			cls: `sgb-accordion-body ${this.isHeadingLevelGoalsOpen ? 'is-open' : ''}`,
+		});
+
+		accordionHeader.addEventListener('click', () => {
+			this.isHeadingLevelGoalsOpen = !this.isHeadingLevelGoalsOpen;
+			if (this.isHeadingLevelGoalsOpen) {
+				accordionHeader.addClass('is-open');
+				accordionBody.addClass('is-open');
+				setIcon(accordionChevron, 'chevron-down');
+			} else {
+				accordionHeader.removeClass('is-open');
+				accordionBody.removeClass('is-open');
+				setIcon(accordionChevron, 'chevron-right');
+			}
+			this.updateScrollbarOffset();
+		});
+
+		const levelGrid = accordionBody.createDiv({ cls: 'sgb-level-goals-grid' });
+		for (let level = 1; level <= 6; level++) {
+			const itemEl = levelGrid.createDiv({ cls: 'sgb-level-goal-item' });
+			const labelEl = itemEl.createSpan({ cls: 'sgb-level-goal-label' });
+			labelEl.title = `H${level}`;
+			const iconSpan = labelEl.createSpan({ cls: 'sgb-level-goal-icon' });
+			setIcon(iconSpan, `heading-${level}`);
+
+			const input = itemEl.createEl('input', {
+				type: 'number',
+				cls: 'sgb-goal-input sgb-level-input',
+				placeholder: this.defaultSectionGoalInput ? String(this.defaultSectionGoalInput) : t('MODAL_GOAL_PLACEHOLDER'),
+			});
+
+			const val = this.headingLevelGoalsInput[level];
+			if (val !== undefined && val > 0) {
+				input.value = String(val);
+			}
+
+			input.addEventListener('input', () => {
+				const num = parseInt(input.value, 10);
+				if (!isNaN(num) && num > 0) {
+					this.headingLevelGoalsInput[level] = num;
+				} else {
+					delete this.headingLevelGoalsInput[level];
+				}
+				this.refreshSectionMiniProgress();
+				this.debouncedSaveGoals();
+			});
+		}
+
 		// --- Section 2: Headings tree goals & Set button ---
 		const sectionHeaderEl = contentEl.createDiv({ cls: 'sgb-modal-section-header' });
 		sectionHeaderEl.createEl('h3', { text: t('MODAL_SECTIONS_HEADER') });
@@ -293,13 +357,15 @@ export class GoalManagementModal extends Modal {
 			});
 
 			const explicitGoal = this.sectionGoalsMap.get(section.heading);
-			const effectiveGoal = explicitGoal ?? this.defaultSectionGoalInput;
+			const levelGoal = this.headingLevelGoalsInput[section.level];
+			const effectiveGoal = explicitGoal ?? levelGoal ?? this.defaultSectionGoalInput;
+			const placeholderVal = levelGoal ?? this.defaultSectionGoalInput;
 
 			const inputWrapperEl = controlsEl.createDiv({ cls: 'sgb-goal-input-wrapper' });
 			const inputEl = inputWrapperEl.createEl('input', {
 				type: 'number',
 				cls: 'sgb-goal-input',
-				placeholder: this.defaultSectionGoalInput ? String(this.defaultSectionGoalInput) : t('MODAL_GOAL_PLACEHOLDER'),
+				placeholder: placeholderVal ? String(placeholderVal) : t('MODAL_GOAL_PLACEHOLDER'),
 			});
 			if (explicitGoal !== undefined && explicitGoal > 0) {
 				inputEl.value = String(explicitGoal);
@@ -320,7 +386,8 @@ export class GoalManagementModal extends Modal {
 				} else {
 					this.sectionGoalsMap.delete(section.heading);
 				}
-				const currentEffective = this.sectionGoalsMap.get(section.heading) ?? this.defaultSectionGoalInput;
+				const curLevelGoal = this.headingLevelGoalsInput[section.level];
+				const currentEffective = this.sectionGoalsMap.get(section.heading) ?? curLevelGoal ?? this.defaultSectionGoalInput;
 				this.updateMiniProgress(miniFillEl, miniPercentEl, section.charCount, currentEffective);
 				this.debouncedSaveGoals();
 			};
@@ -349,14 +416,14 @@ export class GoalManagementModal extends Modal {
 
 	private refreshSectionMiniProgress(): void {
 		// Update placeholders and mini progress without destroying current input focus
-		for (const inputEl of this.inputElements.values()) {
-			inputEl.placeholder = this.defaultSectionGoalInput ? String(this.defaultSectionGoalInput) : t('MODAL_GOAL_PLACEHOLDER');
-		}
-
-		// Update mini progress bars and percent labels
 		for (const sec of this.parsedData.flatSections) {
-			const effective = this.sectionGoalsMap.get(sec.heading) ?? this.defaultSectionGoalInput;
 			const inputEl = this.inputElements.get(sec.heading);
+			const levelGoal = this.headingLevelGoalsInput[sec.level];
+			const placeholderVal = levelGoal ?? this.defaultSectionGoalInput;
+			if (inputEl) {
+				inputEl.placeholder = placeholderVal ? String(placeholderVal) : t('MODAL_GOAL_PLACEHOLDER');
+			}
+			const effective = this.sectionGoalsMap.get(sec.heading) ?? levelGoal ?? this.defaultSectionGoalInput;
 			const rowControlsEl = inputEl?.parentElement?.parentElement;
 			const miniFillEl = rowControlsEl?.querySelector('.sgb-mini-progress-fill') as HTMLElement | null;
 			const miniPercentEl = rowControlsEl?.querySelector('.sgb-mini-percent') as HTMLElement | null;
@@ -430,6 +497,7 @@ export class GoalManagementModal extends Modal {
 			this.fileGoalInput,
 			this.defaultSectionGoalInput,
 			sectionGoals,
+			this.headingLevelGoalsInput,
 		);
 		this.onGoalsUpdated();
 	}

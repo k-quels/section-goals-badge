@@ -60,6 +60,22 @@ export default {
 	SETTINGS_SECTION_LABEL: 'Label',
 	SETTINGS_SECTION_LABEL_DESC: 'Display a custom prefix string on the badge (e.g. Sec:).',
 
+	SETTINGS_HEADING_LEVELS_ACCORDION: 'Heading level progress (H1–H6)',
+	SETTINGS_HEADING_LEVELS_ACCORDION_DESC: 'Display progress for specific heading levels vertically on the badge.',
+
+	SETTINGS_HEADING_LEVEL_1: 'Show H1 progress',
+	SETTINGS_HEADING_LEVEL_1_DESC: 'Display progress for the active H1 heading.',
+	SETTINGS_HEADING_LEVEL_2: 'Show H2 progress',
+	SETTINGS_HEADING_LEVEL_2_DESC: 'Display progress for the active H2 heading.',
+	SETTINGS_HEADING_LEVEL_3: 'Show H3 progress',
+	SETTINGS_HEADING_LEVEL_3_DESC: 'Display progress for the active H3 heading.',
+	SETTINGS_HEADING_LEVEL_4: 'Show H4 progress',
+	SETTINGS_HEADING_LEVEL_4_DESC: 'Display progress for the active H4 heading.',
+	SETTINGS_HEADING_LEVEL_5: 'Show H5 progress',
+	SETTINGS_HEADING_LEVEL_5_DESC: 'Display progress for the active H5 heading.',
+	SETTINGS_HEADING_LEVEL_6: 'Show H6 progress',
+	SETTINGS_HEADING_LEVEL_6_DESC: 'Display progress for the active H6 heading.',
+
 	// Settings - Total
 	SETTINGS_TOTAL_SHOW: 'Show note total progress',
 	SETTINGS_TOTAL_SHOW_DESC: 'Display the progress badge for the entire note.',
@@ -129,6 +145,8 @@ export default {
 	MODAL_TOTAL_GOAL_NAME: 'Note total goal',
 	MODAL_DEFAULT_SECTION_GOAL_NAME: 'Section goal',
 	MODAL_DEFAULT_SECTION_DESC: 'Used when individual section goals are not set.',
+	MODAL_HEADING_LEVEL_GOALS_TOGGLE: 'Set default goals by heading level',
+	MODAL_HEADING_LEVEL_GOALS_DESC: 'Configure fallback goals for H1–H6 if specific section goals are empty.',
 	MODAL_SECTIONS_HEADER: 'Section list',
 	MODAL_NO_HEADINGS: 'No headings found in note',
 	MODAL_GOAL_PLACEHOLDER: 'Goal',

@@ -11,6 +11,12 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	showSectionGoal: true,
 	showSectionIcon: true,
 	sectionLabel: '',
+	showHeadingLevel1: false,
+	showHeadingLevel2: false,
+	showHeadingLevel3: false,
+	showHeadingLevel4: false,
+	showHeadingLevel5: false,
+	showHeadingLevel6: false,
 
 	// Cumulative options
 	showCumulativeProgress: true,
@@ -54,6 +60,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 	plugin: SectionGoalsBadgePlugin;
 	private observer: MutationObserver | null = null;
+	private isHeadingLevelsAccordionOpen = false;
 
 	constructor(app: App, plugin: SectionGoalsBadgePlugin) {
 		super(app, plugin);
@@ -137,6 +144,15 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 			},
 		];
 
+		const headingLevelNames = [
+			t('SETTINGS_HEADING_LEVEL_1'),
+			t('SETTINGS_HEADING_LEVEL_2'),
+			t('SETTINGS_HEADING_LEVEL_3'),
+			t('SETTINGS_HEADING_LEVEL_4'),
+			t('SETTINGS_HEADING_LEVEL_5'),
+			t('SETTINGS_HEADING_LEVEL_6'),
+		];
+
 		const allItems = Array.from(target.querySelectorAll<HTMLElement>('.setting-item'));
 		groups.forEach(({ label, enabled }) => {
 			const parentIdx = allItems.findIndex((item) => {
@@ -154,10 +170,28 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 					if (item.classList.contains('setting-item-heading')) {
 						break;
 					}
-					item.style.setProperty('display', enabled ? '' : 'none', 'important');
+
+					// Special handling for heading level items: folded under accordion
+					if (name && headingLevelNames.includes(name)) {
+						const showLevelItem = enabled && this.isHeadingLevelsAccordionOpen;
+						item.style.setProperty('display', showLevelItem ? '' : 'none', 'important');
+						item.addClass('sgb-setting-sub-item');
+					} else {
+						item.style.setProperty('display', enabled ? '' : 'none', 'important');
+					}
 				}
 			}
 		});
+
+		// Accordion header row visibility
+		const accordionRow = target.querySelector<HTMLElement>('.sgb-settings-accordion-item');
+		if (accordionRow) {
+			accordionRow.style.setProperty(
+				'display',
+				this.plugin.settings.showSectionProgress ? '' : 'none',
+				'important',
+			);
+		}
 	}
 
 	private applyEnhancements(root: HTMLElement): void {
@@ -208,7 +242,39 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 			}
 		});
 
-		// 2. Inject Color Swatches
+		// 2. Inject Accordion Header before H1 item if not already present
+		const h1Name = t('SETTINGS_HEADING_LEVEL_1');
+		const allItemEls = Array.from(root.querySelectorAll<HTMLElement>('.setting-item'));
+		const h1Item = allItemEls.find(
+			(item) => item.querySelector('.setting-item-name')?.textContent?.trim() === h1Name,
+		);
+
+		if (h1Item && h1Item.parentElement && !root.querySelector('.sgb-settings-accordion-item')) {
+			const accordionEl = createDiv({ cls: 'setting-item sgb-settings-accordion-item' });
+			const infoEl = accordionEl.createDiv({ cls: 'setting-item-info' });
+			infoEl.createDiv({
+				cls: 'setting-item-name',
+				text: t('SETTINGS_HEADING_LEVELS_ACCORDION'),
+			});
+			infoEl.createDiv({
+				cls: 'setting-item-description',
+				text: t('SETTINGS_HEADING_LEVELS_ACCORDION_DESC'),
+			});
+
+			const controlEl = accordionEl.createDiv({ cls: 'setting-item-control' });
+			const chevron = controlEl.createSpan({ cls: 'sgb-settings-accordion-chevron' });
+			setIcon(chevron, this.isHeadingLevelsAccordionOpen ? 'chevron-down' : 'chevron-right');
+
+			accordionEl.addEventListener('click', () => {
+				this.isHeadingLevelsAccordionOpen = !this.isHeadingLevelsAccordionOpen;
+				setIcon(chevron, this.isHeadingLevelsAccordionOpen ? 'chevron-down' : 'chevron-right');
+				this.updateGroupVisibility(root);
+			});
+
+			h1Item.parentElement.insertBefore(accordionEl, h1Item);
+		}
+
+		// 3. Inject Color Swatches
 		const nameEls = root.querySelectorAll<HTMLElement>('.setting-item-name');
 		nameEls.forEach((el) => {
 			if (el.querySelector('.sgb-color-preview-circle')) return;
@@ -220,7 +286,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 			}
 		});
 
-		// 3. Bind direct event listeners to controls and inject enhancements
+		// 4. Bind direct event listeners to controls and inject enhancements
 		const allElements = Array.from(
 			root.querySelectorAll<HTMLElement>(
 				'.setting-group-heading, .setting-item-heading, .setting-item, h2, h3, h4',
@@ -392,6 +458,24 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 					break;
 				case t('SETTINGS_SECTION_LABEL'):
 					this.plugin.settings.sectionLabel = String(value);
+					break;
+				case t('SETTINGS_HEADING_LEVEL_1'):
+					this.plugin.settings.showHeadingLevel1 = value as boolean;
+					break;
+				case t('SETTINGS_HEADING_LEVEL_2'):
+					this.plugin.settings.showHeadingLevel2 = value as boolean;
+					break;
+				case t('SETTINGS_HEADING_LEVEL_3'):
+					this.plugin.settings.showHeadingLevel3 = value as boolean;
+					break;
+				case t('SETTINGS_HEADING_LEVEL_4'):
+					this.plugin.settings.showHeadingLevel4 = value as boolean;
+					break;
+				case t('SETTINGS_HEADING_LEVEL_5'):
+					this.plugin.settings.showHeadingLevel5 = value as boolean;
+					break;
+				case t('SETTINGS_HEADING_LEVEL_6'):
+					this.plugin.settings.showHeadingLevel6 = value as boolean;
 					break;
 			}
 		} else if (headingText === t('SETTINGS_HEADING_TOTAL')) {
@@ -781,6 +865,84 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 							key: 'sectionLabel',
 							onChange: async (val: string) => {
 								this.plugin.settings.sectionLabel = val;
+								await this.plugin.saveSettings();
+								this.plugin.refreshBadgeUI();
+							},
+						},
+					},
+					{
+						name: t('SETTINGS_HEADING_LEVEL_1'),
+						desc: t('SETTINGS_HEADING_LEVEL_1_DESC'),
+						control: {
+							type: 'toggle',
+							key: 'showHeadingLevel1',
+							onChange: async (val: boolean) => {
+								this.plugin.settings.showHeadingLevel1 = val;
+								await this.plugin.saveSettings();
+								this.plugin.refreshBadgeUI();
+							},
+						},
+					},
+					{
+						name: t('SETTINGS_HEADING_LEVEL_2'),
+						desc: t('SETTINGS_HEADING_LEVEL_2_DESC'),
+						control: {
+							type: 'toggle',
+							key: 'showHeadingLevel2',
+							onChange: async (val: boolean) => {
+								this.plugin.settings.showHeadingLevel2 = val;
+								await this.plugin.saveSettings();
+								this.plugin.refreshBadgeUI();
+							},
+						},
+					},
+					{
+						name: t('SETTINGS_HEADING_LEVEL_3'),
+						desc: t('SETTINGS_HEADING_LEVEL_3_DESC'),
+						control: {
+							type: 'toggle',
+							key: 'showHeadingLevel3',
+							onChange: async (val: boolean) => {
+								this.plugin.settings.showHeadingLevel3 = val;
+								await this.plugin.saveSettings();
+								this.plugin.refreshBadgeUI();
+							},
+						},
+					},
+					{
+						name: t('SETTINGS_HEADING_LEVEL_4'),
+						desc: t('SETTINGS_HEADING_LEVEL_4_DESC'),
+						control: {
+							type: 'toggle',
+							key: 'showHeadingLevel4',
+							onChange: async (val: boolean) => {
+								this.plugin.settings.showHeadingLevel4 = val;
+								await this.plugin.saveSettings();
+								this.plugin.refreshBadgeUI();
+							},
+						},
+					},
+					{
+						name: t('SETTINGS_HEADING_LEVEL_5'),
+						desc: t('SETTINGS_HEADING_LEVEL_5_DESC'),
+						control: {
+							type: 'toggle',
+							key: 'showHeadingLevel5',
+							onChange: async (val: boolean) => {
+								this.plugin.settings.showHeadingLevel5 = val;
+								await this.plugin.saveSettings();
+								this.plugin.refreshBadgeUI();
+							},
+						},
+					},
+					{
+						name: t('SETTINGS_HEADING_LEVEL_6'),
+						desc: t('SETTINGS_HEADING_LEVEL_6_DESC'),
+						control: {
+							type: 'toggle',
+							key: 'showHeadingLevel6',
+							onChange: async (val: boolean) => {
+								this.plugin.settings.showHeadingLevel6 = val;
 								await this.plugin.saveSettings();
 								this.plugin.refreshBadgeUI();
 							},

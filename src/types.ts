@@ -7,6 +7,12 @@ export interface HeadingGoalItem {
 export interface GoalFrontmatter {
 	'goal-file'?: number;
 	'goal-section'?: number;
+	'goal-section-h1'?: number;
+	'goal-section-h2'?: number;
+	'goal-section-h3'?: number;
+	'goal-section-h4'?: number;
+	'goal-section-h5'?: number;
+	'goal-section-h6'?: number;
 	goals?: Array<HeadingGoalItem | { heading: string; goal: number }>;
 }
 
@@ -23,13 +29,17 @@ export interface SectionNode {
 	children: SectionNode[];
 }
 
+export interface SectionProgressItem {
+	level: number;
+	heading: string;
+	current: number;
+	goal?: number;
+	percentage?: number;
+}
+
 export interface WritingProgress {
-	currentSection: {
-		heading: string;
-		current: number;
-		goal?: number;
-		percentage?: number;
-	} | null;
+	currentSection: SectionProgressItem | null;
+	sectionLevels?: SectionProgressItem[];
 	cumulative: {
 		current: number;
 		goal?: number;
@@ -53,6 +63,12 @@ export interface PluginSettings {
 	showSectionGoal: boolean;
 	showSectionIcon: boolean;
 	sectionLabel: string;
+	showHeadingLevel1: boolean;
+	showHeadingLevel2: boolean;
+	showHeadingLevel3: boolean;
+	showHeadingLevel4: boolean;
+	showHeadingLevel5: boolean;
+	showHeadingLevel6: boolean;
 
 	// Cumulative Progress options
 	showCumulativeProgress: boolean;

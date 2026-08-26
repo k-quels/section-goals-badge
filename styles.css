@@ -162,6 +162,42 @@ settings:
 	display: block;
 }
 
+/* Settings Tab Accordion & Sub-items */
+.setting-item.sgb-settings-accordion-item {
+	cursor: pointer;
+	user-select: none;
+	border-top: 1px dashed var(--background-modifier-border);
+	margin-top: 6px !important;
+	padding-top: 10px !important;
+	padding-bottom: 10px !important;
+	transition: background-color 0.15s ease;
+}
+
+.setting-item.sgb-settings-accordion-item:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.sgb-settings-accordion-chevron {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 18px;
+	height: 18px;
+	color: var(--text-muted);
+}
+
+.sgb-settings-accordion-chevron svg {
+	width: 100%;
+	height: 100%;
+	stroke-width: 2.2px;
+}
+
+.setting-item.sgb-setting-sub-item {
+	padding-left: 20px !important;
+	border-top: none !important;
+	background-color: var(--background-secondary-alt);
+}
+
 /* Color Preview Swatches for Settings */
 .sgb-color-preview-circle {
 	display: inline-block;
@@ -203,7 +239,7 @@ settings:
 	opacity: var(--sgb-badge-opacity);
 	z-index: var(--layer-popover, 100);
 	display: flex;
-	align-items: center;
+	align-items: flex-end;
 	gap: 6px;
 	padding: 4px 8px;
 	border-radius: var(--sgb-badge-radius);
@@ -217,6 +253,14 @@ settings:
 	cursor: pointer;
 	touch-action: none;
 	transition: box-shadow 0.2s ease, transform 0.1s ease, background-color 0.2s ease;
+}
+
+.section-goals-badge.is-pos-top {
+	align-items: flex-start;
+}
+
+.section-goals-badge.is-pos-bottom {
+	align-items: flex-end;
 }
 
 .section-goals-badge:hover {
@@ -300,6 +344,39 @@ settings:
 .sgb-pill.is-progress-done {
 	color: var(--sgb-color-done, #ff4d4f);
 	background-color: color-mix(in srgb, var(--sgb-color-done, #ff4d4f) 18%, transparent);
+	font-weight: 600;
+}
+
+/* Multiline Section Pill (When multiple heading levels are shown) */
+.sgb-section-pill.sgb-section-pill-multiline {
+	display: inline-flex;
+	flex-direction: column;
+	gap: 3px;
+	align-items: flex-start;
+}
+
+.sgb-section-row {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	width: 100%;
+}
+
+/* Individual row progress colors in multiline section pill */
+.sgb-section-row.is-progress-default {
+	color: var(--sgb-color-default, #ababab);
+}
+
+.sgb-section-row.is-progress-warn {
+	color: var(--sgb-color-warn, #e2b93b);
+}
+
+.sgb-section-row.is-progress-good {
+	color: var(--sgb-color-good, #ff7843);
+}
+
+.sgb-section-row.is-progress-done {
+	color: var(--sgb-color-done, #ff4d4f);
 	font-weight: 600;
 }
 
@@ -444,6 +521,109 @@ settings:
 
 .sgb-spacer-progress {
 	width: 40px;
+}
+
+/* Accordion for Level-Specific Default Goals */
+.sgb-accordion-container {
+	border-top: 1px dashed var(--background-modifier-border);
+	padding-top: 5px;
+	margin-top: 2px;
+}
+
+.sgb-accordion-header {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	cursor: pointer;
+	user-select: none;
+	padding: 2px 0;
+	color: var(--text-muted);
+	font-size: 11px;
+	transition: color 0.15s ease;
+}
+
+.sgb-accordion-header:hover {
+	color: var(--text-normal);
+}
+
+.sgb-accordion-chevron {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 12px;
+	height: 12px;
+	opacity: 0.8;
+	flex-shrink: 0;
+}
+
+.sgb-accordion-chevron svg {
+	width: 100%;
+	height: 100%;
+	stroke-width: 2.2px;
+}
+
+.sgb-accordion-title {
+	font-weight: 500;
+}
+
+.sgb-accordion-body {
+	display: none;
+	padding-top: 6px;
+}
+
+.sgb-accordion-body.is-open {
+	display: block;
+}
+
+.sgb-level-goals-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 6px 12px;
+	padding: 4px 0;
+}
+
+@media (max-width: 480px) {
+	.sgb-level-goals-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+.sgb-level-goal-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px;
+}
+
+.sgb-level-goal-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--text-muted);
+}
+
+.sgb-level-goal-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 12px;
+	height: 12px;
+	opacity: 0.8;
+}
+
+.sgb-level-goal-icon svg {
+	width: 100%;
+	height: 100%;
+	stroke-width: 2.2px;
+}
+
+.sgb-level-input {
+	width: 60px !important;
+	height: 24px !important;
+	font-size: 11px !important;
+	text-align: right;
 }
 
 /* Section Header & Reset Controls */

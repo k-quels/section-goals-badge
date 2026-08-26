@@ -62,6 +62,22 @@ const ja: typeof en = {
 	SETTINGS_SECTION_LABEL: 'ラベル',
 	SETTINGS_SECTION_LABEL_DESC: 'バッジの先頭に指定文字列を表示します。（例: Sec:）',
 
+	SETTINGS_HEADING_LEVELS_ACCORDION: '見出しレベルごとの進捗表示（H1〜H6）',
+	SETTINGS_HEADING_LEVELS_ACCORDION_DESC: '指定した見出しレベルの進捗をバッジ内に縦並びで表示します。',
+
+	SETTINGS_HEADING_LEVEL_1: 'H1 の進捗を表示',
+	SETTINGS_HEADING_LEVEL_1_DESC: 'アクティブな H1 見出しの進捗を表示します。',
+	SETTINGS_HEADING_LEVEL_2: 'H2 の進捗を表示',
+	SETTINGS_HEADING_LEVEL_2_DESC: 'アクティブな H2 見出しの進捗を表示します。',
+	SETTINGS_HEADING_LEVEL_3: 'H3 の進捗を表示',
+	SETTINGS_HEADING_LEVEL_3_DESC: 'アクティブな H3 見出しの進捗を表示します。',
+	SETTINGS_HEADING_LEVEL_4: 'H4 の進捗を表示',
+	SETTINGS_HEADING_LEVEL_4_DESC: 'アクティブな H4 見出しの進捗を表示します。',
+	SETTINGS_HEADING_LEVEL_5: 'H5 の進捗を表示',
+	SETTINGS_HEADING_LEVEL_5_DESC: 'アクティブな H5 見出しの進捗を表示します。',
+	SETTINGS_HEADING_LEVEL_6: 'H6 の進捗を表示',
+	SETTINGS_HEADING_LEVEL_6_DESC: 'アクティブな H6 見出しの進捗を表示します。',
+
 	// Settings - Total
 	SETTINGS_TOTAL_SHOW: 'ノート全体の進捗を表示',
 	SETTINGS_TOTAL_SHOW_DESC: 'ノート全体の進捗バッジを表示します。',
@@ -131,6 +147,8 @@ const ja: typeof en = {
 	MODAL_TOTAL_GOAL_NAME: 'ノート全体目標',
 	MODAL_DEFAULT_SECTION_GOAL_NAME: 'セクション目標',
 	MODAL_DEFAULT_SECTION_DESC: '個別目標が未設定の項目に適用',
+	MODAL_HEADING_LEVEL_GOALS_TOGGLE: '見出しレベルごとの目標値を設定',
+	MODAL_HEADING_LEVEL_GOALS_DESC: '個別目標が未設定の見出しに対して、レベル（H1〜H6）別のデフォルト目標を設定します。',
 	MODAL_SECTIONS_HEADER: 'セクション一覧',
 	MODAL_NO_HEADINGS: 'ノート内に見出しがありません',
 	MODAL_GOAL_PLACEHOLDER: '目標',

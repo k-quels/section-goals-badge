@@ -4,6 +4,7 @@ import { GoalFrontmatter, HeadingGoalItem } from '../types';
 export interface FileGoalData {
 	fileGoal?: number;
 	defaultSectionGoal?: number;
+	headingLevelGoals?: Record<number, number>;
 	sectionGoals: HeadingGoalItem[];
 }
 
@@ -27,6 +28,16 @@ export class FrontmatterManager {
 		const fileGoal = typeof frontmatter['goal-file'] === 'number' ? frontmatter['goal-file'] : undefined;
 		const defaultSectionGoal =
 			typeof frontmatter['goal-section'] === 'number' ? frontmatter['goal-section'] : undefined;
+
+		const headingLevelGoals: Record<number, number> = {};
+		for (let level = 1; level <= 6; level++) {
+			const key = `goal-section-h${level}` as keyof GoalFrontmatter;
+			const val = frontmatter[key];
+			if (typeof val === 'number' && val > 0) {
+				headingLevelGoals[level] = val;
+			}
+		}
+
 		const sectionGoals: HeadingGoalItem[] = [];
 
 		if (Array.isArray(frontmatter.goals)) {
@@ -49,17 +60,23 @@ export class FrontmatterManager {
 			}
 		}
 
-		return { fileGoal, defaultSectionGoal, sectionGoals };
+		return {
+			fileGoal,
+			defaultSectionGoal,
+			headingLevelGoals: Object.keys(headingLevelGoals).length > 0 ? headingLevelGoals : undefined,
+			sectionGoals,
+		};
 	}
 
 	/**
-	 * Save file goal, default section goal, and specific section goals to frontmatter.
+	 * Save file goal, default section goal, level-specific default goals, and specific section goals to frontmatter.
 	 */
 	public async saveGoalData(
 		file: TFile,
 		fileGoal: number | undefined,
 		defaultSectionGoal: number | undefined,
 		sectionGoals: HeadingGoalItem[],
+		headingLevelGoals?: Record<number, number>,
 	): Promise<void> {
 		await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
 			if (fileGoal !== undefined && fileGoal > 0) {
@@ -72,6 +89,16 @@ export class FrontmatterManager {
 				fm['goal-section'] = defaultSectionGoal;
 			} else {
 				delete fm['goal-section'];
+			}
+
+			for (let level = 1; level <= 6; level++) {
+				const key = `goal-section-h${level}`;
+				const val = headingLevelGoals?.[level];
+				if (typeof val === 'number' && val > 0) {
+					fm[key] = val;
+				} else {
+					delete fm[key];
+				}
 			}
 
 			if (sectionGoals.length > 0) {
@@ -88,7 +115,7 @@ export class FrontmatterManager {
 	 * Compares current headings in order and updates matching goals.
 	 */
 	public async syncHeadings(file: TFile, currentHeadings: string[]): Promise<void> {
-		const { fileGoal, defaultSectionGoal, sectionGoals } = this.getGoalData(file);
+		const { fileGoal, defaultSectionGoal, headingLevelGoals, sectionGoals } = this.getGoalData(file);
 		if (sectionGoals.length === 0) return;
 
 		let hasChanges = false;
@@ -120,7 +147,7 @@ export class FrontmatterManager {
 		}
 
 		if (hasChanges) {
-			await this.saveGoalData(file, fileGoal, defaultSectionGoal, updatedGoals);
+			await this.saveGoalData(file, fileGoal, defaultSectionGoal, updatedGoals, headingLevelGoals);
 		}
 	}
 }

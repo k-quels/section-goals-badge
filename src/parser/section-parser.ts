@@ -29,7 +29,7 @@ export class SectionParser {
 		// Scan headings directly from current content with accurate line numbers
 		const rawHeadings = this.scanHeadingsFast(content);
 		const frontmatterEndOffset = this.getFrontmatterEndOffset(file, content);
-		const { defaultSectionGoal, sectionGoals } = this.fmManager.getGoalData(file);
+		const { defaultSectionGoal, headingLevelGoals, sectionGoals } = this.fmManager.getGoalData(file);
 
 		if (rawHeadings.length === 0) {
 			const totalCharCount = countText(content.slice(frontmatterEndOffset), options.countType, options);
@@ -78,7 +78,7 @@ export class SectionParser {
 			// Extract text in this scope, excluding internal heading lines
 			const charCount = this.calculateScopeCharCount(content, startOffset, endOffset, rawHeadings, i, options);
 
-			// Match goal by heading name queue, otherwise fallback to defaultSectionGoal
+			// Match goal by heading name queue, then heading level default, then defaultSectionGoal
 			let goalCount: number | undefined;
 			let isDefaultGoal = false;
 
@@ -87,9 +87,15 @@ export class SectionParser {
 				goalCount = queue.shift();
 			}
 
-			if (goalCount === undefined && defaultSectionGoal !== undefined && defaultSectionGoal > 0) {
-				goalCount = defaultSectionGoal;
-				isDefaultGoal = true;
+			if (goalCount === undefined) {
+				const levelGoal = headingLevelGoals?.[heading.level];
+				if (levelGoal !== undefined && levelGoal > 0) {
+					goalCount = levelGoal;
+					isDefaultGoal = true;
+				} else if (defaultSectionGoal !== undefined && defaultSectionGoal > 0) {
+					goalCount = defaultSectionGoal;
+					isDefaultGoal = true;
+				}
 			}
 
 			const node: SectionNode = {
@@ -137,17 +143,19 @@ export class SectionParser {
 		options: CounterOptions = {},
 	): WritingProgress {
 		const { flatSections, totalCharCount, docText, frontmatterEndOffset } = parsed;
-		const { fileGoal, defaultSectionGoal } = goalData;
+		const { fileGoal, defaultSectionGoal, headingLevelGoals } = goalData;
 
 		// 1. Total progress
 		const totalPercentage = fileGoal && fileGoal > 0 ? Math.round((totalCharCount / fileGoal) * 100) : undefined;
 
 		// 2. Active section detection: find the closest heading at or before cursorLine
 		let currentSectionNode: SectionNode | null = null;
+		let currentSectionIndex = -1;
 		for (let i = flatSections.length - 1; i >= 0; i--) {
 			const sec = flatSections[i]!;
 			if (cursorLine >= sec.line) {
 				currentSectionNode = sec;
+				currentSectionIndex = i;
 				break;
 			}
 		}
@@ -155,6 +163,7 @@ export class SectionParser {
 		// Fallback: If cursor is before the first heading (preamble)
 		if (!currentSectionNode && flatSections.length > 0) {
 			currentSectionNode = flatSections[0] ?? null;
+			currentSectionIndex = 0;
 		}
 
 		// 3. Cumulative progress (either from top of note OR from top of active section)
@@ -170,7 +179,10 @@ export class SectionParser {
 				const stripped = rawContent.replace(/^#{1,6}\s+.*$/gm, '');
 				cumulativeChars = countText(stripped, options.countType, options);
 			}
-			cumulativeGoal = currentSectionNode.goalCount ?? defaultSectionGoal;
+			cumulativeGoal =
+				currentSectionNode.goalCount ??
+				headingLevelGoals?.[currentSectionNode.level] ??
+				defaultSectionGoal;
 		} else {
 			// From top of note (after frontmatter)
 			if (cursorOffset > frontmatterEndOffset) {
@@ -182,22 +194,63 @@ export class SectionParser {
 		const cumulativePercentage =
 			cumulativeGoal && cumulativeGoal > 0 ? Math.round((cumulativeChars / cumulativeGoal) * 100) : undefined;
 
-		// 4. Current section progress
+		// 4. Current section progress & ancestor level progress
 		let currentSection: WritingProgress['currentSection'] = null;
-		if (currentSectionNode) {
+		const sectionLevels: WritingProgress['sectionLevels'] = [];
+
+		if (currentSectionNode && currentSectionIndex !== -1) {
 			const current = currentSectionNode.charCount;
-			const goal = currentSectionNode.goalCount ?? defaultSectionGoal;
+			const goal =
+				currentSectionNode.goalCount ??
+				headingLevelGoals?.[currentSectionNode.level] ??
+				defaultSectionGoal;
 			const percentage = goal && goal > 0 ? Math.round((current / goal) * 100) : undefined;
 			currentSection = {
+				level: currentSectionNode.level,
 				heading: currentSectionNode.heading,
 				current,
 				goal,
 				percentage,
 			};
+
+			// Build ancestor level map (finding the active node for each heading level up the hierarchy)
+			const activeNodesByLevel: Map<number, SectionNode> = new Map();
+			activeNodesByLevel.set(currentSectionNode.level, currentSectionNode);
+			let targetLevel = currentSectionNode.level;
+
+			for (let i = currentSectionIndex - 1; i >= 0; i--) {
+				const sec = flatSections[i]!;
+				if (sec.level < targetLevel) {
+					activeNodesByLevel.set(sec.level, sec);
+					targetLevel = sec.level;
+					if (targetLevel === 1) break;
+				}
+			}
+
+			// Format each active level in order 1..6
+			for (let lvl = 1; lvl <= 6; lvl++) {
+				const node = activeNodesByLevel.get(lvl);
+				if (node) {
+					const nodeCurrent = node.charCount;
+					const nodeGoal =
+						node.goalCount ??
+						headingLevelGoals?.[node.level] ??
+						defaultSectionGoal;
+					const nodePercentage = nodeGoal && nodeGoal > 0 ? Math.round((nodeCurrent / nodeGoal) * 100) : undefined;
+					sectionLevels.push({
+						level: lvl,
+						heading: node.heading,
+						current: nodeCurrent,
+						goal: nodeGoal,
+						percentage: nodePercentage,
+					});
+				}
+			}
 		}
 
 		return {
 			currentSection,
+			sectionLevels,
 			cumulative: {
 				current: cumulativeChars,
 				goal: cumulativeGoal,

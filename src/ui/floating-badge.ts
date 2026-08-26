@@ -263,21 +263,8 @@ export class FloatingBadge {
 		}
 
 		// 2. Section progress (Center)
-		if (this.settings.showSectionProgress && progress.currentSection) {
-			this.sectionPillEl.removeClass('sgb-hidden');
-			this.renderPill(
-				this.sectionPillEl,
-				this.settings.sectionLabel !== undefined ? this.settings.sectionLabel : 'Sec:',
-				progress.currentSection.current,
-				progress.currentSection.goal,
-				progress.currentSection.percentage,
-				this.settings.showSectionCurrent ?? true,
-				this.settings.showSectionPercentage,
-				this.settings.showSectionGoal,
-				'hash',
-				this.settings.showSectionIcon,
-				t('BADGE_TOOLTIP_SECTION', { heading: progress.currentSection.heading }),
-			);
+		if (this.settings.showSectionProgress) {
+			this.renderSectionPill(progress);
 		} else {
 			this.sectionPillEl.addClass('sgb-hidden');
 		}
@@ -303,15 +290,143 @@ export class FloatingBadge {
 		}
 
 		// If all pills are hidden, hide the outer badge capsule as well
+		const hasSectionPillVisible = !this.sectionPillEl.classList.contains('sgb-hidden');
 		const hasVisiblePill =
 			this.settings.showCumulativeProgress ||
-			(this.settings.showSectionProgress && progress.currentSection !== null) ||
+			hasSectionPillVisible ||
 			this.settings.showTotalProgress;
 
 		if (!hasVisiblePill) {
 			this.containerEl.addClass('sgb-hidden');
 		} else {
 			this.containerEl.removeClass('sgb-hidden');
+		}
+	}
+
+	private renderSectionPill(progress: WritingProgress): void {
+		const enabledLevels: number[] = [];
+		if (this.settings.showHeadingLevel1) enabledLevels.push(1);
+		if (this.settings.showHeadingLevel2) enabledLevels.push(2);
+		if (this.settings.showHeadingLevel3) enabledLevels.push(3);
+		if (this.settings.showHeadingLevel4) enabledLevels.push(4);
+		if (this.settings.showHeadingLevel5) enabledLevels.push(5);
+		if (this.settings.showHeadingLevel6) enabledLevels.push(6);
+
+		// If no heading level toggles are enabled, fallback to classic single section display
+		if (enabledLevels.length === 0) {
+			this.sectionPillEl.removeClass('sgb-section-pill-multiline');
+			if (!progress.currentSection) {
+				this.sectionPillEl.addClass('sgb-hidden');
+				return;
+			}
+			this.sectionPillEl.removeClass('sgb-hidden');
+			this.renderPill(
+				this.sectionPillEl,
+				this.settings.sectionLabel !== undefined ? this.settings.sectionLabel : 'Sec:',
+				progress.currentSection.current,
+				progress.currentSection.goal,
+				progress.currentSection.percentage,
+				this.settings.showSectionCurrent ?? true,
+				this.settings.showSectionPercentage,
+				this.settings.showSectionGoal,
+				'hash',
+				this.settings.showSectionIcon,
+				t('BADGE_TOOLTIP_SECTION', { heading: progress.currentSection.heading }),
+			);
+			return;
+		}
+
+		// Filter active levels matching enabled levels
+		const activeItems = (progress.sectionLevels || []).filter((item) => enabledLevels.includes(item.level));
+
+		if (activeItems.length === 0) {
+			this.sectionPillEl.addClass('sgb-hidden');
+			return;
+		}
+
+		this.sectionPillEl.removeClass('sgb-hidden');
+		this.sectionPillEl.addClass('sgb-section-pill-multiline');
+
+		const baseLabel = this.settings.sectionLabel !== undefined ? this.settings.sectionLabel : 'Sec:';
+		const stateKey =
+			'multiline|' +
+			activeItems
+				.map((it) => `${it.level}:${it.current}:${it.goal ?? ''}:${it.percentage ?? ''}:${it.heading}`)
+				.join(';') +
+			`|${baseLabel}|${this.settings.showSectionIcon}|${this.settings.showSectionCurrent ?? true}|${this.settings.showSectionPercentage}|${this.settings.showSectionGoal}`;
+
+		if (this.sectionPillEl.dataset.sgbState === stateKey) {
+			return;
+		}
+		this.sectionPillEl.dataset.sgbState = stateKey;
+		this.sectionPillEl.empty();
+
+		// Overall tooltip using the deepest active heading
+		// Clear progress class from outer pill in multiline mode to keep uniform background
+		this.sectionPillEl.className = this.sectionPillEl.className.replace(/\bis-progress-\w+/g, '');
+		const deepestItem = activeItems[activeItems.length - 1];
+		if (deepestItem) {
+			this.sectionPillEl.title = t('BADGE_TOOLTIP_SECTION', { heading: deepestItem.heading });
+		}
+
+		// Render each level as a row inside the section pill
+		for (const item of activeItems) {
+			const rowEl = this.sectionPillEl.createDiv({ cls: 'sgb-section-row' });
+			rowEl.title = t('BADGE_TOOLTIP_SECTION', { heading: item.heading });
+
+			// Icon
+			if (this.settings.showSectionIcon) {
+				const iconEl = rowEl.createSpan({ cls: 'sgb-pill-icon' });
+				setIcon(iconEl, `heading-${item.level}`);
+			}
+
+			// Prefix text (e.g. "1" or "Sec:1")
+			if (!this.settings.showSectionIcon || (baseLabel && baseLabel.trim().length > 0)) {
+				let prefix = baseLabel.trim();
+				if (prefix.length === 0) {
+					prefix = `${item.level}`;
+				} else if (prefix.endsWith(':')) {
+					prefix = `${prefix.slice(0, -1)}:${item.level}`;
+				} else {
+					prefix = `${prefix}:${item.level}`;
+				}
+				rowEl.createSpan({ cls: 'sgb-pill-prefix', text: prefix });
+			}
+
+			// Count text
+			const showCurrent = this.settings.showSectionCurrent ?? true;
+			const showGoal = this.settings.showSectionGoal;
+			const showPercent = this.settings.showSectionPercentage;
+
+			let countText = '';
+			if (showCurrent && showGoal && item.goal !== undefined && item.goal > 0) {
+				countText = `${item.current.toLocaleString()} / ${item.goal.toLocaleString()}`;
+			} else if (showCurrent) {
+				countText = item.current.toLocaleString();
+			} else if (showGoal && item.goal !== undefined && item.goal > 0) {
+				countText = `/ ${item.goal.toLocaleString()}`;
+			}
+
+			let text = '';
+			if (showPercent) {
+				const percentLabel = item.percentage !== undefined ? `${item.percentage}%` : '-';
+				if (countText.length > 0) {
+					text = `${percentLabel} (${countText})`;
+				} else {
+					text = percentLabel;
+				}
+			} else {
+				text = countText;
+			}
+
+			if (text.length > 0) {
+				rowEl.createSpan({ cls: 'sgb-pill-text', text });
+			}
+
+			// Apply color individually per row
+			if (item.percentage !== undefined) {
+				this.applyProgressClass(rowEl, item.percentage);
+			}
 		}
 	}
 
@@ -407,6 +522,12 @@ export class FloatingBadge {
 
 	public applyPosition(): void {
 		if (this.customPosition) {
+			const isBottom = this.currentParentEl
+				? this.customPosition.y > this.currentParentEl.offsetHeight / 2
+				: true;
+			this.containerEl.classList.toggle('is-pos-bottom', isBottom);
+			this.containerEl.classList.toggle('is-pos-top', !isBottom);
+
 			setCssProps(this.containerEl, {
 				'--sgb-badge-left': `${this.customPosition.x}px`,
 				'--sgb-badge-top': `${this.customPosition.y}px`,
@@ -421,6 +542,9 @@ export class FloatingBadge {
 
 			const isBottom = badgePosition.includes('bottom');
 			const isRight = badgePosition.includes('right');
+
+			this.containerEl.classList.toggle('is-pos-bottom', isBottom);
+			this.containerEl.classList.toggle('is-pos-top', !isBottom);
 
 			setCssProps(this.containerEl, {
 				'--sgb-badge-left': isRight ? 'auto' : `${offsetX}px`,

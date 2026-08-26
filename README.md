@@ -10,12 +10,10 @@ A floating character counter and writing goal tracker per heading for Obsidian, 
 
 Display floating badges on your editor to keep track of character counts and progress rates for the active heading (section) or entire note in real time.
 
-▼ Desktop
-
+▼ Desktop<br>
 <img src="./doc/images/badges.png" width="450">
 
-▼ Mobile
-
+▼ Mobile<br>
 <img src="./doc/images/badges-mobile.jpg" width="300">
 
 ---
@@ -43,12 +41,13 @@ Display floating badges on your editor to keep track of character counts and pro
 - Tap or click the badge on the editor to open the goal management window.
   - *(Can be changed to "Long press to open" in settings to avoid accidental taps)*
 
-<img src="./doc/images/goal-modal-ja.png" width="450">
+<img src="./doc/images/goal-modal-en.png" width="450">
 
 ### 2. Set Target Counts
 Enter target counts directly in the modal (automatically saved to Frontmatter):
 - **Note Total Goal**: Target count for the entire note.
 - **Section Goal (Default)**: Default target applied to headings without individual goals.
+- **Heading Level Goals**: Set default target counts for each heading level (H1–H6).
 - **Individual Section Goals**: Set specific targets per heading row in the list.
 - **"Set current count as all goals" Button**: Batch-assigns written character counts as goals for all sections.
 
@@ -65,14 +64,17 @@ The following features and options can be customized:
 ### 1. Badge Display Customization (Cursor / Section / Total)
 
 - **Toggle Visibility**: Enable or disable the 3 progress badges independently.
-  - e.g., Hide note total badge:
-    - <img src="doc/images/badge-hide-all.png" width="200">
+  - e.g., Hide note total badge:<br>
+  <img src="doc/images/badge-hide-all.png" width="200">
+- **Heading Level Progress (H1–H6)**: Display progress for specific heading levels (H1–H6) in the section progress badge.
+  - e.g., When H1 and H2 are enabled, you can monitor H1 progress while editing H2:<br>
+  <img src="doc/images/badge-headings.png" width="250">
 - **Display Content**: Toggle current count, target goal, and progress percentage.
-  - e.g., Show only count for cursor position, full details for section:
-    - <img src="doc/images/badge-hide-all.png" width="200">
+  - e.g., Show only count for cursor position, full details for section:<br>
+  <img src="doc/images/badge-hide-all.png" width="200">
 - **Icon / Label**: Toggle prefix icons and text labels.
-  - e.g., Hide both for cursor, icon only for section, full for total:
-    - <img src="doc/images/badge-icon-label.png" width="250">
+  - e.g., Hide both for cursor, icon only for section, full for total:<br>
+  <img src="doc/images/badge-icon-label.png" width="250">
 
 ### 2. Counting Rules
 
