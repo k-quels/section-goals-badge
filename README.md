@@ -11,10 +11,10 @@ A floating character counter and writing goal tracker per heading for Obsidian, 
 Display floating badges on your editor to keep track of character counts and progress rates for the active heading (section) or entire note in real time.
 
 ▼ Desktop<br>
-<img src="./doc/images/badges.png" width="450">
+<img src="./doc/images/badges-en.png" width="450">
 
 ▼ Mobile<br>
-<img src="./doc/images/badges-mobile.jpg" width="300">
+<img src="./doc/images/badges-mobile-en.jpg" width="300">
 
 ---
 
@@ -159,7 +159,7 @@ goals:
 
 If you enjoy Section Goals Badge, your support is greatly appreciated!
 
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-%E3%81%8A%E3%81%AB%E3%81%98%E3%82%8A%E3%81%84%E3%81%A3%E3%81%93%E3%81%8A%E3%81%94%E3%82%8B-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/quels)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Donate-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/quels)
 
 ---
 

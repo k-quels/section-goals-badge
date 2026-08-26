@@ -4,9 +4,7 @@
 
 
 [![Obsidian Downloads](https://img.shields.io/badge/Obsidian-Community%20Plugin-7C3AED?logo=obsidian&logoColor=white)](https://obsidian.md/plugins?id=section-goals-badge)
-
 [![GitHub release](https://img.shields.io/github/v/release/k-quels/section-goals-badge?include_prereleases&color=blue)](https://github.com/k-quels/section-goals-badge/releases)
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 Obsidian で小説や長編ドキュメントを執筆する人のための、**見出しごとの目標文字数管理＆進捗バッジ表示**プラグインです。
@@ -14,10 +12,10 @@ Obsidian で小説や長編ドキュメントを執筆する人のための、**
 エディタ上にバッジを常時表示し、今書いているセクションやノート全体の文字数 / 進捗率をリアルタイムに把握できます。
 
 ▼ デスクトップ版<br>
-<img src="./doc/images/badges.png" width="450">
+<img src="./doc/images/badges-ja.png" width="450">
 
 ▼ モバイル版<br>
-<img src="./doc/images/badges-mobile.jpg" width="300">
+<img src="./doc/images/badges-mobile-ja.jpg" width="300">
 
 ---
 
