@@ -46,8 +46,8 @@ settings:
         type: variable-themed-color
         opacity: false
         format: hex
-        default-light: '#8c8c8c'
-        default-dark: '#8c8c8c'
+        default-light: '#ababab'
+        default-dark: '#ababab'
     - 
         id: sgb-color-warn
         title: Mid-Progress Color (>= 50%)
@@ -104,7 +104,7 @@ settings:
 	--sgb-scrollbar-width: 0px;
 
 	/* Progress Colors */
-	--sgb-color-default: #8c8c8c;
+	--sgb-color-default: #ababab;
 	--sgb-color-warn: #e2b93b;
 	--sgb-color-good: #ff7843;
 	--sgb-color-done: #ff4d4f;
@@ -188,7 +188,7 @@ settings:
 }
 
 .sgb-color-preview-default {
-	background-color: var(--sgb-color-default, #8c8c8c);
+	background-color: var(--sgb-color-default, #ababab);
 }
 
 /* ==========================================================================
@@ -283,8 +283,8 @@ settings:
 
 /* --- Progress Color Modifiers (Dynamic tint with color-mix) --- */
 .sgb-pill.is-progress-default {
-	color: var(--sgb-color-default, #8c8c8c);
-	background-color: color-mix(in srgb, var(--sgb-color-default, #8c8c8c) 18%, transparent);
+	color: var(--sgb-color-default, #ababab);
+	background-color: color-mix(in srgb, var(--sgb-color-default, #ababab) 18%, transparent);
 }
 
 .sgb-pill.is-progress-warn {
@@ -477,8 +477,13 @@ settings:
 	max-height: var(--sgb-tree-max-height, 46vh);
 	overflow-y: auto;
 	padding-right: 0px;
-	padding-bottom: 80px; /* Generous bottom spacing for mobile virtual keyboard */
+	padding-bottom: 120px; /* Moderate bottom spacing to allow comfortable scrolling */
 	overscroll-behavior: contain;
+}
+
+.is-mobile .sgb-section-tree-container,
+.is-phone .sgb-section-tree-container {
+	padding-bottom: 220px; /* Extra bottom clearance for mobile virtual keyboard and IME conversion candidates */
 }
 
 .sgb-section-tree-item {
@@ -610,7 +615,7 @@ settings:
 .sgb-mini-progress-fill {
 	height: 100%;
 	width: var(--sgb-mini-fill-width, 0%);
-	background: var(--sgb-color-default, #8c8c8c);
+	background: var(--sgb-color-default, #ababab);
 	transition: width 0.2s ease;
 }
 

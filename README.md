@@ -90,13 +90,13 @@ The following features and options can be customized:
 
 #### CSS Snippet Color Customization
 
-Add a custom CSS file to your vault (**Settings → Appearance → CSS snippets**):
+Save the following CSS to `.obsidian/snippets/section-goals-badge.css` (or any snippet file name) and enable it in Obsidian under **Settings → Appearance → CSS snippets**:
 
 ```css
 /* Section Goals Badge - Custom Colors */
 body {
     /* Progress threshold colors */
-    --sgb-color-default: #8c8c8c; /* Initial progress (< 50%) */
+    --sgb-color-default: #ababab; /* Initial progress (< 50%) */
     --sgb-color-warn: #e2b93b;    /* Mid progress (>= 50%) */
     --sgb-color-good: #ff7843;    /* High progress (>= 80%) */
     --sgb-color-done: #ff4d4f;    /* Goal reached (>= 100%) */
@@ -111,20 +111,20 @@ body {
 
 ```css
 body {
-    --sgb-color-default: #8c8c8c; /* Safe (< 50%): Gray */
+    --sgb-color-default: #ababab; /* Safe (< 50%): Gray */
     --sgb-color-warn: #e2b93b;    /* Halfway (>= 50%): Yellow */
     --sgb-color-good: #ff7843;    /* Approaching cap (>= 80%): Orange */
     --sgb-color-done: #ff4d4f;    /* Reached limit (>= 100%): Red */
 }
 ```
 
-##### ② Minimum Target Style: When meeting minimum target goals
+##### ② Target Achievement Style: When aiming to write at least a specific word/char count
 
 <img src="./doc/images/colorsample-style2.png" width="150">
 
 ```css
 body {
-    --sgb-color-default: #8c8c8c; /* Starting (< 50%): Gray */
+    --sgb-color-default: #ababab; /* Starting (< 50%): Gray */
     --sgb-color-warn: #f09533;    /* In Progress (>= 50%): Orange */
     --sgb-color-good: #24b750;    /* Almost there (>= 80%): Green */
     --sgb-color-done: #207dff;    /* Completed (>= 100%): Blue */

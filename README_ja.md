@@ -11,7 +11,7 @@
 
 Obsidian で小説や長編ドキュメントを執筆する人のための、**見出しごとの目標文字数管理＆進捗バッジ表示**プラグインです。
 
-エディタ上にバッジを常時表示し、今書いている見出し（セクション）やノート全体の文字数 / 進捗率をリアルタイムに把握できます。
+エディタ上にバッジを常時表示し、今書いているセクションやノート全体の文字数 / 進捗率をリアルタイムに把握できます。
 
 ▼ デスクトップ版
 
@@ -109,17 +109,17 @@ Obsidian で小説や長編ドキュメントを執筆する人のための、**
 ### 4. 進捗カラーのカスタマイズ
 
 - バッジやバーの色が切り替わる進捗率を変更可能（デフォルト: 50% / 80% / 100%）
-- カラーは **[Style Settings](https://github.com/mgmeyers/obsidian-style-settings)** プラグインからGUIで変更できるほか、**CSSスニペット**でも変更可能です。
+- カラーは **[Style Settings](https://github.com/mgmeyers/obsidian-style-settings)** プラグインからGUIで変更できるほか、**CSSスニペット**でも変更可能。
 
 #### CSSスニペットでのカラー設定
 
-Obsidianの **設定 → 外観 → CSSスニペット** に以下のCSSを追加することで、お好みのカラーに変更できます。
+以下のCSSを`.obsidian/snippets/section-goals-badge.css`などに保存し、Obsidian本体の **設定 → 外観 → CSSスニペット** から有効化してください。
 
 ```css
 /* Section Goals Badge - カスタムカラー設定 */
 body {
     /* 進捗しきい値カラー */
-    --sgb-color-default: #8c8c8c; /* 初期カラー (< 50%) */
+    --sgb-color-default: #ababab; /* 初期カラー (< 50%) */
     --sgb-color-warn: #e2b93b;    /* 中間カラー (>= 50%) */
     --sgb-color-good: #ff7843;    /* 高進捗カラー (>= 80%) */
     --sgb-color-done: #ff4d4f;    /* 達成・完了カラー (>= 100%) */
@@ -134,20 +134,20 @@ body {
 
 ```css
 body {
-    --sgb-color-default: #8c8c8c; /* 余裕あり (< 50%)  : 灰 */
+    --sgb-color-default: #ababab; /* 余裕あり (< 50%)  : 灰 */
     --sgb-color-warn: #e2b93b;    /* 半分経過 (>= 50%) : 黄 */
     --sgb-color-good: #ff7843;    /* 上限間近 (>= 80%) : 橙 */
     --sgb-color-done: #ff4d4f;    /* 上限到達 (>= 100%): 赤 */
 }
 ```
 
-##### ② 最短目標スタイル: 指定文字数以上書きたい場合
+##### ② 達成目標スタイル: 指定文字数以上書きたい場合
 
 <img src="./doc/images/colorsample-style2.png" width="150">
 
 ```css
 body {
-    --sgb-color-default: #8c8c8c; /* 書き始め (< 50%)   : 灰 */
+    --sgb-color-default: #ababab; /* 書き始め (< 50%)   : 灰 */
     --sgb-color-warn: #f09533;    /* 進行中 (>= 50%)    : 橙 */
     --sgb-color-good: #24b750;    /* あと一息 (>= 80%)  : 緑 */
     --sgb-color-done: #207dff;    /* 目標達成 (>= 100%) : 青 */
@@ -171,7 +171,7 @@ body {
 ---
 
 goal-file: 10000    # <- ノート全体の目標値
-goal-section: 2000　# <-セクションのデフォルト目標値
+goal-section: 2000　# <- セクションのデフォルト目標値
 goals:
   - 第1章: 2500     # <- セクション個別の目標値
   - 第2章: 3000
@@ -188,7 +188,7 @@ goals:
   ## サポート & 開発支援
 
   
-Section Goals Badge を気に入っていただけましたら、サポートしていただけますと幸いです！
+Section Goals Badge を気に入っていただけましたら、サポートを考えていただけますと幸いです。
 
 
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-%E3%81%8A%E3%81%AB%E3%81%8E%E3%82%8A%E3%81%84%E3%81%A3%E3%81%93%E3%81%8A%E3%81%94%E3%82%8B-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/quels)

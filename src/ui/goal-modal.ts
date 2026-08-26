@@ -104,6 +104,15 @@ export class GoalManagementModal extends Modal {
 				});
 			}
 			this.updateScrollbarOffset();
+
+			// Keep currently active input row visible in center when keyboard/IME resizes viewport
+			const activeEl = document.activeElement;
+			if (activeEl instanceof HTMLInputElement && this.contentEl.contains(activeEl)) {
+				const activeItem = activeEl.closest('.sgb-section-tree-item');
+				if (activeItem instanceof HTMLElement) {
+					activeItem.scrollIntoView({ block: 'center', behavior: 'smooth' });
+				}
+			}
 		};
 
 		if (window.visualViewport) {
