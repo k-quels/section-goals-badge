@@ -167,7 +167,7 @@ export class FloatingBadge {
 					offsetY,
 				});
 			} else if (!this.isDragging) {
-				if (!this.settings.longPressToOpenModal || this.isLongPress) {
+				if (!this.settings.longPressToOpenModal) {
 					this.triggerModalOpen();
 				}
 			}

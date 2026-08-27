@@ -28,8 +28,8 @@ settings:
         default-dark: '#2a2a2a'
     - 
         id: sgb-badge-text
-        title: Badge Text Color
-        description: Text color for pills without active progress color
+        title: Badge Text Color (No Goal Set)
+        description: Text and icon color for pills when no goal is configured (no progress coloring)
         type: variable-themed-color
         opacity: false
         format: hex
@@ -346,24 +346,36 @@ settings:
 /* ==========================================================================
    Goal Management Modal
    ========================================================================== */
+.modal:has(.section-goals-badge-modal),
+.modal.sgb-goal-modal {
+	overflow-x: hidden !important;
+}
+
+.modal-content.section-goals-badge-modal,
+.modal:has(.section-goals-badge-modal) .modal-content,
+.modal.sgb-goal-modal .modal-content,
 .section-goals-badge-modal {
 	padding: 4px 2px;
 	max-height: var(--sgb-modal-max-height, 80vh);
 	display: flex;
 	flex-direction: column;
+	overflow-y: auto;
 	overflow-x: hidden !important;
 	width: 100%;
 	box-sizing: border-box;
-}
-
-.modal-content:has(.section-goals-badge-modal) {
-	overflow-x: hidden !important;
+	overscroll-behavior: contain;
 }
 
 
 .sgb-modal-header-title {
-	margin: 0 0 8px 0;
+	margin: 0 0 4px 0;
+	padding: 0 10px;
 	font-size: 1.2em;
+}
+
+.is-mobile .sgb-modal-header-title,
+.is-phone .sgb-modal-header-title {
+	padding: 2px 14px 0 14px;
 }
 
 /* Table Column Header (Placed at the top to label all rows) */
@@ -377,7 +389,6 @@ settings:
 	color: var(--text-muted);
 	border-bottom: 1px solid var(--background-modifier-border);
 	margin-bottom: 6px;
-	margin-right: var(--sgb-scrollbar-width, 0px);
 	flex-shrink: 0;
 }
 
@@ -420,7 +431,6 @@ settings:
 	border-radius: var(--radius-m);
 	padding: 6px 10px;
 	margin-bottom: 8px;
-	margin-right: var(--sgb-scrollbar-width, 0px);
 	border: 1px solid var(--background-modifier-border);
 	display: flex;
 	flex-direction: column;
@@ -624,8 +634,13 @@ settings:
 	justify-content: space-between;
 	margin-top: 4px;
 	margin-bottom: 6px;
-	margin-right: var(--sgb-scrollbar-width, 0px);
+	padding: 0 4px;
 	flex-shrink: 0;
+}
+
+.is-mobile .sgb-modal-section-header,
+.is-phone .sgb-modal-section-header {
+	padding: 0 6px;
 }
 
 
@@ -645,11 +660,8 @@ settings:
 	flex-direction: column;
 	gap: 4px;
 	flex: 1;
-	max-height: var(--sgb-tree-max-height, 46vh);
-	overflow-y: auto;
 	padding-right: 0px;
 	padding-bottom: 120px; /* Moderate bottom spacing to allow comfortable scrolling */
-	overscroll-behavior: contain;
 }
 
 .is-mobile .sgb-section-tree-container,
@@ -853,6 +865,32 @@ settings:
 	height: 24px !important;
 	padding: 1px 24px 1px 8px !important;
 	cursor: pointer;
+}
+
+/* Modal Header Description */
+.sgb-modal-header-desc {
+	font-size: 11px;
+	color: var(--text-muted);
+	line-height: 1.4;
+	padding: 0 10px;
+	margin-bottom: 8px;
+	flex-shrink: 0;
+}
+
+.is-mobile .sgb-modal-header-desc,
+.is-phone .sgb-modal-header-desc {
+	padding: 0 14px;
+}
+
+.sgb-folder-hint-link {
+	color: var(--text-accent);
+	text-decoration: underline;
+	cursor: pointer;
+	transition: color 0.15s ease;
+}
+
+.sgb-folder-hint-link:hover {
+	color: var(--text-accent-hover);
 }
 
 /* Settings Tab: Color Styles Manager */

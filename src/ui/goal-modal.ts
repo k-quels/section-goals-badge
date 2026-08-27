@@ -61,7 +61,8 @@ export class GoalManagementModal extends Modal {
 	}
 
 	async onOpen(): Promise<void> {
-		const { contentEl } = this;
+		const { contentEl, modalEl } = this;
+		modalEl.addClass('sgb-goal-modal');
 		contentEl.empty();
 		contentEl.addClass('section-goals-badge-modal');
 
@@ -114,15 +115,6 @@ export class GoalManagementModal extends Modal {
 
 	private setupViewportListener(): void {
 		const updateLayout = () => {
-			if (window.visualViewport) {
-				const vh = window.visualViewport.height;
-				const treeMaxHeight = Math.max(140, Math.min(380, vh - 220));
-				setCssProps(this.contentEl, {
-					'--sgb-tree-max-height': `${treeMaxHeight}px`,
-				});
-			}
-			this.updateScrollbarOffset();
-
 			// Keep currently active input row visible in center when keyboard/IME resizes viewport
 			const activeEl = document.activeElement;
 			if (activeEl instanceof HTMLInputElement && this.contentEl.contains(activeEl)) {
@@ -136,41 +128,25 @@ export class GoalManagementModal extends Modal {
 		if (window.visualViewport) {
 			this.viewportResizeHandler = updateLayout;
 			window.visualViewport.addEventListener('resize', this.viewportResizeHandler);
-			updateLayout();
 		}
 	}
 
 	/**
-	 * Safely scrolls a tree item into center view without causing horizontal parent container shifts.
+	 * Safely scrolls a tree item into center view of modal content container.
 	 */
 	private scrollToItem(itemEl: HTMLElement): void {
-		const treeContainer = this.contentEl.querySelector<HTMLElement>('.sgb-section-tree-container');
-		if (treeContainer) {
-			const containerRect = treeContainer.getBoundingClientRect();
-			const itemRect = itemEl.getBoundingClientRect();
-			const relativeTop = itemRect.top - containerRect.top + treeContainer.scrollTop;
-			const targetScroll = relativeTop - containerRect.height / 2 + itemRect.height / 2;
-			treeContainer.scrollTo({
-				top: Math.max(0, targetScroll),
-				behavior: 'smooth',
-			});
-		}
+		const containerRect = this.contentEl.getBoundingClientRect();
+		const itemRect = itemEl.getBoundingClientRect();
+		const relativeTop = itemRect.top - containerRect.top + this.contentEl.scrollTop;
+		const targetScroll = relativeTop - containerRect.height / 2 + itemRect.height / 2;
+		this.contentEl.scrollTo({
+			top: Math.max(0, targetScroll),
+			behavior: 'smooth',
+		});
 	}
 
-	/**
-	 * Dynamically measure section list scrollbar width and apply offset to header and top card,
-	 * ensuring pixel-perfect column alignment regardless of scrollbar presence.
-	 */
 	private updateScrollbarOffset(): void {
-		window.requestAnimationFrame(() => {
-			const treeEl = this.contentEl.querySelector<HTMLElement>('.sgb-section-tree-container');
-			if (treeEl) {
-				const scrollbarWidth = Math.max(0, treeEl.offsetWidth - treeEl.clientWidth);
-				setCssProps(this.contentEl, {
-					'--sgb-scrollbar-width': `${scrollbarWidth}px`,
-				});
-			}
-		});
+		// Entire modal content scrolls as a single container, no extra offsets needed
 	}
 
 	private getHeadingLevelPlaceholder(level: number): string {
@@ -257,6 +233,32 @@ export class GoalManagementModal extends Modal {
 
 		const titleText = this.settings.countType === 'word' ? t('MODAL_TITLE_WORDS') : t('MODAL_TITLE');
 		contentEl.createEl('h2', { cls: 'sgb-modal-header-title', text: titleText });
+
+		// Description for folder defaults with link to plugin settings
+		const descEl = contentEl.createDiv({ cls: 'sgb-modal-header-desc' });
+		const hintTemplate = t('MODAL_FOLDER_DEFAULTS_HINT');
+		const linkText = t('MODAL_FOLDER_DEFAULTS_HINT_LINK');
+		const parts = hintTemplate.split('{link}');
+
+		if (parts.length === 2) {
+			descEl.appendText(parts[0] ?? '');
+			const linkEl = descEl.createEl('a', {
+				cls: 'sgb-folder-hint-link',
+				text: linkText,
+				href: '#',
+			});
+			linkEl.addEventListener('click', (e) => {
+				e.preventDefault();
+				void (async () => {
+					await this.saveGoals();
+					this.close();
+					this.openPluginSettings();
+				})();
+			});
+			descEl.appendText(parts[1] ?? '');
+		} else {
+			descEl.setText(hintTemplate);
+		}
 
 		// --- Master Table Column Header (Labels all rows below) ---
 		const tableHeaderEl = contentEl.createDiv({ cls: 'sgb-section-table-header' });
@@ -714,6 +716,19 @@ export class GoalManagementModal extends Modal {
 			},
 			true,
 		);
+	}
+
+	private openPluginSettings(): void {
+		const appWithSetting = this.app as unknown as {
+			setting?: {
+				open: () => void;
+				openTabById: (id: string) => void;
+			};
+		};
+		if (appWithSetting.setting) {
+			appWithSetting.setting.open();
+			appWithSetting.setting.openTabById('section-goals-badge');
+		}
 	}
 
 	onClose(): void {

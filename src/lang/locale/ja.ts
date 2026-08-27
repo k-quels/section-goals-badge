@@ -164,7 +164,7 @@ const ja: typeof en = {
 	MODAL_TOTAL_GOAL_NAME: 'ノート全体目標',
 	MODAL_DEFAULT_SECTION_GOAL_NAME: 'セクション目標',
 	MODAL_DEFAULT_SECTION_DESC: '個別目標が未設定の項目に適用',
-	MODAL_HEADING_LEVEL_GOALS_TOGGLE: '見出しレベルごとの目標値を設定',
+	MODAL_HEADING_LEVEL_GOALS_TOGGLE: '見出しレベルごとの目標値',
 	MODAL_HEADING_LEVEL_GOALS_DESC: '個別目標が未設定の見出しに対して、レベル（H1〜H6）別のデフォルト目標を設定します。',
 	MODAL_SECTIONS_HEADER: 'セクション一覧',
 	MODAL_NO_HEADINGS: 'ノート内に見出しがありません',
@@ -181,7 +181,9 @@ const ja: typeof en = {
 
 	// Modal Color Style
 	MODAL_COLOR_STYLE_LABEL: 'カラースタイル',
-	MODAL_COLOR_STYLE_DESC: 'このノートのバッジや進捗バーに適用する配色',
+	MODAL_COLOR_STYLE_DESC: 'このノートのバッジ等に使う配色',
+	MODAL_FOLDER_DEFAULTS_HINT: 'フォルダごとの初期値は{link}で定義できます',
+	MODAL_FOLDER_DEFAULTS_HINT_LINK: 'プラグイン設定',
 
 	// Settings - Folder Goals
 	SETTINGS_HEADING_FOLDER_GOALS: 'フォルダごとの初期値',

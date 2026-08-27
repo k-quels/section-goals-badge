@@ -359,11 +359,18 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 		this.lastHeadingLineText = view.editor.getLine(currentLineNum) ?? '';
 	}
 
+	private activeModal: GoalManagementModal | null = null;
+
 	public openGoalModal(): void {
 		const view = this.getActiveMarkdownEditorView();
 		if (!view || !view.file) return;
 
-		new GoalManagementModal(
+		// Prevent duplicate modal instances if one is already open
+		if (this.activeModal) {
+			return;
+		}
+
+		this.activeModal = new GoalManagementModal(
 			this.app,
 			view.file,
 			view,
@@ -373,6 +380,12 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 			() => {
 				this.performFullRecalculation();
 			},
-		).open();
+		);
+		const originalOnClose = this.activeModal.onClose.bind(this.activeModal);
+		this.activeModal.onClose = () => {
+			this.activeModal = null;
+			originalOnClose();
+		};
+		this.activeModal.open();
 	}
 }

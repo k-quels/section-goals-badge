@@ -180,6 +180,8 @@ export default {
 	// Modal Color Style
 	MODAL_COLOR_STYLE_LABEL: 'Color style',
 	MODAL_COLOR_STYLE_DESC: 'Color style applied to badges and bars for this note.',
+	MODAL_FOLDER_DEFAULTS_HINT: 'Folder defaults can be defined in {link}.',
+	MODAL_FOLDER_DEFAULTS_HINT_LINK: 'plugin settings',
 
 	// Settings - Folder Goals
 	SETTINGS_HEADING_FOLDER_GOALS: 'Folder defaults',
