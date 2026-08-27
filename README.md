@@ -102,6 +102,7 @@ The following features and options can be customized:
 - Default Presets:
   - **① Limit Goal Style**: Best for strict word/character caps (Gray → Yellow → Orange → Red)<br>
   <img src="./doc/images/colorsample-style1.png" width="80">
+  
   - **② Target Achievement Style**: Best for aiming to reach a target count (Gray → Orange → Green → Blue)<br>
   <img src="./doc/images/colorsample-style2.png" width="80">
 
