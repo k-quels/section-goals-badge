@@ -905,23 +905,41 @@ settings:
 }
 
 .sgb-style-action-btn {
-	width: 24px;
-	height: 24px;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
+	width: 24px !important;
+	height: 24px !important;
+	min-width: 24px !important;
+	min-height: 24px !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	border: none !important;
+	box-shadow: none !important;
+	background: transparent !important;
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
 	cursor: pointer;
 	border-radius: var(--radius-s);
-	color: var(--text-muted);
+	color: var(--text-muted) !important;
 }
 
 .sgb-style-action-btn:hover {
-	color: var(--text-normal);
-	background-color: var(--background-modifier-hover);
+	color: var(--text-normal) !important;
+	background-color: var(--background-modifier-hover) !important;
+}
+
+.sgb-style-action-btn.mod-warning {
+	background: transparent !important;
+	color: var(--text-muted) !important;
 }
 
 .sgb-style-action-btn.mod-warning:hover {
-	color: var(--text-error);
+	color: var(--text-error) !important;
+	background-color: var(--background-modifier-hover) !important;
+}
+
+.sgb-style-action-btn svg {
+	width: 16px;
+	height: 16px;
 }
 
 .sgb-style-colors-grid {
@@ -1030,14 +1048,69 @@ settings:
 }
 
 .sgb-reset-all-styles-btn {
-	width: 28px;
-	height: 28px;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	color: var(--text-muted);
+	width: 28px !important;
+	height: 28px !important;
+	min-width: 28px !important;
+	min-height: 28px !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	border: none !important;
+	box-shadow: none !important;
+	background: transparent !important;
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	cursor: pointer;
+	border-radius: var(--radius-s);
+	color: var(--text-muted) !important;
 }
 
 .sgb-reset-all-styles-btn:hover {
-	color: var(--text-normal);
+	color: var(--text-normal) !important;
+	background-color: var(--background-modifier-hover) !important;
 }
+
+/* Settings Heading Icons */
+.sgb-heading-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin-right: 8px;
+	color: var(--text-muted);
+	vertical-align: middle;
+}
+
+.sgb-heading-icon svg {
+	width: 18px;
+	height: 18px;
+}
+
+.sgb-setting-heading {
+	display: flex;
+	align-items: center;
+}
+
+/* Visibility Utility */
+.sgb-is-hidden {
+	display: none !important;
+}
+
+/* Settings Sub-items & Accordion */
+.sgb-setting-sub-item {
+	padding-left: 20px !important;
+	opacity: 0.95;
+}
+
+.sgb-settings-accordion-item {
+	cursor: pointer;
+	user-select: none;
+}
+
+.sgb-settings-accordion-chevron {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	transition: transform 0.15s ease;
+}
+
+
