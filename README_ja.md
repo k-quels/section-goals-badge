@@ -111,10 +111,10 @@ Obsidian で小説や長編ドキュメントを執筆する人のための、**
 - 進捗カラーの配色パターンを自由に定義・編集可能（最大10件）
 - デフォルトのプリセット
   - **① 制限目標スタイル**: 指定文字数以内に収めたい場合（灰 → 黄 → 橙 → 赤）<br>
-  <img src="./doc/images/colorsample-style1.png" width="80">
+  　<img src="./doc/images/colorsample-style1.png" width="80">
   
   - **② 達成目標スタイル**: 指定文字数以上書きたい場合（灰 → 橙 → 緑 → 青）<br>
-  <img src="./doc/images/colorsample-style2.png" width="80">
+  　<img src="./doc/images/colorsample-style2.png" width="80">
  
 - 目標管理ウインドウの「カラースタイル」から、 **ノートごとに好きなスタイルを選択可能**。
 

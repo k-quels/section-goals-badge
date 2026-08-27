@@ -101,10 +101,10 @@ The following features and options can be customized:
 - In the plugin settings under **Color styles**, freely define and customize color schemes (up to 10 styles).
 - Default Presets:
   - **① Limit Goal Style**: Best for strict word/character caps (Gray → Yellow → Orange → Red)<br>
-  <img src="./doc/images/colorsample-style1.png" width="80">
+  　<img src="./doc/images/colorsample-style1.png" width="80">
   
   - **② Target Achievement Style**: Best for aiming to reach a target count (Gray → Orange → Green → Blue)<br>
-  <img src="./doc/images/colorsample-style2.png" width="80">
+  　<img src="./doc/images/colorsample-style2.png" width="80">
 
 - In the Goal Management modal, **select your preferred style per note** from the "Color style" dropdown.
 
