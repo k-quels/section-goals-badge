@@ -351,7 +351,15 @@ settings:
 	max-height: var(--sgb-modal-max-height, 80vh);
 	display: flex;
 	flex-direction: column;
+	overflow-x: hidden !important;
+	width: 100%;
+	box-sizing: border-box;
 }
+
+.modal-content:has(.section-goals-badge-modal) {
+	overflow-x: hidden !important;
+}
+
 
 .sgb-modal-header-title {
 	margin: 0 0 8px 0;
@@ -370,7 +378,6 @@ settings:
 	border-bottom: 1px solid var(--background-modifier-border);
 	margin-bottom: 6px;
 	margin-right: var(--sgb-scrollbar-width, 0px);
-	transition: margin-right 0.15s ease;
 	flex-shrink: 0;
 }
 
@@ -414,13 +421,13 @@ settings:
 	padding: 6px 10px;
 	margin-bottom: 8px;
 	margin-right: var(--sgb-scrollbar-width, 0px);
-	transition: margin-right 0.15s ease;
 	border: 1px solid var(--background-modifier-border);
 	display: flex;
 	flex-direction: column;
 	gap: 6px;
 	flex-shrink: 0;
 }
+
 
 .sgb-modal-card-row {
 	display: flex;
@@ -486,6 +493,8 @@ settings:
 	width: 40px;
 }
 
+
+
 /* Accordion for Level-Specific Default Goals */
 .sgb-accordion-container {
 	border-top: 1px dashed var(--background-modifier-border);
@@ -541,14 +550,23 @@ settings:
 .sgb-level-goals-grid {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
-	gap: 6px 12px;
+	gap: 6px 10px;
 	padding: 4px 0;
+	width: 100%;
+	box-sizing: border-box;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 520px), (max-device-width: 520px) {
 	.sgb-level-goals-grid {
 		grid-template-columns: repeat(2, 1fr);
+		gap: 6px 12px;
 	}
+}
+
+.is-mobile .sgb-level-goals-grid,
+.is-phone .sgb-level-goals-grid {
+	grid-template-columns: repeat(2, 1fr);
+	gap: 6px 12px;
 }
 
 .sgb-level-goal-item {
@@ -556,6 +574,7 @@ settings:
 	align-items: center;
 	justify-content: space-between;
 	gap: 6px;
+	min-width: 0;
 }
 
 .sgb-level-goal-label {
@@ -565,6 +584,8 @@ settings:
 	font-size: 11px;
 	font-weight: 600;
 	color: var(--text-muted);
+	white-space: nowrap;
+	flex-shrink: 0;
 }
 
 .sgb-level-goal-icon {
@@ -583,11 +604,18 @@ settings:
 }
 
 .sgb-level-input {
-	width: 60px !important;
+	flex: 1;
+	width: 100% !important;
+	min-width: 64px !important;
+	max-width: 88px !important;
 	height: 24px !important;
+	padding: 2px 4px !important;
 	font-size: 11px !important;
 	text-align: right;
+	box-sizing: border-box;
 }
+
+
 
 /* Section Header & Reset Controls */
 .sgb-modal-section-header {
@@ -597,9 +625,9 @@ settings:
 	margin-top: 4px;
 	margin-bottom: 6px;
 	margin-right: var(--sgb-scrollbar-width, 0px);
-	transition: margin-right 0.15s ease;
 	flex-shrink: 0;
 }
+
 
 .sgb-modal-section-header h3 {
 	margin: 0;
@@ -724,6 +752,8 @@ settings:
 	width: 40px;
 	box-sizing: border-box;
 }
+
+
 
 .sgb-mini-percent {
 	font-size: 9px;
@@ -1112,5 +1142,304 @@ settings:
 	justify-content: center;
 	transition: transform 0.15s ease;
 }
+
+/* Folder Goals Manager */
+.sgb-folder-goals-setting {
+	border-top: none !important;
+	padding-top: 0 !important;
+}
+
+.sgb-folder-goals-setting .setting-item-control {
+	width: 100%;
+	justify-content: flex-start !important;
+	text-align: left !important;
+}
+
+.sgb-folder-goals-container {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	width: 100%;
+	text-align: left;
+}
+
+.sgb-folder-goals-desc {
+	font-size: 12px;
+	color: var(--text-muted);
+	line-height: 1.5;
+	white-space: pre-line;
+	text-align: left !important;
+	margin-top: 14px;
+	margin-bottom: 12px;
+}
+
+
+.sgb-folder-goals-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.sgb-folder-goals-empty {
+	font-size: 12px;
+	color: var(--text-muted);
+	padding: 12px;
+	text-align: center;
+	background: var(--background-secondary);
+	border-radius: var(--radius-m);
+	border: 1px dashed var(--background-modifier-border);
+}
+
+.sgb-folder-goal-card {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background: var(--background-secondary);
+	overflow: hidden;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sgb-folder-goal-card:hover {
+	border-color: var(--background-modifier-border-hover);
+}
+
+.sgb-folder-card-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 8px 12px;
+	user-select: none;
+}
+
+.sgb-folder-card-header-left {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+	flex: 1;
+	min-width: 0;
+}
+
+.sgb-folder-card-chevron {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-muted);
+	width: 16px;
+	height: 16px;
+}
+
+.sgb-folder-card-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-accent);
+	width: 16px;
+	height: 16px;
+}
+
+.sgb-folder-card-title {
+	font-weight: 500;
+	font-size: 13px;
+	color: var(--text-normal);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	padding-right: 8px;
+}
+
+.sgb-folder-card-title.is-placeholder {
+	color: var(--text-muted);
+	font-style: normal;
+}
+
+.sgb-folder-card-header-right {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.sgb-folder-action-btn {
+	width: 24px !important;
+	height: 24px !important;
+	min-width: 24px !important;
+	min-height: 24px !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	border: none !important;
+	box-shadow: none !important;
+	background: transparent !important;
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	cursor: pointer;
+	border-radius: var(--radius-s);
+	color: var(--text-muted) !important;
+}
+
+.sgb-folder-action-btn:hover {
+	color: var(--text-normal) !important;
+	background-color: var(--background-modifier-hover) !important;
+}
+
+.sgb-folder-action-btn.mod-warning {
+	background: transparent !important;
+	color: var(--text-muted) !important;
+}
+
+.sgb-folder-action-btn.mod-warning:hover {
+	color: var(--text-error) !important;
+	background-color: var(--background-modifier-hover) !important;
+}
+
+.sgb-folder-action-btn svg {
+	width: 16px !important;
+	height: 16px !important;
+}
+
+
+
+.sgb-folder-card-body {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 12px 14px;
+	border-top: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+}
+
+.sgb-folder-card-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.sgb-folder-row-label {
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--text-normal);
+	white-space: nowrap;
+}
+
+.sgb-folder-path-input {
+	flex: 1;
+	max-width: 320px;
+	font-size: 12px;
+}
+
+.sgb-folder-number-input {
+	width: 160px !important;
+	text-align: right;
+	font-size: 12px;
+}
+
+.sgb-folder-headings-accordion-header {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	cursor: pointer;
+	user-select: none;
+	padding: 4px 0;
+	color: var(--text-muted);
+	font-size: 12px;
+	font-weight: 500;
+	transition: color 0.15s ease;
+}
+
+.sgb-folder-headings-accordion-header:hover {
+	color: var(--text-normal);
+}
+
+.sgb-folder-headings-chevron {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 14px;
+	height: 14px;
+}
+
+.sgb-folder-headings-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 8px 12px;
+	padding: 8px 10px;
+	background: var(--background-secondary);
+	border-radius: var(--radius-s);
+	border: 1px solid var(--background-modifier-border);
+	width: 100%;
+	box-sizing: border-box;
+}
+
+@media (max-width: 540px) {
+	.sgb-folder-headings-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+.sgb-folder-heading-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px;
+	min-width: 0;
+}
+
+.sgb-folder-heading-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--text-muted);
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.sgb-folder-heading-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 12px;
+	height: 12px;
+	opacity: 0.8;
+}
+
+.sgb-folder-heading-icon svg {
+	width: 100%;
+	height: 100%;
+	stroke-width: 2.2px;
+}
+
+.sgb-folder-heading-item .sgb-folder-heading-input {
+	flex: 1;
+	width: 100% !important;
+	min-width: 0 !important;
+	max-width: 130px;
+	height: 26px !important;
+	font-size: 11px !important;
+	text-align: right;
+	box-sizing: border-box;
+}
+
+
+.sgb-folder-style-select {
+	max-width: 220px;
+	font-size: 12px;
+}
+
+.sgb-folder-goals-footer {
+	display: flex;
+	justify-content: flex-start;
+	padding-top: 4px;
+}
+
+.sgb-add-folder-goal-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+	padding: 6px 14px;
+}
+
 
 

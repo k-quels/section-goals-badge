@@ -1,5 +1,5 @@
-import { App, TFile } from 'obsidian';
-import { GoalFrontmatter, HeadingGoalItem } from '../types';
+import { App, TFile, TFolder } from 'obsidian';
+import { FolderGoalConfig, GoalFrontmatter, HeadingGoalItem, PluginSettings } from '../types';
 
 export interface FileGoalData {
 	fileGoal?: number;
@@ -9,11 +9,112 @@ export interface FileGoalData {
 	styleId?: number;
 }
 
+export interface EffectiveGoalData extends FileGoalData {
+	inheritedDefaults?: {
+		fileGoal?: number;
+		defaultSectionGoal?: number;
+		headingLevelGoals?: Record<number, number>;
+		styleId?: number;
+	};
+}
+
 /**
  * Handles reading and writing goal data in note frontmatter.
  */
 export class FrontmatterManager {
 	constructor(private app: App) {}
+
+	/**
+	 * Resolves effective goal data by cascading:
+	 * Note Frontmatter -> Current Folder -> Parent Folders -> Global Settings
+	 */
+	public getEffectiveGoalData(file: TFile, settings: PluginSettings): EffectiveGoalData {
+		const fmData = this.getGoalData(file);
+
+		const folderGoalsMap = new Map<string, FolderGoalConfig>();
+		for (const fg of settings.folderGoals || []) {
+			if (fg.folderPath) {
+				const normalized = fg.folderPath.trim().replace(/^\/+|\/+$/g, '');
+				if (normalized) {
+					folderGoalsMap.set(normalized, fg);
+				}
+			}
+		}
+
+		let inheritedFileGoal: number | undefined;
+		let inheritedDefaultSectionGoal: number | undefined;
+		let inheritedStyleId: number | undefined;
+		const inheritedHeadingLevelGoals: Record<number, number> = {};
+
+		// Traverse upwards from note's folder to vault root
+		let currentFolder: TFolder | null = file.parent;
+		while (currentFolder && currentFolder.path && currentFolder.path !== '/') {
+			const normalizedPath = currentFolder.path.replace(/^\/+|\/+$/g, '');
+			const folderGoal = folderGoalsMap.get(normalizedPath);
+			if (folderGoal) {
+				if (inheritedFileGoal === undefined && folderGoal.fileGoal !== undefined && folderGoal.fileGoal > 0) {
+					inheritedFileGoal = folderGoal.fileGoal;
+				}
+				if (
+					inheritedDefaultSectionGoal === undefined &&
+					folderGoal.defaultSectionGoal !== undefined &&
+					folderGoal.defaultSectionGoal > 0
+				) {
+					inheritedDefaultSectionGoal = folderGoal.defaultSectionGoal;
+				}
+				if (inheritedStyleId === undefined && folderGoal.styleId !== undefined) {
+					inheritedStyleId = folderGoal.styleId;
+				}
+				if (folderGoal.headingLevelGoals) {
+					for (let level = 1; level <= 6; level++) {
+						const val = folderGoal.headingLevelGoals[level];
+						if (inheritedHeadingLevelGoals[level] === undefined && val !== undefined && val > 0) {
+							inheritedHeadingLevelGoals[level] = val;
+						}
+					}
+				}
+			}
+			currentFolder = currentFolder.parent;
+		}
+
+		// Fallback style to global default
+		if (inheritedStyleId === undefined) {
+			inheritedStyleId = settings.defaultStyleId ?? 1;
+		}
+
+		// Apply cascade: Note Frontmatter takes precedence over inherited folder goals
+		const fileGoal = fmData.fileGoal !== undefined ? fmData.fileGoal : inheritedFileGoal;
+		const defaultSectionGoal =
+			fmData.defaultSectionGoal !== undefined ? fmData.defaultSectionGoal : inheritedDefaultSectionGoal;
+		const styleId = fmData.styleId !== undefined ? fmData.styleId : inheritedStyleId;
+
+		const headingLevelGoals: Record<number, number> = {};
+		for (let level = 1; level <= 6; level++) {
+			const fmVal = fmData.headingLevelGoals?.[level];
+			const inheritedVal = inheritedHeadingLevelGoals[level];
+			if (fmVal !== undefined && fmVal > 0) {
+				headingLevelGoals[level] = fmVal;
+			} else if (inheritedVal !== undefined && inheritedVal > 0) {
+				headingLevelGoals[level] = inheritedVal;
+			}
+		}
+
+		return {
+			fileGoal,
+			defaultSectionGoal,
+			headingLevelGoals: Object.keys(headingLevelGoals).length > 0 ? headingLevelGoals : undefined,
+			sectionGoals: fmData.sectionGoals,
+			styleId,
+			inheritedDefaults: {
+				fileGoal: inheritedFileGoal,
+				defaultSectionGoal: inheritedDefaultSectionGoal,
+				headingLevelGoals:
+					Object.keys(inheritedHeadingLevelGoals).length > 0 ? inheritedHeadingLevelGoals : undefined,
+				styleId: inheritedStyleId,
+			},
+		};
+	}
+
 
 	/**
 	 * Parse goal data from file frontmatter cache.

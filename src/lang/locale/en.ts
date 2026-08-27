@@ -180,4 +180,24 @@ export default {
 	// Modal Color Style
 	MODAL_COLOR_STYLE_LABEL: 'Color style',
 	MODAL_COLOR_STYLE_DESC: 'Color style applied to badges and bars for this note.',
+
+	// Settings - Folder Goals
+	SETTINGS_HEADING_FOLDER_GOALS: 'Folder defaults',
+	SETTINGS_FOLDER_GOALS_DESC: 'Set default goals and color styles for notes under specific folders.\n* Note frontmatter takes precedence.',
+	SETTINGS_FOLDER_GOAL_ADD: 'Add folder',
+	SETTINGS_FOLDER_GOAL_DELETE: 'Delete',
+	SETTINGS_FOLDER_PATH_LABEL: 'Target folder',
+	SETTINGS_FOLDER_PATH_PLACEHOLDER: 'Folder path',
+	SETTINGS_FOLDER_TOTAL_GOAL: 'Note total goal',
+	SETTINGS_FOLDER_SECTION_GOAL: 'Section goal',
+	SETTINGS_FOLDER_UNSET_PLACEHOLDER: 'Unset (inherit from parent)',
+	SETTINGS_FOLDER_HEADING_GOALS_ACCORDION: 'Goals by heading level (H1–H6)',
+	SETTINGS_FOLDER_STYLE_LABEL: 'Color style',
+	SETTINGS_FOLDER_STYLE_INHERIT: 'Default (inherit from parent)',
+	SETTINGS_FOLDER_SELECT_PLACEHOLDER: 'No folder selected',
+	SETTINGS_FOLDER_EMPTY_LIST: 'No folder settings',
+	SETTINGS_FOLDER_DUPLICATE_NOTICE: 'A setting for this folder already exists!',
 };
+
+
+

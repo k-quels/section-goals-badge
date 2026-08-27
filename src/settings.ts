@@ -1,8 +1,17 @@
-import { App, Modal, PluginSettingTab, setIcon, Setting } from 'obsidian';
+import { App, Modal, Notice, PluginSettingTab, setIcon, Setting } from 'obsidian';
+
 import { t } from './lang/helpers';
 import type SectionGoalsBadgePlugin from './main';
-import { BadgePositionPreset, CountType, CumulativeCountMode, GoalColorStyle, PluginSettings } from './types';
+import {
+	BadgePositionPreset,
+	CountType,
+	CumulativeCountMode,
+	GoalColorStyle,
+	PluginSettings,
+} from './types';
+
 import { setCssProps } from './utils/dom';
+import { FolderSuggest } from './utils/folder-suggest';
 
 export interface SettingItemDefinition {
 	name?: string;
@@ -85,6 +94,9 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	styles: getDefaultStyles(),
 	defaultStyleId: 1,
 
+	// Folder Goals
+	folderGoals: [],
+
 	// Counting rules
 	countType: 'character',
 	excludeWhitespace: true,
@@ -98,6 +110,9 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 	plugin: SectionGoalsBadgePlugin;
 	private isHeadingLevelsAccordionOpen = false;
+	private expandedFolderCardIds: Set<string> = new Set();
+	private expandedFolderHeadingIds: Set<string> = new Set();
+
 
 	constructor(app: App, plugin: SectionGoalsBadgePlugin) {
 		super(app, plugin);
@@ -141,6 +156,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 			[t('SETTINGS_HEADING_APPEARANCE')]: 'layout',
 			[t('SETTINGS_HEADING_THRESHOLDS')]: 'gauge',
 			[t('SETTINGS_HEADING_STYLES')]: 'palette',
+			[t('SETTINGS_HEADING_FOLDER_GOALS')]: 'folder',
 			[t('SETTINGS_HEADING_SUPPORT')]: 'heart',
 		};
 
@@ -1268,8 +1284,10 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 								cls: 'sgb-styles-manager-container',
 							});
 
-							const updateDefaultDropdown = () => {
+							const updateAllStyleDropdowns = () => {
 								const root = this.getTabRoot(stylesManagerSetting.settingEl);
+
+								// 1. Update Default Color Style Dropdown
 								const defaultSettingEl = root.querySelector<HTMLElement>(
 									'.sgb-default-style-setting',
 								);
@@ -1289,6 +1307,33 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 									}
 								}
 								this.updateSettingSwatches(stylesManagerSetting.settingEl);
+
+								// 2. Update Folder Goals Style Dropdowns in all expanded folder cards
+								const folderCards = root.querySelectorAll<HTMLElement>('.sgb-folder-goal-card');
+								folderCards.forEach((cardEl) => {
+									const folderId = cardEl.getAttribute('data-folder-id');
+									const folderConfig = this.plugin.settings.folderGoals.find((f) => f.id === folderId);
+									const folderSelect = cardEl.querySelector<HTMLSelectElement>('.sgb-folder-style-select');
+									if (folderSelect && folderConfig) {
+										folderSelect.empty();
+										const defaultOpt = folderSelect.createEl('option', {
+											value: '',
+											text: t('SETTINGS_FOLDER_STYLE_INHERIT'),
+										});
+										if (folderConfig.styleId === undefined) {
+											defaultOpt.selected = true;
+										}
+										for (const style of this.plugin.settings.styles) {
+											const opt = folderSelect.createEl('option', {
+												value: String(style.id),
+												text: style.name,
+											});
+											if (folderConfig.styleId === style.id) {
+												opt.selected = true;
+											}
+										}
+									}
+								});
 							};
 
 							const renderStylesList = () => {
@@ -1322,7 +1367,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 											nameInput.value = style.name;
 											await this.plugin.saveSettings();
 											this.plugin.refreshBadgeUI();
-											updateDefaultDropdown();
+											updateAllStyleDropdowns();
 										})();
 									});
 
@@ -1347,7 +1392,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 													await this.plugin.saveSettings();
 													this.plugin.refreshBadgeUI();
 													renderStylesList();
-													updateDefaultDropdown();
+													updateAllStyleDropdowns();
 												}
 											})();
 										});
@@ -1359,17 +1404,24 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 										setIcon(deleteBtn, 'trash-2');
 										deleteBtn.addEventListener('click', () => {
 											void (async () => {
+												const deletedStyleId = style.id;
 												this.plugin.settings.styles = this.plugin.settings.styles.filter(
-													(s) => s.id !== style.id,
+													(s) => s.id !== deletedStyleId,
 												);
-												if (this.plugin.settings.defaultStyleId === style.id) {
+												if (this.plugin.settings.defaultStyleId === deletedStyleId) {
 													this.plugin.settings.defaultStyleId =
 														this.plugin.settings.styles[0]?.id ?? 1;
+												}
+												// Clean up any folder goals pointing to deleted style
+												for (const fg of this.plugin.settings.folderGoals) {
+													if (fg.styleId === deletedStyleId) {
+														fg.styleId = undefined;
+													}
 												}
 												await this.plugin.saveSettings();
 												this.plugin.refreshBadgeUI();
 												renderStylesList();
-												updateDefaultDropdown();
+												updateAllStyleDropdowns();
 											})();
 										});
 									}
@@ -1475,7 +1527,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 										await this.plugin.saveSettings();
 										this.plugin.refreshBadgeUI();
 										renderStylesList();
-										updateDefaultDropdown();
+										updateAllStyleDropdowns();
 									})();
 								});
 
@@ -1489,10 +1541,16 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 										void (async () => {
 											this.plugin.settings.styles = getDefaultStyles();
 											this.plugin.settings.defaultStyleId = 1;
+											const validStyleIds = new Set(this.plugin.settings.styles.map((s) => s.id));
+											for (const fg of this.plugin.settings.folderGoals) {
+												if (fg.styleId !== undefined && !validStyleIds.has(fg.styleId)) {
+													fg.styleId = undefined;
+												}
+											}
 											await this.plugin.saveSettings();
 											this.plugin.refreshBadgeUI();
 											renderStylesList();
-											updateDefaultDropdown();
+											updateAllStyleDropdowns();
 										})();
 									}).open();
 								});
@@ -1502,12 +1560,350 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						},
 					},
 				],
+
 			},
 
-			// Group 8: Support
+			// Group 8: Folder Goals
+			{
+				type: 'group',
+				heading: t('SETTINGS_HEADING_FOLDER_GOALS'),
+				items: [
+					{
+						render: (folderGoalsSetting: Setting) => {
+							this.attachHeadingIcon(folderGoalsSetting, 'folder');
+							folderGoalsSetting.settingEl.addClass('sgb-folder-goals-setting');
+							folderGoalsSetting.infoEl.remove();
+
+							const container = folderGoalsSetting.controlEl.createDiv({
+								cls: 'sgb-folder-goals-container',
+							});
+
+							container.createDiv({
+								cls: 'sgb-folder-goals-desc',
+								text: t('SETTINGS_FOLDER_GOALS_DESC'),
+							});
+
+							const listEl = container.createDiv({ cls: 'sgb-folder-goals-list' });
+
+							const renderList = () => {
+								listEl.empty();
+
+								if (!this.plugin.settings.folderGoals || this.plugin.settings.folderGoals.length === 0) {
+									listEl.createDiv({
+										cls: 'sgb-folder-goals-empty',
+										text: t('SETTINGS_FOLDER_EMPTY_LIST'),
+									});
+								} else {
+									this.plugin.settings.folderGoals.forEach((folderConfig) => {
+										const isCardExpanded = this.expandedFolderCardIds.has(folderConfig.id);
+										const cardEl = listEl.createDiv({
+											cls: `sgb-folder-goal-card ${isCardExpanded ? 'is-expanded' : 'is-collapsed'}`,
+										});
+										cardEl.setAttribute('data-folder-id', folderConfig.id);
+
+										// Header
+										const headerEl = cardEl.createDiv({ cls: 'sgb-folder-card-header' });
+
+										const headerLeft = headerEl.createDiv({ cls: 'sgb-folder-card-header-left' });
+										const chevronEl = headerLeft.createSpan({ cls: 'sgb-folder-card-chevron' });
+										setIcon(chevronEl, isCardExpanded ? 'chevron-down' : 'chevron-right');
+
+										const folderIconEl = headerLeft.createSpan({ cls: 'sgb-folder-card-icon' });
+										setIcon(folderIconEl, 'folder');
+
+										const titleText = folderConfig.folderPath || t('SETTINGS_FOLDER_SELECT_PLACEHOLDER');
+										const titleEl = headerLeft.createSpan({
+											cls: `sgb-folder-card-title ${!folderConfig.folderPath ? 'is-placeholder' : ''}`,
+											text: titleText,
+										});
+
+										headerLeft.addEventListener('click', () => {
+											if (this.expandedFolderCardIds.has(folderConfig.id)) {
+												this.expandedFolderCardIds.delete(folderConfig.id);
+											} else {
+												this.expandedFolderCardIds.add(folderConfig.id);
+											}
+											renderList();
+										});
+
+										const headerRight = headerEl.createDiv({ cls: 'sgb-folder-card-header-right' });
+										const deleteBtn = headerRight.createEl('button', {
+											cls: 'clickable-icon sgb-folder-action-btn mod-warning',
+											title: t('SETTINGS_FOLDER_GOAL_DELETE'),
+										});
+										setIcon(deleteBtn, 'trash-2');
+										deleteBtn.addEventListener('click', (e) => {
+											e.stopPropagation();
+											void (async () => {
+												this.plugin.settings.folderGoals = this.plugin.settings.folderGoals.filter(
+													(f) => f.id !== folderConfig.id,
+												);
+												this.expandedFolderCardIds.delete(folderConfig.id);
+												this.expandedFolderHeadingIds.delete(folderConfig.id);
+												await this.plugin.saveSettings();
+												this.plugin.refreshBadgeUI();
+												this.plugin.recalculateCounts();
+												renderList();
+											})();
+										});
+
+										// Body (when expanded)
+										if (isCardExpanded) {
+											const bodyEl = cardEl.createDiv({ cls: 'sgb-folder-card-body' });
+
+											// 1. Folder path input with Suggest
+											const pathRow = bodyEl.createDiv({ cls: 'sgb-folder-card-row' });
+											pathRow.createSpan({
+												cls: 'sgb-folder-row-label',
+												text: t('SETTINGS_FOLDER_PATH_LABEL'),
+											});
+											const pathInput = pathRow.createEl('input', {
+												type: 'text',
+												cls: 'sgb-folder-path-input',
+												placeholder: t('SETTINGS_FOLDER_PATH_PLACEHOLDER'),
+												value: folderConfig.folderPath,
+											});
+											new FolderSuggest(this.app, pathInput);
+											pathInput.addEventListener('change', () => {
+												void (async () => {
+													const rawVal = pathInput.value.trim();
+													const normalized = rawVal.replace(/^\/+|\/+$/g, '');
+
+													if (normalized) {
+														const isDuplicate = this.plugin.settings.folderGoals.some(
+															(f) =>
+																f.id !== folderConfig.id &&
+																f.folderPath.trim().replace(/^\/+|\/+$/g, '') === normalized,
+														);
+														if (isDuplicate) {
+															new Notice(t('SETTINGS_FOLDER_DUPLICATE_NOTICE'));
+															pathInput.value = folderConfig.folderPath;
+															return;
+														}
+													}
+
+													folderConfig.folderPath = rawVal;
+													titleEl.setText(folderConfig.folderPath || t('SETTINGS_FOLDER_SELECT_PLACEHOLDER'));
+													titleEl.classList.toggle('is-placeholder', !folderConfig.folderPath);
+													await this.plugin.saveSettings();
+													this.plugin.refreshBadgeUI();
+													this.plugin.recalculateCounts();
+												})();
+											});
+
+											// 2. Note Total Goal
+											const totalRow = bodyEl.createDiv({ cls: 'sgb-folder-card-row' });
+											totalRow.createSpan({
+												cls: 'sgb-folder-row-label',
+												text: t('SETTINGS_FOLDER_TOTAL_GOAL'),
+											});
+											const totalInput = totalRow.createEl('input', {
+												type: 'number',
+												cls: 'sgb-folder-number-input',
+												placeholder: t('SETTINGS_FOLDER_UNSET_PLACEHOLDER'),
+												value: folderConfig.fileGoal ? String(folderConfig.fileGoal) : '',
+												attr: { min: '0', step: '1' },
+											});
+											totalInput.addEventListener('change', () => {
+												void (async () => {
+													const val = parseInt(totalInput.value, 10);
+													folderConfig.fileGoal = !isNaN(val) && val > 0 ? val : undefined;
+													await this.plugin.saveSettings();
+													this.plugin.refreshBadgeUI();
+													this.plugin.recalculateCounts();
+												})();
+											});
+
+											// 3. Section Default Goal
+											const secRow = bodyEl.createDiv({ cls: 'sgb-folder-card-row' });
+											secRow.createSpan({
+												cls: 'sgb-folder-row-label',
+												text: t('SETTINGS_FOLDER_SECTION_GOAL'),
+											});
+											const secInput = secRow.createEl('input', {
+												type: 'number',
+												cls: 'sgb-folder-number-input',
+												placeholder: t('SETTINGS_FOLDER_UNSET_PLACEHOLDER'),
+												value: folderConfig.defaultSectionGoal ? String(folderConfig.defaultSectionGoal) : '',
+												attr: { min: '0', step: '1' },
+											});
+											secInput.addEventListener('change', () => {
+												void (async () => {
+													const val = parseInt(secInput.value, 10);
+													folderConfig.defaultSectionGoal = !isNaN(val) && val > 0 ? val : undefined;
+													await this.plugin.saveSettings();
+													this.plugin.refreshBadgeUI();
+													this.plugin.recalculateCounts();
+												})();
+											});
+
+											// 4. Heading Level Goals Accordion
+											const isHeadingsExpanded = this.expandedFolderHeadingIds.has(folderConfig.id);
+											const headingsAccordionHeader = bodyEl.createDiv({
+												cls: 'sgb-folder-headings-accordion-header',
+											});
+											const hChevron = headingsAccordionHeader.createSpan({
+												cls: 'sgb-folder-headings-chevron',
+											});
+											setIcon(hChevron, isHeadingsExpanded ? 'chevron-down' : 'chevron-right');
+											headingsAccordionHeader.createSpan({
+												cls: 'sgb-folder-headings-title',
+												text: t('SETTINGS_FOLDER_HEADING_GOALS_ACCORDION'),
+											});
+
+											headingsAccordionHeader.addEventListener('click', () => {
+												if (this.expandedFolderHeadingIds.has(folderConfig.id)) {
+													this.expandedFolderHeadingIds.delete(folderConfig.id);
+												} else {
+													this.expandedFolderHeadingIds.add(folderConfig.id);
+												}
+												renderList();
+											});
+
+											if (isHeadingsExpanded) {
+												const headingsGrid = bodyEl.createDiv({
+													cls: 'sgb-folder-headings-grid',
+												});
+												for (let level = 1; level <= 6; level++) {
+													const hItem = headingsGrid.createDiv({
+														cls: 'sgb-folder-heading-item',
+													});
+													const hLabel = hItem.createSpan({
+														cls: 'sgb-folder-heading-label',
+													});
+													hLabel.title = `H${level}`;
+													const hIcon = hLabel.createSpan({
+														cls: 'sgb-folder-heading-icon',
+													});
+													setIcon(hIcon, `heading-${level}`);
+
+													const hInput = hItem.createEl('input', {
+														type: 'number',
+														cls: 'sgb-folder-number-input sgb-folder-heading-input',
+														placeholder: t('SETTINGS_FOLDER_UNSET_PLACEHOLDER'),
+														value: folderConfig.headingLevelGoals?.[level]
+															? String(folderConfig.headingLevelGoals[level])
+															: '',
+														attr: { min: '0', step: '1' },
+													});
+
+													hInput.addEventListener('change', () => {
+														void (async () => {
+															const val = parseInt(hInput.value, 10);
+															if (!folderConfig.headingLevelGoals) {
+																folderConfig.headingLevelGoals = {};
+															}
+															if (!isNaN(val) && val > 0) {
+																folderConfig.headingLevelGoals[level] = val;
+															} else {
+																delete folderConfig.headingLevelGoals[level];
+															}
+															await this.plugin.saveSettings();
+															this.plugin.refreshBadgeUI();
+															this.plugin.recalculateCounts();
+														})();
+													});
+												}
+											}
+
+											// 5. Color Style Dropdown
+											const styleRow = bodyEl.createDiv({ cls: 'sgb-folder-card-row' });
+											styleRow.createSpan({
+												cls: 'sgb-folder-row-label',
+												text: t('SETTINGS_FOLDER_STYLE_LABEL'),
+											});
+											const styleSelect = styleRow.createEl('select', {
+												cls: 'dropdown sgb-folder-style-select',
+											});
+											// Option for inherit/default
+											const defaultOpt = styleSelect.createEl('option', {
+												value: '',
+												text: t('SETTINGS_FOLDER_STYLE_INHERIT'),
+											});
+											if (folderConfig.styleId === undefined) {
+												defaultOpt.selected = true;
+											}
+											for (const style of this.plugin.settings.styles) {
+												const opt = styleSelect.createEl('option', {
+													value: String(style.id),
+													text: style.name,
+												});
+												if (folderConfig.styleId === style.id) {
+													opt.selected = true;
+												}
+											}
+											styleSelect.addEventListener('change', () => {
+												void (async () => {
+													if (!styleSelect.value) {
+														folderConfig.styleId = undefined;
+													} else {
+														const parsed = parseInt(styleSelect.value, 10);
+														folderConfig.styleId = !isNaN(parsed) ? parsed : undefined;
+													}
+													await this.plugin.saveSettings();
+													this.plugin.refreshBadgeUI();
+													this.plugin.recalculateCounts();
+												})();
+											});
+										}
+									});
+								}
+							};
+
+							const footerEl = container.createDiv({ cls: 'sgb-folder-goals-footer' });
+							const addBtn = footerEl.createEl('button', {
+								cls: 'mod-cta sgb-add-folder-goal-btn',
+								text: t('SETTINGS_FOLDER_GOAL_ADD'),
+							});
+							setIcon(addBtn.createSpan({ cls: 'sgb-btn-icon' }), 'plus');
+							addBtn.addEventListener('click', () => {
+								void (async () => {
+									if (!Array.isArray(this.plugin.settings.folderGoals)) {
+										this.plugin.settings.folderGoals = [];
+									}
+
+									// If an unconfigured empty card already exists, reuse and expand it
+									const existingEmpty = this.plugin.settings.folderGoals.find(
+										(f) => !f.folderPath.trim(),
+									);
+									if (existingEmpty) {
+										this.expandedFolderCardIds.add(existingEmpty.id);
+										renderList();
+										window.requestAnimationFrame(() => {
+											const emptyCard = listEl.querySelector(`[data-folder-id="${existingEmpty.id}"]`);
+											const input = emptyCard?.querySelector<HTMLInputElement>('.sgb-folder-path-input');
+											input?.focus();
+										});
+										return;
+									}
+
+									const newId = String(Date.now());
+									this.plugin.settings.folderGoals.push({
+										id: newId,
+										folderPath: '',
+									});
+									this.expandedFolderCardIds.add(newId);
+									await this.plugin.saveSettings();
+									renderList();
+									window.requestAnimationFrame(() => {
+										const lastCard = listEl.querySelector('.sgb-folder-goal-card:last-child');
+										const input = lastCard?.querySelector<HTMLInputElement>('.sgb-folder-path-input');
+										input?.focus();
+									});
+								})();
+							});
+
+							renderList();
+						},
+					},
+				],
+			},
+
+			// Group 9: Support
 			{
 				type: 'group',
 				heading: t('SETTINGS_HEADING_SUPPORT'),
+
 				items: [
 					{
 						name: t('SETTINGS_DONATE'),

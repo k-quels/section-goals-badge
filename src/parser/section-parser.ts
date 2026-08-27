@@ -25,11 +25,12 @@ export class SectionParser {
 		file: TFile,
 		content: string,
 		options: CounterOptions = {},
+		goalData?: FileGoalData,
 	): ParsedDocumentSections {
 		// Scan headings directly from current content with accurate line numbers
 		const rawHeadings = this.scanHeadingsFast(content);
 		const frontmatterEndOffset = this.getFrontmatterEndOffset(file, content);
-		const { defaultSectionGoal, headingLevelGoals, sectionGoals } = this.fmManager.getGoalData(file);
+		const { defaultSectionGoal, headingLevelGoals, sectionGoals } = goalData ?? this.fmManager.getGoalData(file);
 
 		if (rawHeadings.length === 0) {
 			const totalCharCount = countText(content.slice(frontmatterEndOffset), options.countType, options);

@@ -181,7 +181,26 @@ const ja: typeof en = {
 
 	// Modal Color Style
 	MODAL_COLOR_STYLE_LABEL: 'カラースタイル',
-	MODAL_COLOR_STYLE_DESC: 'このノートのバッジや進捗バーに適用する配色です。',
+	MODAL_COLOR_STYLE_DESC: 'このノートのバッジや進捗バーに適用する配色',
+
+	// Settings - Folder Goals
+	SETTINGS_HEADING_FOLDER_GOALS: 'フォルダごとの初期値',
+	SETTINGS_FOLDER_GOALS_DESC: '指定フォルダ以下のノートにデフォルトの目標値やカラースタイルを設定できます。\n※ノート内のFrontmatterが優先されます。',
+	SETTINGS_FOLDER_GOAL_ADD: 'フォルダを追加',
+	SETTINGS_FOLDER_GOAL_DELETE: '削除',
+	SETTINGS_FOLDER_PATH_LABEL: '対象フォルダ',
+	SETTINGS_FOLDER_PATH_PLACEHOLDER: 'フォルダパス',
+	SETTINGS_FOLDER_TOTAL_GOAL: 'ノート全体目標',
+	SETTINGS_FOLDER_SECTION_GOAL: 'セクション目標',
+	SETTINGS_FOLDER_UNSET_PLACEHOLDER: '未設定 (親から継承)',
+	SETTINGS_FOLDER_HEADING_GOALS_ACCORDION: '見出しレベルごとの目標（H1〜H6）',
+	SETTINGS_FOLDER_STYLE_LABEL: 'カラースタイル',
+	SETTINGS_FOLDER_STYLE_INHERIT: 'デフォルト (親から継承)',
+	SETTINGS_FOLDER_SELECT_PLACEHOLDER: 'フォルダ未選択',
+	SETTINGS_FOLDER_EMPTY_LIST: 'フォルダ設定はありません',
+	SETTINGS_FOLDER_DUPLICATE_NOTICE: 'このフォルダの設定は既に存在します！',
 };
 
 export default ja;
+
+

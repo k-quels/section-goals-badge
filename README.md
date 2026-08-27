@@ -20,7 +20,7 @@ Display floating badges on your editor to keep track of character counts and pro
 
 ## Key Features
 
-- 🎯 **Goal Tracking per Section (Heading)**: Set target counts for each chapter or section.
+- 🎯 **Goal Tracking per Section (Heading)**: Set target counts per folder, per note, or for each chapter and section.
 
 - 📛 **Unobtrusive Floating Badge**: Position at any corner of the editor, with drag-and-drop movement and opacity adjustments.
 
@@ -39,33 +39,32 @@ Display floating badges on your editor to keep track of character counts and pro
 
 - ⚡ **Fast & Battery Efficient (1M+ characters)**: Optimized to minimize typing latency and reduce mobile battery drain even in long-form writing.
 
-- 💾 **Self-Contained in Note**: Goal values and color styles are saved directly into the note's Frontmatter.
-
 ---
 
 ## Usage
 
 ### 1. Open Goal Management Window
 
-- Tap or click the badge on the editor to open the goal management window.
-  - *(Can be changed to "Long press to open" in settings to avoid accidental taps)*
-
+- Tap or click the badge on the editor to open the goal management window.<br>
 <img src="./doc/images/goal-modal-en.png" width="450">
+
+  - Tips: Change to "Long press to open" in settings to avoid accidental taps.
+  - Tips: Click a section name to close the modal and jump directly to that heading.
 
 ### 2. Set Target Counts
 
-Enter target counts directly in the modal (automatically saved to Frontmatter):
+Enter target counts for each item (automatically saved to Frontmatter).<br>
+*Note: To configure goals per folder, add folder definitions in the plugin settings.*
 
-- **Note Total Goal**: Target count for the entire note.
-- **Section Goal (Default)**: Default target applied to headings without individual goals.
+- **Note Total Goal**: Target count for the entire note being edited.
+- **Section Goal**: Default target count applied to headings without individual goals.
 - **Heading Level Goals**: Set default target counts for each heading level (H1–H6).
-- **Individual Section Goals**: Set specific targets per heading row in the list.
-- **"Set current count as all goals" Button**: Batch-assigns written character counts as goals for all sections.
+- **Individual Section Goals**: Enter specific target counts for each row in the heading list.
 
 ### 3. Adjust Badge Position & Appearance
 
 - **Drag and drop** the badge to place it anywhere on your editor.
-  - You can also specify exact offsets in the settings tab (synced with drag-and-drop values).
+  - You can also specify exact values in the settings tab (synced with drag-and-drop values).
 
 ---
 
@@ -109,6 +108,11 @@ The following features and options can be customized:
 - In the Goal Management modal, **select your preferred style per note** from the "Color style" dropdown.
 
 - Progress color thresholds (default: 50% / 80% / 100%) can be customized in settings.
+
+### 5. Folder-Level Defaults
+
+- Set default target goals and color styles for notes under specified folders.
+  - *Note: Settings specified within individual notes take precedence.*
 
 ---
 

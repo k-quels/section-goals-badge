@@ -66,6 +66,15 @@ export interface WritingProgress {
 export type BadgePositionPreset = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 export type CumulativeCountMode = 'from-top' | 'from-section';
 
+export interface FolderGoalConfig {
+	id: string;
+	folderPath: string;
+	fileGoal?: number;
+	defaultSectionGoal?: number;
+	headingLevelGoals?: Record<number, number>;
+	styleId?: number;
+}
+
 export interface PluginSettings {
 	// Section Progress options
 	showSectionProgress: boolean;
@@ -112,6 +121,9 @@ export interface PluginSettings {
 	styles: GoalColorStyle[];
 	defaultStyleId: number;
 
+	// Folder Goals
+	folderGoals: FolderGoalConfig[];
+
 	// Counter options
 	countType: CountType;
 	excludeWhitespace: boolean;
@@ -121,4 +133,5 @@ export interface PluginSettings {
 	// Interaction
 	longPressToOpenModal: boolean;
 }
+
 

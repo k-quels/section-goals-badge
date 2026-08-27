@@ -181,7 +181,7 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 	}
 
 	public getActiveColorStyle(file: TFile): GoalColorStyle {
-		const goalData = this.fmManager.getGoalData(file);
+		const goalData = this.fmManager.getEffectiveGoalData(file, this.settings);
 		const targetId = goalData.styleId ?? this.settings.defaultStyleId ?? 1;
 		const found = this.settings.styles.find((s) => s.id === targetId);
 		if (found) return found;
@@ -254,12 +254,18 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 		}
 
 		const content = view.editor.getValue();
-		this.currentParsedDoc = this.parser.parseDocument(view.file, content, {
-			countType: this.settings.countType,
-			excludeWhitespace: this.settings.excludeWhitespace,
-			excludeRuby: this.settings.excludeRuby,
-			excludeCharacters: this.settings.excludeCharacters,
-		});
+		const effectiveGoalData = this.fmManager.getEffectiveGoalData(view.file, this.settings);
+		this.currentParsedDoc = this.parser.parseDocument(
+			view.file,
+			content,
+			{
+				countType: this.settings.countType,
+				excludeWhitespace: this.settings.excludeWhitespace,
+				excludeRuby: this.settings.excludeRuby,
+				excludeCharacters: this.settings.excludeCharacters,
+			},
+			effectiveGoalData,
+		);
 
 		this.updateBadgeWithCursor(view, true);
 	}
@@ -307,7 +313,7 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 		}
 		this.lastCursorOffset = cursorOffset;
 
-		const goalData = this.fmManager.getGoalData(view.file);
+		const goalData = this.fmManager.getEffectiveGoalData(view.file, this.settings);
 
 		const progress = this.parser.calculateProgress(
 			this.currentParsedDoc,

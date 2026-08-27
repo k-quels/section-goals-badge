@@ -1,5 +1,5 @@
 import { App, DropdownComponent, MarkdownView, Modal, setIcon, TFile } from 'obsidian';
-import { FrontmatterManager } from '../frontmatter/frontmatter-manager';
+import { EffectiveGoalData, FrontmatterManager } from '../frontmatter/frontmatter-manager';
 import { t } from '../lang/helpers';
 import { ParsedDocumentSections, SectionParser } from '../parser/section-parser';
 import { GoalColorStyle, HeadingGoalItem, PluginSettings, SectionNode } from '../types';
@@ -13,6 +13,7 @@ export class GoalManagementModal extends Modal {
 	private fmManager: FrontmatterManager;
 	private settings: PluginSettings;
 	private parsedData!: ParsedDocumentSections;
+	private effectiveData!: EffectiveGoalData;
 	private currentCursorOffset: number;
 	private onGoalsUpdated: () => void;
 
@@ -24,6 +25,7 @@ export class GoalManagementModal extends Modal {
 	private sectionGoalsMap: Map<string, number> = new Map();
 	private activeSectionHeading: string | null = null;
 	private inputElements: Map<string, HTMLInputElement> = new Map();
+	private levelInputElements: Map<number, HTMLInputElement> = new Map();
 	private totalGoalInputElement: HTMLInputElement | null = null;
 	private defaultSectionGoalInputElement: HTMLInputElement | null = null;
 	private colorPreviewDots: HTMLElement[] = [];
@@ -68,17 +70,23 @@ export class GoalManagementModal extends Modal {
 
 		// Re-read file content and frontmatter to ensure freshness
 		const docContent = this.view.editor.getValue();
-		this.parsedData = this.parser.parseDocument(this.file, docContent, {
-			countType: this.settings.countType,
-			excludeWhitespace: this.settings.excludeWhitespace,
-			excludeRuby: this.settings.excludeRuby,
-			excludeCharacters: this.settings.excludeCharacters,
-		});
+		this.effectiveData = this.fmManager.getEffectiveGoalData(this.file, this.settings);
+		this.parsedData = this.parser.parseDocument(
+			this.file,
+			docContent,
+			{
+				countType: this.settings.countType,
+				excludeWhitespace: this.settings.excludeWhitespace,
+				excludeRuby: this.settings.excludeRuby,
+				excludeCharacters: this.settings.excludeCharacters,
+			},
+			this.effectiveData,
+		);
 
 		const { fileGoal, defaultSectionGoal, headingLevelGoals, sectionGoals, styleId } = this.fmManager.getGoalData(this.file);
 		this.fileGoalInput = fileGoal;
 		this.defaultSectionGoalInput = defaultSectionGoal;
-		this.styleIdInput = styleId ?? this.settings.defaultStyleId ?? 1;
+		this.styleIdInput = styleId ?? this.effectiveData.styleId ?? this.settings.defaultStyleId ?? 1;
 		this.headingLevelGoalsInput = headingLevelGoals ? { ...headingLevelGoals } : {};
 
 		// Apply initial color style to modal
@@ -120,7 +128,7 @@ export class GoalManagementModal extends Modal {
 			if (activeEl instanceof HTMLInputElement && this.contentEl.contains(activeEl)) {
 				const activeItem = activeEl.closest('.sgb-section-tree-item');
 				if (activeItem instanceof HTMLElement) {
-					activeItem.scrollIntoView({ block: 'center', behavior: 'smooth' });
+					this.scrollToItem(activeItem);
 				}
 			}
 		};
@@ -129,6 +137,23 @@ export class GoalManagementModal extends Modal {
 			this.viewportResizeHandler = updateLayout;
 			window.visualViewport.addEventListener('resize', this.viewportResizeHandler);
 			updateLayout();
+		}
+	}
+
+	/**
+	 * Safely scrolls a tree item into center view without causing horizontal parent container shifts.
+	 */
+	private scrollToItem(itemEl: HTMLElement): void {
+		const treeContainer = this.contentEl.querySelector<HTMLElement>('.sgb-section-tree-container');
+		if (treeContainer) {
+			const containerRect = treeContainer.getBoundingClientRect();
+			const itemRect = itemEl.getBoundingClientRect();
+			const relativeTop = itemRect.top - containerRect.top + treeContainer.scrollTop;
+			const targetScroll = relativeTop - containerRect.height / 2 + itemRect.height / 2;
+			treeContainer.scrollTo({
+				top: Math.max(0, targetScroll),
+				behavior: 'smooth',
+			});
 		}
 	}
 
@@ -148,10 +173,87 @@ export class GoalManagementModal extends Modal {
 		});
 	}
 
+	private getHeadingLevelPlaceholder(level: number): string {
+		// Priority: Folder heading level goal -> Note default section goal -> Folder default section goal -> Default placeholder
+		const inheritedHeadingGoal = this.effectiveData.inheritedDefaults?.headingLevelGoals?.[level];
+		if (inheritedHeadingGoal !== undefined && inheritedHeadingGoal > 0) {
+			return String(inheritedHeadingGoal);
+		}
+		if (this.defaultSectionGoalInput !== undefined && this.defaultSectionGoalInput > 0) {
+			return String(this.defaultSectionGoalInput);
+		}
+		const inheritedDefaultSecGoal = this.effectiveData.inheritedDefaults?.defaultSectionGoal;
+		if (inheritedDefaultSecGoal !== undefined && inheritedDefaultSecGoal > 0) {
+			return String(inheritedDefaultSecGoal);
+		}
+		return t('MODAL_GOAL_PLACEHOLDER');
+	}
+
+	private updateLevelInputPlaceholders(): void {
+		for (let level = 1; level <= 6; level++) {
+			const inputEl = this.levelInputElements.get(level);
+			if (inputEl) {
+				inputEl.placeholder = this.getHeadingLevelPlaceholder(level);
+			}
+		}
+	}
+
+	private getEffectiveSectionGoal(heading: string, level: number): number | undefined {
+		// 1. Explicit section goal in note
+		const explicitGoal = this.sectionGoalsMap.get(heading);
+		if (explicitGoal !== undefined && explicitGoal > 0) {
+			return explicitGoal;
+		}
+		// 2. Note heading level goal
+		const noteLevelGoal = this.headingLevelGoalsInput[level];
+		if (noteLevelGoal !== undefined && noteLevelGoal > 0) {
+			return noteLevelGoal;
+		}
+		// 3. Folder heading level goal
+		const inheritedLevelGoal = this.effectiveData.inheritedDefaults?.headingLevelGoals?.[level];
+		if (inheritedLevelGoal !== undefined && inheritedLevelGoal > 0) {
+			return inheritedLevelGoal;
+		}
+		// 4. Note default section goal
+		if (this.defaultSectionGoalInput !== undefined && this.defaultSectionGoalInput > 0) {
+			return this.defaultSectionGoalInput;
+		}
+		// 5. Folder default section goal
+		const inheritedDefaultSecGoal = this.effectiveData.inheritedDefaults?.defaultSectionGoal;
+		if (inheritedDefaultSecGoal !== undefined && inheritedDefaultSecGoal > 0) {
+			return inheritedDefaultSecGoal;
+		}
+		return undefined;
+	}
+
+	private getSectionPlaceholder(level: number): string {
+		const noteLevelGoal = this.headingLevelGoalsInput[level];
+		if (noteLevelGoal !== undefined && noteLevelGoal > 0) {
+			return String(noteLevelGoal);
+		}
+		const inheritedLevelGoal = this.effectiveData.inheritedDefaults?.headingLevelGoals?.[level];
+		if (inheritedLevelGoal !== undefined && inheritedLevelGoal > 0) {
+			return String(inheritedLevelGoal);
+		}
+		if (this.defaultSectionGoalInput !== undefined && this.defaultSectionGoalInput > 0) {
+			return String(this.defaultSectionGoalInput);
+		}
+		const inheritedDefaultSecGoal = this.effectiveData.inheritedDefaults?.defaultSectionGoal;
+		if (inheritedDefaultSecGoal !== undefined && inheritedDefaultSecGoal > 0) {
+			return String(inheritedDefaultSecGoal);
+		}
+		return t('MODAL_GOAL_PLACEHOLDER');
+	}
+
 	private renderModal(): void {
 		const { contentEl } = this;
 		contentEl.empty();
 		this.inputElements.clear();
+		this.levelInputElements.clear();
+		this.contentEl.scrollLeft = 0;
+		if (this.contentEl.parentElement) {
+			this.contentEl.parentElement.scrollLeft = 0;
+		}
 
 		const titleText = this.settings.countType === 'word' ? t('MODAL_TITLE_WORDS') : t('MODAL_TITLE');
 		contentEl.createEl('h2', { cls: 'sgb-modal-header-title', text: titleText });
@@ -186,10 +288,13 @@ export class GoalManagementModal extends Modal {
 
 		// Col 2: Total goal input
 		const totalInputWrapper = totalControls.createDiv({ cls: 'sgb-goal-input-wrapper' });
+		const totalPlaceholder = this.effectiveData.inheritedDefaults?.fileGoal
+			? String(this.effectiveData.inheritedDefaults.fileGoal)
+			: t('MODAL_GOAL_PLACEHOLDER');
 		const totalInput = totalInputWrapper.createEl('input', {
 			type: 'number',
 			cls: 'sgb-goal-input',
-			placeholder: t('MODAL_GOAL_PLACEHOLDER'),
+			placeholder: totalPlaceholder,
 		});
 		if (this.fileGoalInput !== undefined && this.fileGoalInput > 0) {
 			totalInput.value = String(this.fileGoalInput);
@@ -226,10 +331,13 @@ export class GoalManagementModal extends Modal {
 
 		// Col 2: Default goal input
 		const defaultInputWrapper = defaultControls.createDiv({ cls: 'sgb-goal-input-wrapper' });
+		const defaultPlaceholder = this.effectiveData.inheritedDefaults?.defaultSectionGoal
+			? String(this.effectiveData.inheritedDefaults.defaultSectionGoal)
+			: t('MODAL_GOAL_PLACEHOLDER');
 		const defaultInput = defaultInputWrapper.createEl('input', {
 			type: 'number',
 			cls: 'sgb-goal-input',
-			placeholder: t('MODAL_GOAL_PLACEHOLDER'),
+			placeholder: defaultPlaceholder,
 		});
 		if (this.defaultSectionGoalInput !== undefined && this.defaultSectionGoalInput > 0) {
 			defaultInput.value = String(this.defaultSectionGoalInput);
@@ -242,6 +350,7 @@ export class GoalManagementModal extends Modal {
 		defaultInput.addEventListener('input', () => {
 			const num = parseInt(defaultInput.value, 10);
 			this.defaultSectionGoalInput = !isNaN(num) && num > 0 ? num : undefined;
+			this.updateLevelInputPlaceholders();
 			this.refreshSectionMiniProgress();
 			this.debouncedSaveGoals();
 		});
@@ -273,6 +382,10 @@ export class GoalManagementModal extends Modal {
 				accordionBody.removeClass('is-open');
 				setIcon(accordionChevron, 'chevron-right');
 			}
+			this.contentEl.scrollLeft = 0;
+			if (this.contentEl.parentElement) {
+				this.contentEl.parentElement.scrollLeft = 0;
+			}
 			this.updateScrollbarOffset();
 		});
 
@@ -284,11 +397,14 @@ export class GoalManagementModal extends Modal {
 			const iconSpan = labelEl.createSpan({ cls: 'sgb-level-goal-icon' });
 			setIcon(iconSpan, `heading-${level}`);
 
+			const levelPlaceholder = this.getHeadingLevelPlaceholder(level);
+
 			const input = itemEl.createEl('input', {
 				type: 'number',
 				cls: 'sgb-goal-input sgb-level-input',
-				placeholder: this.defaultSectionGoalInput ? String(this.defaultSectionGoalInput) : t('MODAL_GOAL_PLACEHOLDER'),
+				placeholder: levelPlaceholder,
 			});
+			this.levelInputElements.set(level, input);
 
 			const val = this.headingLevelGoalsInput[level];
 			if (val !== undefined && val > 0) {
@@ -306,6 +422,8 @@ export class GoalManagementModal extends Modal {
 				this.debouncedSaveGoals();
 			});
 		}
+
+
 
 		// Row 4: Color Style Selection
 		const styleRowEl = topCardEl.createDiv({ cls: 'sgb-modal-card-row sgb-modal-style-row' });
@@ -403,15 +521,14 @@ export class GoalManagementModal extends Modal {
 			});
 
 			const explicitGoal = this.sectionGoalsMap.get(section.heading);
-			const levelGoal = this.headingLevelGoalsInput[section.level];
-			const effectiveGoal = explicitGoal ?? levelGoal ?? this.defaultSectionGoalInput;
-			const placeholderVal = levelGoal ?? this.defaultSectionGoalInput;
+			const effectiveGoal = this.getEffectiveSectionGoal(section.heading, section.level);
+			const placeholderVal = this.getSectionPlaceholder(section.level);
 
 			const inputWrapperEl = controlsEl.createDiv({ cls: 'sgb-goal-input-wrapper' });
 			const inputEl = inputWrapperEl.createEl('input', {
 				type: 'number',
 				cls: 'sgb-goal-input',
-				placeholder: placeholderVal ? String(placeholderVal) : t('MODAL_GOAL_PLACEHOLDER'),
+				placeholder: placeholderVal,
 			});
 			if (explicitGoal !== undefined && explicitGoal > 0) {
 				inputEl.value = String(explicitGoal);
@@ -432,8 +549,7 @@ export class GoalManagementModal extends Modal {
 				} else {
 					this.sectionGoalsMap.delete(section.heading);
 				}
-				const curLevelGoal = this.headingLevelGoalsInput[section.level];
-				const currentEffective = this.sectionGoalsMap.get(section.heading) ?? curLevelGoal ?? this.defaultSectionGoalInput;
+				const currentEffective = this.getEffectiveSectionGoal(section.heading, section.level);
 				this.updateMiniProgress(miniFillEl, miniPercentEl, section.charCount, currentEffective);
 				this.debouncedSaveGoals();
 			};
@@ -444,7 +560,7 @@ export class GoalManagementModal extends Modal {
 			// Ensure mobile virtual keyboard doesn't occlude active input row
 			inputEl.addEventListener('focus', () => {
 				window.setTimeout(() => {
-					itemEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+					this.scrollToItem(itemEl);
 				}, 250);
 			});
 		}
@@ -452,7 +568,9 @@ export class GoalManagementModal extends Modal {
 		// Scroll to active section if needed
 		if (activeItemEl) {
 			window.setTimeout(() => {
-				activeItemEl?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+				if (activeItemEl) {
+					this.scrollToItem(activeItemEl);
+				}
 			}, 50);
 		}
 
@@ -464,12 +582,10 @@ export class GoalManagementModal extends Modal {
 		// Update placeholders and mini progress without destroying current input focus
 		for (const sec of this.parsedData.flatSections) {
 			const inputEl = this.inputElements.get(sec.heading);
-			const levelGoal = this.headingLevelGoalsInput[sec.level];
-			const placeholderVal = levelGoal ?? this.defaultSectionGoalInput;
 			if (inputEl) {
-				inputEl.placeholder = placeholderVal ? String(placeholderVal) : t('MODAL_GOAL_PLACEHOLDER');
+				inputEl.placeholder = this.getSectionPlaceholder(sec.level);
 			}
-			const effective = this.sectionGoalsMap.get(sec.heading) ?? levelGoal ?? this.defaultSectionGoalInput;
+			const effective = this.getEffectiveSectionGoal(sec.heading, sec.level);
 			const rowControlsEl = inputEl?.parentElement?.parentElement;
 			const miniFillEl = rowControlsEl?.querySelector('.sgb-mini-progress-fill') as HTMLElement | null;
 			const miniPercentEl = rowControlsEl?.querySelector('.sgb-mini-percent') as HTMLElement | null;
@@ -480,6 +596,7 @@ export class GoalManagementModal extends Modal {
 
 		this.updateScrollbarOffset();
 	}
+
 
 	private setAllGoalsFromCurrent(): void {
 		for (const sec of this.parsedData.flatSections) {
@@ -538,6 +655,9 @@ export class GoalManagementModal extends Modal {
 			}
 		}
 
+		const inheritedDefaultStyleId =
+			this.effectiveData.inheritedDefaults?.styleId ?? this.settings.defaultStyleId ?? 1;
+
 		await this.fmManager.saveGoalData(
 			this.file,
 			this.fileGoalInput,
@@ -545,10 +665,11 @@ export class GoalManagementModal extends Modal {
 			sectionGoals,
 			this.headingLevelGoalsInput,
 			this.styleIdInput,
-			this.settings.defaultStyleId ?? 1,
+			inheritedDefaultStyleId,
 		);
 		this.onGoalsUpdated();
 	}
+
 
 	private getEffectiveStyle(): GoalColorStyle {
 		const found = this.settings.styles.find((s) => s.id === this.styleIdInput);
