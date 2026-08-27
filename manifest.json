@@ -1,7 +1,7 @@
 {
 	"id": "section-goals-badge",
 	"name": "Section Goals Badge",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "1.8.7",
 	"description": "Mobile-friendly floating character counter to set and track writing goals per section.",
 	"author": "quels <@k-quels>",
