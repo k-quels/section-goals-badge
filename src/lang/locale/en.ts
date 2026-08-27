@@ -181,11 +181,11 @@ export default {
 	MODAL_COLOR_STYLE_LABEL: 'Color style',
 	MODAL_COLOR_STYLE_DESC: 'Color style applied to badges and bars for this note.',
 	MODAL_FOLDER_DEFAULTS_HINT: 'Folder defaults can be defined in {link}.',
-	MODAL_FOLDER_DEFAULTS_HINT_LINK: 'plugin settings',
+	MODAL_FOLDER_DEFAULTS_HINT_LINK: 'Plugin settings',
 
 	// Settings - Folder Goals
 	SETTINGS_HEADING_FOLDER_GOALS: 'Folder defaults',
-	SETTINGS_FOLDER_GOALS_DESC: 'Set default goals and color styles for notes under specific folders.\n* Note frontmatter takes precedence.',
+	SETTINGS_FOLDER_GOALS_DESC: 'Set default goals and color styles for notes under specific folders.\nNote frontmatter takes precedence.',
 	SETTINGS_FOLDER_GOAL_ADD: 'Add folder',
 	SETTINGS_FOLDER_GOAL_DELETE: 'Delete',
 	SETTINGS_FOLDER_PATH_LABEL: 'Target folder',
