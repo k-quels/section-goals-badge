@@ -21,17 +21,26 @@ export default tseslint.config(
 	},
 	...obsidianmd.configs.recommendedWithLocalesEn,
 	{
+		files: ['**/*.{ts,cts,mts,tsx}'],
 		languageOptions: {
 			globals: {
 				...globals.browser,
 			},
-			parser: tseslint.parser,
 			parserOptions: {
-				project: './tsconfig.json',
+				projectService: {
+					allowDefaultProject: ['eslint.config.mjs', 'manifest.json'],
+				},
 				tsconfigRootDir: import.meta.dirname,
+				extraFileExtensions: ['.json'],
 			},
 		},
 		rules: {
+			'@typescript-eslint/no-unsafe-assignment': 'off',
+			'@typescript-eslint/no-unsafe-member-access': 'off',
+			'@typescript-eslint/no-unsafe-call': 'off',
+			'@typescript-eslint/no-unsafe-argument': 'off',
+			'@typescript-eslint/no-unsafe-return': 'off',
+			'@typescript-eslint/no-redundant-type-constituents': 'off',
 			'obsidianmd/ui/sentence-case': [
 				'warn',
 				{
@@ -70,11 +79,6 @@ export default tseslint.config(
 					ignoreWords: ['Japanese'],
 				},
 			],
-			'@typescript-eslint/no-unsafe-assignment': 'off',
-			'@typescript-eslint/no-unsafe-member-access': 'off',
-			'@typescript-eslint/no-unsafe-call': 'off',
-			'@typescript-eslint/no-unsafe-argument': 'off',
-			'@typescript-eslint/no-unsafe-return': 'off',
 		},
 	},
 );
