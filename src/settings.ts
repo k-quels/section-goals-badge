@@ -171,6 +171,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 	private attachHeadingIcon(setting: Setting, _iconName: string): void {
 		window.requestAnimationFrame(() => {
 			this.applyHeadingIcons(setting.settingEl);
+			this.updateGroupVisibility(setting.settingEl);
 		});
 	}
 
@@ -319,6 +320,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						desc: t('SETTINGS_CUMULATIVE_MODE_DESC'),
 						render: (setting: Setting) => {
 							setting.settingEl.addClass('sgb-group-cumulative');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showCumulativeProgress);
 							setting.settingEl.style.setProperty(
 								'display',
 								this.plugin.settings.showCumulativeProgress ? '' : 'none',
@@ -347,6 +349,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						desc: t('SETTINGS_CUMULATIVE_CURRENT_DESC'),
 						render: (setting: Setting) => {
 							setting.settingEl.addClass('sgb-group-cumulative');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showCumulativeProgress);
 							setting.settingEl.style.setProperty(
 								'display',
 								this.plugin.settings.showCumulativeProgress ? '' : 'none',
@@ -369,6 +372,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						desc: t('SETTINGS_CUMULATIVE_GOAL_DESC'),
 						render: (setting: Setting) => {
 							setting.settingEl.addClass('sgb-group-cumulative');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showCumulativeProgress);
 							setting.settingEl.style.setProperty(
 								'display',
 								this.plugin.settings.showCumulativeProgress ? '' : 'none',
@@ -391,6 +395,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						desc: t('SETTINGS_CUMULATIVE_PERCENT_DESC'),
 						render: (setting: Setting) => {
 							setting.settingEl.addClass('sgb-group-cumulative');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showCumulativeProgress);
 							setting.settingEl.style.setProperty(
 								'display',
 								this.plugin.settings.showCumulativeProgress ? '' : 'none',
@@ -415,6 +420,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						desc: t('SETTINGS_CUMULATIVE_ICON_DESC'),
 						render: (setting: Setting) => {
 							setting.settingEl.addClass('sgb-group-cumulative');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showCumulativeProgress);
 							setting.settingEl.style.setProperty(
 								'display',
 								this.plugin.settings.showCumulativeProgress ? '' : 'none',
@@ -437,6 +443,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						desc: t('SETTINGS_CUMULATIVE_LABEL_DESC'),
 						render: (setting: Setting) => {
 							setting.settingEl.addClass('sgb-group-cumulative');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showCumulativeProgress);
 							setting.settingEl.style.setProperty(
 								'display',
 								this.plugin.settings.showCumulativeProgress ? '' : 'none',
@@ -485,6 +492,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						desc: t('SETTINGS_SECTION_CURRENT_DESC'),
 						render: (setting: Setting) => {
 							setting.settingEl.addClass('sgb-group-section');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showSectionProgress);
 							setting.settingEl.style.setProperty(
 								'display',
 								this.plugin.settings.showSectionProgress ? '' : 'none',
@@ -507,6 +515,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						desc: t('SETTINGS_SECTION_GOAL_DESC'),
 						render: (setting: Setting) => {
 							setting.settingEl.addClass('sgb-group-section');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showSectionProgress);
 							setting.settingEl.style.setProperty(
 								'display',
 								this.plugin.settings.showSectionProgress ? '' : 'none',
@@ -529,6 +538,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						desc: t('SETTINGS_SECTION_PERCENT_DESC'),
 						render: (setting: Setting) => {
 							setting.settingEl.addClass('sgb-group-section');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showSectionProgress);
 							setting.settingEl.style.setProperty(
 								'display',
 								this.plugin.settings.showSectionProgress ? '' : 'none',
@@ -551,6 +561,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						desc: t('SETTINGS_SECTION_ICON_DESC'),
 						render: (setting: Setting) => {
 							setting.settingEl.addClass('sgb-group-section');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showSectionProgress);
 							setting.settingEl.style.setProperty(
 								'display',
 								this.plugin.settings.showSectionProgress ? '' : 'none',
@@ -573,6 +584,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						desc: t('SETTINGS_SECTION_LABEL_DESC'),
 						render: (setting: Setting) => {
 							setting.settingEl.addClass('sgb-group-section');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showSectionProgress);
 							setting.settingEl.style.setProperty(
 								'display',
 								this.plugin.settings.showSectionProgress ? '' : 'none',
@@ -596,6 +608,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						desc: t('SETTINGS_HEADING_LEVELS_ACCORDION_DESC'),
 						render: (setting: Setting) => {
 							setting.settingEl.addClass('sgb-settings-accordion-item');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showSectionProgress);
 							setting.settingEl.style.setProperty(
 								'display',
 								this.plugin.settings.showSectionProgress ? '' : 'none',
@@ -792,6 +805,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						desc: t('SETTINGS_TOTAL_CURRENT_DESC'),
 						render: (setting: Setting) => {
 							setting.settingEl.addClass('sgb-group-total');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showTotalProgress);
 							setting.settingEl.style.setProperty(
 								'display',
 								this.plugin.settings.showTotalProgress ? '' : 'none',
@@ -814,6 +828,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						desc: t('SETTINGS_TOTAL_GOAL_DESC'),
 						render: (setting: Setting) => {
 							setting.settingEl.addClass('sgb-group-total');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showTotalProgress);
 							setting.settingEl.style.setProperty(
 								'display',
 								this.plugin.settings.showTotalProgress ? '' : 'none',
@@ -836,6 +851,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						desc: t('SETTINGS_TOTAL_PERCENT_DESC'),
 						render: (setting: Setting) => {
 							setting.settingEl.addClass('sgb-group-total');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showTotalProgress);
 							setting.settingEl.style.setProperty(
 								'display',
 								this.plugin.settings.showTotalProgress ? '' : 'none',
@@ -858,6 +874,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						desc: t('SETTINGS_TOTAL_ICON_DESC'),
 						render: (setting: Setting) => {
 							setting.settingEl.addClass('sgb-group-total');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showTotalProgress);
 							setting.settingEl.style.setProperty(
 								'display',
 								this.plugin.settings.showTotalProgress ? '' : 'none',
@@ -880,6 +897,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						desc: t('SETTINGS_TOTAL_LABEL_DESC'),
 						render: (setting: Setting) => {
 							setting.settingEl.addClass('sgb-group-total');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showTotalProgress);
 							setting.settingEl.style.setProperty(
 								'display',
 								this.plugin.settings.showTotalProgress ? '' : 'none',
