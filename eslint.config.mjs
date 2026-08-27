@@ -1,33 +1,34 @@
 import obsidianmd from 'eslint-plugin-obsidianmd';
 import globals from 'globals';
-import { globalIgnores, defineConfig } from 'eslint/config';
+import tseslint from 'typescript-eslint';
 
-export default defineConfig([
-	globalIgnores([
-		'node_modules',
-		'dist',
-		'esbuild.config.mjs',
-		'version-bump.mjs',
-		'versions.json',
-		'main.js',
-		'package-lock.json',
-		'tsconfig.json',
-		'vitest.config.mts',
-		'tests/**',
-		'manual-test-vault/**',
-	]),
+export default tseslint.config(
+	{
+		ignores: [
+			'node_modules/**',
+			'dist/**',
+			'esbuild.config.mjs',
+			'eslint.config.mjs',
+			'version-bump.mjs',
+			'versions.json',
+			'main.js',
+			'package-lock.json',
+			'tsconfig.json',
+			'vitest.config.mts',
+			'tests/**',
+			'manual-test-vault/**',
+		],
+	},
 	...obsidianmd.configs.recommendedWithLocalesEn,
 	{
 		languageOptions: {
 			globals: {
 				...globals.browser,
 			},
+			parser: tseslint.parser,
 			parserOptions: {
-				projectService: {
-					allowDefaultProject: ['eslint.config.mts', 'manifest.json'],
-				},
+				project: './tsconfig.json',
 				tsconfigRootDir: import.meta.dirname,
-				extraFileExtensions: ['.json'],
 			},
 		},
 		rules: {
@@ -76,5 +77,4 @@ export default defineConfig([
 			'@typescript-eslint/no-unsafe-return': 'off',
 		},
 	},
-]);
-
+);
