@@ -20,31 +20,42 @@ Display floating badges on your editor to keep track of character counts and pro
 
 ## Key Features
 
-- **Goal Tracking per Section (Heading)**: Set target counts for each chapter or section.
-- **Unobtrusive Floating Badge**: Position at any corner of the editor, with drag-and-drop movement and opacity adjustments.
-- **3 Configurable Progress Badges**:
+- 🎯 **Goal Tracking per Section (Heading)**: Set target counts for each chapter or section.
+
+- 📛 **Unobtrusive Floating Badge**: Position at any corner of the editor, with drag-and-drop movement and opacity adjustments.
+
+- 🚥 **3 Configurable Progress Badges**:
   - **Progress to Cursor**: Counts characters from note top (or section top) up to cursor position.
   - **Active Section Progress**: Counts characters within the current heading block.
   - **Note Total Progress**: Counts characters for the entire note.
-- **Dynamic Badge Colors**: Visual status updates as you write.
-- **Mobile-Friendly**: Works smoothly on smartphones even with massive documents.
-- **Character & Word Counting**: Switch between Character count and Word count freely.
-- **Exclusion Rules**: Exclude whitespace, Japanese novel ruby notation, and custom user-specified symbols.
-- **Fast & Battery Efficient (1M+ characters)**: Optimized to minimize typing latency and reduce mobile battery drain.
-- **Self-Contained in Note**: Goal values are saved directly into the note's Frontmatter.
+
+- 🎨 **Dynamic Badge Colors**: Define custom color styles and visually track progress rates at a glance.
+
+- 📱 **Mobile-Friendly**: Works smoothly on smartphones even with massive documents.
+
+- 🔢 **Character & Word Counting**: Switch between Character count and Word count freely.
+
+- ✂️ **Exclusion Rules**: Exclude whitespace, Japanese novel ruby notation, and custom user-specified symbols.
+
+- ⚡ **Fast & Battery Efficient (1M+ characters)**: Optimized to minimize typing latency and reduce mobile battery drain even in long-form writing.
+
+- 💾 **Self-Contained in Note**: Goal values and color styles are saved directly into the note's Frontmatter.
 
 ---
 
 ## Usage
 
 ### 1. Open Goal Management Window
+
 - Tap or click the badge on the editor to open the goal management window.
   - *(Can be changed to "Long press to open" in settings to avoid accidental taps)*
 
 <img src="./doc/images/goal-modal-en.png" width="450">
 
 ### 2. Set Target Counts
+
 Enter target counts directly in the modal (automatically saved to Frontmatter):
+
 - **Note Total Goal**: Target count for the entire note.
 - **Section Goal (Default)**: Default target applied to headings without individual goals.
 - **Heading Level Goals**: Set default target counts for each heading level (H1–H6).
@@ -52,6 +63,7 @@ Enter target counts directly in the modal (automatically saved to Frontmatter):
 - **"Set current count as all goals" Button**: Batch-assigns written character counts as goals for all sections.
 
 ### 3. Adjust Badge Position & Appearance
+
 - **Drag and drop** the badge to place it anywhere on your editor.
   - You can also specify exact offsets in the settings tab (synced with drag-and-drop values).
 
@@ -64,16 +76,16 @@ The following features and options can be customized:
 ### 1. Badge Display Customization (Cursor / Section / Total)
 
 - **Toggle Visibility**: Enable or disable the 3 progress badges independently.
-  - e.g., Hide note total badge:<br>
+  - ▼ e.g., Hide note total badge:<br>
   <img src="doc/images/badge-hide-all.png" width="200">
 - **Heading Level Progress (H1–H6)**: Display progress for specific heading levels (H1–H6) in the section progress badge.
-  - e.g., When H1 and H2 are enabled, you can monitor H1 progress while editing H2:<br>
+  - ▼ e.g., When H1 and H2 are enabled, you can monitor H1 progress while editing H2:<br>
   <img src="doc/images/badge-headings.png" width="250">
 - **Display Content**: Toggle current count, target goal, and progress percentage.
-  - e.g., Show only count for cursor position, full details for section:<br>
+  - ▼ e.g., Show only count for cursor position, full details for section:<br>
   <img src="doc/images/badge-hide-all.png" width="200">
 - **Icon / Label**: Toggle prefix icons and text labels.
-  - e.g., Hide both for cursor, icon only for section, full for total:<br>
+  - ▼ e.g., Hide both for cursor, icon only for section, full for total:<br>
   <img src="doc/images/badge-icon-label.png" width="250">
 
 ### 2. Counting Rules
@@ -85,69 +97,35 @@ The following features and options can be customized:
 
 - Configure badge position preset, opacity, and font size.
 
-### 4. Customizing Progress Colors
+### 4. Color Styles
 
-- Customize percentage thresholds (default: 50% / 80% / 100%) that trigger dynamic badge and progress bar color changes.
-- Colors can be configured visually with the **[Style Settings](https://github.com/mgmeyers/obsidian-style-settings)** plugin or via **CSS Snippets**.
+- In the plugin settings under **Color styles**, freely define and customize color schemes (up to 10 styles).
+- Default Presets:
+  - **① Limit Goal Style**: Best for strict word/character caps (Gray → Yellow → Orange → Red)<br>
+  <img src="./doc/images/colorsample-style1.png" width="80">
+  - **② Target Achievement Style**: Best for aiming to reach a target count (Gray → Orange → Green → Blue)<br>
+  <img src="./doc/images/colorsample-style2.png" width="80">
 
-#### CSS Snippet Color Customization
+- In the Goal Management modal, **select your preferred style per note** from the "Color style" dropdown.
 
-Save the following CSS to `.obsidian/snippets/section-goals-badge.css` (or any snippet file name) and enable it in Obsidian under **Settings → Appearance → CSS snippets**:
-
-```css
-/* Section Goals Badge - Custom Colors */
-body {
-    /* Progress threshold colors */
-    --sgb-color-default: #ababab; /* Initial progress (< 50%) */
-    --sgb-color-warn: #e2b93b;    /* Mid progress (>= 50%) */
-    --sgb-color-good: #ff7843;    /* High progress (>= 80%) */
-    --sgb-color-done: #ff4d4f;    /* Goal reached (>= 100%) */
-}
-```
-
-#### Color Preset Samples
-
-##### ① Limit Goal Style: When staying within a strict word/char limit
-
-<img src="./doc/images/colorsample-style1.png" width="150">
-
-```css
-body {
-    --sgb-color-default: #ababab; /* Safe (< 50%): Gray */
-    --sgb-color-warn: #e2b93b;    /* Halfway (>= 50%): Yellow */
-    --sgb-color-good: #ff7843;    /* Approaching cap (>= 80%): Orange */
-    --sgb-color-done: #ff4d4f;    /* Reached limit (>= 100%): Red */
-}
-```
-
-##### ② Target Achievement Style: When aiming to write at least a specific word/char count
-
-<img src="./doc/images/colorsample-style2.png" width="150">
-
-```css
-body {
-    --sgb-color-default: #ababab; /* Starting (< 50%): Gray */
-    --sgb-color-warn: #f09533;    /* In Progress (>= 50%): Orange */
-    --sgb-color-good: #24b750;    /* Almost there (>= 80%): Green */
-    --sgb-color-done: #207dff;    /* Completed (>= 100%): Blue */
-}
-```
+- Progress color thresholds (default: 50% / 80% / 100%) can be customized in settings.
 
 ---
 
 ## Frontmatter Format
 
-- Target goals are stored in the note's YAML Frontmatter in the following format.
+- Target goals and color style choices are stored in the note's YAML Frontmatter in the following format.
 - You can manage goals via the Goal Management modal or edit them directly.
 - Setting goals is completely optional.
 
 ```yaml
 ---
-goal-file: 10000       # Target count for the entire note
-goal-section: 2000     # Default target count for sections
-goal-section-h1: 3000  # Default target count for H1 (H1–H6 supported)
+goal-file: 10000       # <- Target count for the entire note
+goal-section: 2000     # <- Default target count for sections
+goal-section-h1: 3000  # <- Default target count for H1 (H1–H6 supported)
+goal-style: 2          # <- Color style ID (omitted for default style)
 goals:
-  - Chapter 1: 2500    # Target count for specific section
+  - Chapter 1: 2500    # <- Target count for specific section
   - Chapter 2: 3000
 ---
 ```

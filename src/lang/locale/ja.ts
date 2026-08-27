@@ -126,6 +126,24 @@ const ja: typeof en = {
 	SETTINGS_THRESH_DONE: '達成カラーの閾値 (%)',
 	SETTINGS_THRESH_DONE_DESC: '進捗カラーを達成色に切り替える進捗率です（例: 100%）。',
 
+	// Settings - Color Styles
+	SETTINGS_HEADING_STYLES: 'カラースタイル',
+	SETTINGS_DEFAULT_STYLE: 'デフォルトのカラースタイル',
+	SETTINGS_DEFAULT_STYLE_DESC: 'ノートのFrontmatterで指定がない場合に使用するカラースタイルです。',
+	SETTINGS_STYLE_ADD: 'スタイルを追加',
+	SETTINGS_STYLE_RESET_ALL: 'すべてのカラースタイルをデフォルトに戻す',
+	SETTINGS_STYLE_RESET_ALL_CONFIRM: 'すべてのカラースタイルをデフォルト値に戻します。\nよろしいですか？',
+	SETTINGS_STYLE_RESET_ITEM: 'デフォルトに戻す',
+	SETTINGS_STYLE_DELETE: '削除',
+	SETTINGS_STYLE_NAME_LABEL: 'スタイル名',
+	SETTINGS_STYLE_NAME_PLACEHOLDER: 'スタイル名を入力',
+	SETTINGS_COLOR_DEFAULT: '初期カラー',
+	SETTINGS_COLOR_WARN: '中間カラー',
+	SETTINGS_COLOR_GOOD: '高進捗カラー',
+	SETTINGS_COLOR_DONE: '達成カラー',
+	PRESET_STYLE_LIMIT: '制限目標',
+	PRESET_STYLE_TARGET: '達成目標',
+
 	SETTINGS_LONG_PRESS: '長押しで目標管理ウインドウを開く',
 	SETTINGS_LONG_PRESS_DESC: '誤操作防止のため長押しでウインドウを開くようにします。',
 
@@ -160,6 +178,10 @@ const ja: typeof en = {
 	MODAL_COL_CURRENT: '現在値',
 	MODAL_COL_GOAL: '目標値',
 	MODAL_COL_PROGRESS: '進捗率',
+
+	// Modal Color Style
+	MODAL_COLOR_STYLE_LABEL: 'カラースタイル',
+	MODAL_COLOR_STYLE_DESC: 'このノートのバッジや進捗バーに適用する配色です。',
 };
 
 export default ja;

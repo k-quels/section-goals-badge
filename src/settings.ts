@@ -1,7 +1,8 @@
-import { App, PluginSettingTab, requireApiVersion, setIcon, Setting } from 'obsidian';
+import { App, Modal, PluginSettingTab, setIcon, Setting } from 'obsidian';
 import { t } from './lang/helpers';
 import type SectionGoalsBadgePlugin from './main';
-import { BadgePositionPreset, CountType, CumulativeCountMode, PluginSettings } from './types';
+import { BadgePositionPreset, CountType, CumulativeCountMode, GoalColorStyle, PluginSettings } from './types';
+import { setCssProps } from './utils/dom';
 
 type SettingControlDefinition =
 	| {
@@ -49,6 +50,29 @@ interface SettingGroupDefinition {
 	items: SettingItemDefinition[];
 }
 
+export function getDefaultStyles(): GoalColorStyle[] {
+	return [
+		{
+			id: 1,
+			name: t('PRESET_STYLE_LIMIT'),
+			colorDefault: '#ababab',
+			colorWarn: '#e2b93b',
+			colorGood: '#ff7843',
+			colorDone: '#ff4d4f',
+			isPreset: true,
+		},
+		{
+			id: 2,
+			name: t('PRESET_STYLE_TARGET'),
+			colorDefault: '#ababab',
+			colorWarn: '#f09533',
+			colorGood: '#24b750',
+			colorDone: '#207dff',
+			isPreset: true,
+		},
+	];
+}
+
 export const DEFAULT_SETTINGS: PluginSettings = {
 	// Section options
 	showSectionProgress: true,
@@ -88,10 +112,12 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	badgeOpacity: 0.9,
 	fontSize: 12,
 
-	// Color Thresholds
+	// Color Thresholds & Styles
 	colorThresholdWarn: 50,
 	colorThresholdGood: 80,
 	colorThresholdDone: 100,
+	styles: getDefaultStyles(),
+	defaultStyleId: 1,
 
 	// Counting rules
 	countType: 'character',
@@ -115,13 +141,45 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 	}
 
 	display(): void {
-		// Dual support: Fall back to imperative rendering on Obsidian < 1.13.0
-		if (typeof requireApiVersion !== 'function' || !requireApiVersion('1.13.0')) {
-			this.renderLegacySettings(this.containerEl);
-		}
-
+		this.renderLegacySettings(this.containerEl);
 		this.initObserver();
 		this.scheduleEnhancements();
+		this.updateSettingSwatches();
+	}
+
+	public updateSettingSwatches(): void {
+		const defaultStyle =
+			this.plugin.settings.styles.find((s) => s.id === this.plugin.settings.defaultStyleId) ??
+			this.plugin.settings.styles[0] ??
+			getDefaultStyles()[0]!;
+
+		setCssProps(this.containerEl, {
+			'--sgb-color-default': defaultStyle.colorDefault,
+			'--sgb-color-warn': defaultStyle.colorWarn,
+			'--sgb-color-good': defaultStyle.colorGood,
+			'--sgb-color-done': defaultStyle.colorDone,
+		});
+
+		const root = this.getTargetRoot();
+		const updateCircles = (parent: HTMLElement) => {
+			parent.querySelectorAll<HTMLElement>('.sgb-color-preview-warn').forEach((el) => {
+				el.style.backgroundColor = defaultStyle.colorWarn;
+			});
+			parent.querySelectorAll<HTMLElement>('.sgb-color-preview-good').forEach((el) => {
+				el.style.backgroundColor = defaultStyle.colorGood;
+			});
+			parent.querySelectorAll<HTMLElement>('.sgb-color-preview-done').forEach((el) => {
+				el.style.backgroundColor = defaultStyle.colorDone;
+			});
+			parent.querySelectorAll<HTMLElement>('.sgb-color-preview-default').forEach((el) => {
+				el.style.backgroundColor = defaultStyle.colorDefault;
+			});
+		};
+
+		updateCircles(this.containerEl);
+		if (root && root !== this.containerEl) {
+			updateCircles(root);
+		}
 	}
 
 	private renderLegacySettings(containerEl: HTMLElement): void {
@@ -154,7 +212,8 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 								break;
 							}
 							case 'dropdown': {
-								const val = String(this.plugin.settings[control.key]);
+								const rawVal = this.plugin.settings[control.key];
+								const val = typeof rawVal === 'string' || typeof rawVal === 'number' ? String(rawVal) : '';
 								setting.addDropdown((dropdown) => {
 									if (control.options) dropdown.addOptions(control.options);
 									dropdown.setValue(val).onChange((newVal) => {
@@ -164,7 +223,8 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 								break;
 							}
 							case 'text': {
-								const val = String(this.plugin.settings[control.key] ?? '');
+								const rawVal = this.plugin.settings[control.key];
+								const val = typeof rawVal === 'string' || typeof rawVal === 'number' ? String(rawVal) : '';
 								setting.addText((text) =>
 									text
 										.setPlaceholder(control.placeholder || '')
@@ -176,11 +236,12 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 								break;
 							}
 							case 'number': {
-								const val = this.plugin.settings[control.key];
+								const rawVal = this.plugin.settings[control.key];
+								const val = typeof rawVal === 'number' ? String(rawVal) : '';
 								setting.addText((text) => {
 									text.inputEl.type = 'number';
 									if (control.placeholder) text.setPlaceholder(control.placeholder);
-									text.setValue(val !== undefined && val !== null ? String(val) : '');
+									text.setValue(val);
 									text.onChange((newVal) => {
 										const num = parseFloat(newVal);
 										if (control.onChange) void control.onChange(num);
@@ -337,6 +398,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 			[t('SETTINGS_HEADING_RULES')]: 'calculator',
 			[t('SETTINGS_HEADING_APPEARANCE')]: 'layout',
 			[t('SETTINGS_HEADING_THRESHOLDS')]: 'gauge',
+			[t('SETTINGS_HEADING_STYLES')]: 'palette',
 			[t('SETTINGS_HEADING_SUPPORT')]: 'heart',
 		};
 
@@ -1390,7 +1452,273 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 				],
 			},
 
-			// Group 7: Support
+			// Group 7: Color Styles
+			{
+				type: 'group',
+				heading: t('SETTINGS_HEADING_STYLES'),
+				items: [
+					{
+						name: t('SETTINGS_DEFAULT_STYLE'),
+						desc: t('SETTINGS_DEFAULT_STYLE_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-default-style-setting');
+							setting.addDropdown((dropdown) => {
+								for (const style of this.plugin.settings.styles) {
+									dropdown.addOption(String(style.id), style.name);
+								}
+								dropdown.setValue(String(this.plugin.settings.defaultStyleId ?? 1));
+								dropdown.onChange(async (val) => {
+									const id = parseInt(val, 10);
+									if (!isNaN(id)) {
+										this.plugin.settings.defaultStyleId = id;
+										await this.plugin.saveSettings();
+										this.plugin.refreshBadgeUI();
+										this.updateSettingSwatches();
+									}
+								});
+							});
+						},
+					},
+					{
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-styles-manager-setting');
+							setting.infoEl.remove();
+
+							const container = setting.controlEl.createDiv({ cls: 'sgb-styles-manager-container' });
+
+							const updateDefaultDropdown = () => {
+								const defaultSettingEl = this.containerEl.querySelector<HTMLElement>('.sgb-default-style-setting');
+								if (defaultSettingEl) {
+									const selectEl = defaultSettingEl.querySelector<HTMLSelectElement>('select');
+									if (selectEl) {
+										selectEl.empty();
+										for (const style of this.plugin.settings.styles) {
+											const opt = selectEl.createEl('option', {
+												value: String(style.id),
+												text: style.name,
+											});
+											if (style.id === this.plugin.settings.defaultStyleId) {
+												opt.selected = true;
+											}
+										}
+									}
+								}
+								this.updateSettingSwatches();
+							};
+
+							const renderStylesList = () => {
+								container.empty();
+
+								const listEl = container.createDiv({ cls: 'sgb-styles-list' });
+
+								this.plugin.settings.styles.forEach((style) => {
+									const cardEl = listEl.createDiv({ cls: 'sgb-style-card' });
+
+									// Card Header: Name Input & Action Button
+									const headerEl = cardEl.createDiv({ cls: 'sgb-style-card-header' });
+									const nameWrapper = headerEl.createDiv({ cls: 'sgb-style-name-wrapper' });
+									nameWrapper.createSpan({ cls: 'sgb-style-name-label', text: t('SETTINGS_STYLE_NAME_LABEL') });
+									const nameInput = nameWrapper.createEl('input', {
+										type: 'text',
+										cls: 'sgb-style-name-input',
+										placeholder: t('SETTINGS_STYLE_NAME_PLACEHOLDER'),
+										value: style.name,
+										attr: {
+											maxlength: '14',
+										},
+									});
+									nameInput.addEventListener('change', () => {
+										void (async () => {
+											const trimmed = nameInput.value.trim().slice(0, 14);
+											style.name = trimmed || `Style ${style.id}`;
+											nameInput.value = style.name;
+											await this.plugin.saveSettings();
+											this.plugin.refreshBadgeUI();
+											updateDefaultDropdown();
+										})();
+									});
+
+									const actionsEl = headerEl.createDiv({ cls: 'sgb-style-card-actions' });
+
+									if (style.isPreset || style.id === 1 || style.id === 2) {
+										const resetBtn = actionsEl.createEl('button', {
+											cls: 'clickable-icon sgb-style-action-btn',
+											title: t('SETTINGS_STYLE_RESET_ITEM'),
+										});
+										setIcon(resetBtn, 'rotate-ccw');
+										resetBtn.addEventListener('click', () => {
+											void (async () => {
+												const defaults = getDefaultStyles();
+												const defaultPreset = defaults.find((d) => d.id === style.id);
+												if (defaultPreset) {
+													style.name = defaultPreset.name;
+													style.colorDefault = defaultPreset.colorDefault;
+													style.colorWarn = defaultPreset.colorWarn;
+													style.colorGood = defaultPreset.colorGood;
+													style.colorDone = defaultPreset.colorDone;
+													await this.plugin.saveSettings();
+													this.plugin.refreshBadgeUI();
+													renderStylesList();
+													updateDefaultDropdown();
+												}
+											})();
+										});
+									} else {
+										const deleteBtn = actionsEl.createEl('button', {
+											cls: 'clickable-icon sgb-style-action-btn mod-warning',
+											title: t('SETTINGS_STYLE_DELETE'),
+										});
+										setIcon(deleteBtn, 'trash-2');
+										deleteBtn.addEventListener('click', () => {
+											void (async () => {
+												this.plugin.settings.styles = this.plugin.settings.styles.filter(
+													(s) => s.id !== style.id,
+												);
+												if (this.plugin.settings.defaultStyleId === style.id) {
+													this.plugin.settings.defaultStyleId =
+														this.plugin.settings.styles[0]?.id ?? 1;
+												}
+												await this.plugin.saveSettings();
+												this.plugin.refreshBadgeUI();
+												renderStylesList();
+												updateDefaultDropdown();
+											})();
+										});
+									}
+
+									// Card Body: 4 Color Pickers Grid
+									const colorsGrid = cardEl.createDiv({ cls: 'sgb-style-colors-grid' });
+
+									const colorConfigs: Array<{
+										key: 'colorDefault' | 'colorWarn' | 'colorGood' | 'colorDone';
+										label: string;
+									}> = [
+										{ key: 'colorDefault', label: t('SETTINGS_COLOR_DEFAULT') },
+										{ key: 'colorWarn', label: t('SETTINGS_COLOR_WARN') },
+										{ key: 'colorGood', label: t('SETTINGS_COLOR_GOOD') },
+										{ key: 'colorDone', label: t('SETTINGS_COLOR_DONE') },
+									];
+
+									colorConfigs.forEach(({ key, label }) => {
+										const colorItemEl = colorsGrid.createDiv({ cls: 'sgb-style-color-item' });
+										colorItemEl.createSpan({ cls: 'sgb-style-color-label', text: label });
+
+										const colorPickerWrapper = colorItemEl.createDiv({
+											cls: 'sgb-style-color-picker-wrapper',
+										});
+										const colorInput = colorPickerWrapper.createEl('input', {
+											type: 'color',
+											cls: 'sgb-style-color-input',
+											value: style[key],
+										});
+										const hexInput = colorPickerWrapper.createEl('input', {
+											type: 'text',
+											cls: 'sgb-style-hex-input',
+											value: style[key],
+											placeholder: '#000000',
+										});
+
+										colorInput.addEventListener('input', () => {
+											void (async () => {
+												style[key] = colorInput.value;
+												hexInput.value = colorInput.value;
+												await this.plugin.saveSettings();
+												this.plugin.refreshBadgeUI();
+												if (style.id === this.plugin.settings.defaultStyleId) {
+													this.updateSettingSwatches();
+												}
+											})();
+										});
+
+										const handleHexChange = () => {
+											void (async () => {
+												let val = hexInput.value.trim();
+												if (!val.startsWith('#') && /^[0-9a-fA-F]{3,6}$/.test(val)) {
+													val = '#' + val;
+												}
+												if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(val)) {
+													if (val.length === 4) {
+														// Expand #abc to #aabbcc for native color input compatibility
+														val = `#${val[1]}${val[1]}${val[2]}${val[2]}${val[3]}${val[3]}`;
+													}
+													style[key] = val;
+													colorInput.value = val;
+													hexInput.value = val;
+													await this.plugin.saveSettings();
+													this.plugin.refreshBadgeUI();
+													if (style.id === this.plugin.settings.defaultStyleId) {
+														this.updateSettingSwatches();
+													}
+												} else {
+													// Revert if invalid format
+													hexInput.value = style[key];
+												}
+											})();
+										};
+
+										hexInput.addEventListener('change', handleHexChange);
+										hexInput.addEventListener('blur', handleHexChange);
+									});
+								});
+
+								// Footer: Add Button & Reset All Button
+								const footerEl = container.createDiv({ cls: 'sgb-styles-footer' });
+
+								const canAdd = this.plugin.settings.styles.length < 10;
+								const addBtn = footerEl.createEl('button', {
+									cls: 'sgb-add-style-btn',
+									text: t('SETTINGS_STYLE_ADD'),
+								});
+								if (!canAdd) {
+									addBtn.disabled = true;
+								}
+								addBtn.addEventListener('click', () => {
+									void (async () => {
+										if (this.plugin.settings.styles.length >= 10) return;
+										const existingIds = this.plugin.settings.styles.map((s) => s.id);
+										const nextId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
+
+										this.plugin.settings.styles.push({
+											id: nextId,
+											name: `Style ${nextId}`,
+											colorDefault: '#ababab',
+											colorWarn: '#e2b93b',
+											colorGood: '#ff7843',
+											colorDone: '#ff4d4f',
+										});
+										await this.plugin.saveSettings();
+										this.plugin.refreshBadgeUI();
+										renderStylesList();
+										updateDefaultDropdown();
+									})();
+								});
+
+								const resetAllBtn = footerEl.createEl('button', {
+									cls: 'clickable-icon sgb-reset-all-styles-btn',
+									title: t('SETTINGS_STYLE_RESET_ALL'),
+								});
+								setIcon(resetAllBtn, 'rotate-ccw');
+								resetAllBtn.addEventListener('click', () => {
+									new ConfirmResetStylesModal(this.app, () => {
+										void (async () => {
+											this.plugin.settings.styles = getDefaultStyles();
+											this.plugin.settings.defaultStyleId = 1;
+											await this.plugin.saveSettings();
+											this.plugin.refreshBadgeUI();
+											renderStylesList();
+											updateDefaultDropdown();
+										})();
+									}).open();
+								});
+							};
+
+							renderStylesList();
+						},
+					},
+				],
+			},
+
+			// Group 8: Support
 			{
 				type: 'group',
 				heading: t('SETTINGS_HEADING_SUPPORT'),
@@ -1415,5 +1743,48 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 				],
 			},
 		];
+	}
+}
+
+/**
+ * Confirmation dialog modal for resetting all color styles.
+ */
+class ConfirmResetStylesModal extends Modal {
+	constructor(
+		app: App,
+		private onConfirm: () => void,
+	) {
+		super(app);
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.addClass('sgb-confirm-modal');
+
+		contentEl.createEl('p', { text: t('SETTINGS_STYLE_RESET_ALL_CONFIRM') });
+
+		const buttonContainer = contentEl.createDiv({ cls: 'sgb-confirm-buttons' });
+
+		const cancelBtn = buttonContainer.createEl('button', {
+			text: t('MODAL_CONFIRM_CANCEL'),
+		});
+		cancelBtn.addEventListener('click', () => {
+			this.close();
+		});
+
+		const confirmBtn = buttonContainer.createEl('button', {
+			cls: 'mod-warning',
+			text: t('MODAL_CONFIRM_OK'),
+		});
+		confirmBtn.addEventListener('click', () => {
+			this.close();
+			this.onConfirm();
+		});
+	}
+
+	onClose(): void {
+		const { contentEl } = this;
+		contentEl.empty();
 	}
 }

@@ -1,6 +1,6 @@
 import { setIcon } from 'obsidian';
 import { t } from '../lang/helpers';
-import { BadgePositionPreset, PluginSettings, WritingProgress } from '../types';
+import { BadgePositionPreset, GoalColorStyle, PluginSettings, WritingProgress } from '../types';
 import { setCssProps } from '../utils/dom';
 import { ViewportTracker } from '../utils/viewport';
 
@@ -234,9 +234,24 @@ export class FloatingBadge {
 	public updateSettings(settings: PluginSettings): void {
 		this.settings = settings;
 		this.applyPosition();
+		if (this.currentColorStyle) {
+			this.applyColorStyle(this.currentColorStyle);
+		}
 		if (this.currentProgress) {
 			this.updateProgress(this.currentProgress);
 		}
+	}
+
+	private currentColorStyle: GoalColorStyle | null = null;
+
+	public applyColorStyle(style: GoalColorStyle): void {
+		this.currentColorStyle = style;
+		setCssProps(this.containerEl, {
+			'--sgb-color-default': style.colorDefault,
+			'--sgb-color-warn': style.colorWarn,
+			'--sgb-color-good': style.colorGood,
+			'--sgb-color-done': style.colorDone,
+		});
 	}
 
 	public updateProgress(progress: WritingProgress): void {

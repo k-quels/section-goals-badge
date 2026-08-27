@@ -35,43 +35,6 @@ settings:
         format: hex
         default-light: '#2e3338'
         default-dark: '#dcddde'
-    - 
-        id: sgb-heading-progress
-        title: Progress Threshold Colors
-        type: heading
-        level: 1
-    - 
-        id: sgb-color-default
-        title: Initial Progress Color (< 50%)
-        type: variable-themed-color
-        opacity: false
-        format: hex
-        default-light: '#ababab'
-        default-dark: '#ababab'
-    - 
-        id: sgb-color-warn
-        title: Mid-Progress Color (>= 50%)
-        type: variable-themed-color
-        opacity: false
-        format: hex
-        default-light: '#e2b93b'
-        default-dark: '#e2b93b'
-    - 
-        id: sgb-color-good
-        title: High-Progress Color (>= 80%)
-        type: variable-themed-color
-        opacity: false
-        format: hex
-        default-light: '#ff7843'
-        default-dark: '#ff7843'
-    - 
-        id: sgb-color-done
-        title: Completed Progress Color (>= 100%)
-        type: variable-themed-color
-        opacity: false
-        format: hex
-        default-light: '#ff4d4f'
-        default-dark: '#ff4d4f'
 
 */
 
@@ -832,4 +795,249 @@ settings:
 	justify-content: flex-end;
 	gap: 8px;
 	margin-top: 16px;
+}
+
+/* Modal Color Style Row */
+.sgb-modal-style-row {
+	border-top: 1px dashed var(--background-modifier-border);
+	padding-top: 6px;
+	margin-top: 2px;
+}
+
+.sgb-modal-style-controls {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-shrink: 0;
+}
+
+.sgb-modal-color-swatches {
+	display: flex;
+	align-items: center;
+	gap: 3px;
+}
+
+.sgb-modal-style-dropdown-wrapper select.dropdown,
+.sgb-modal-style-dropdown-wrapper select {
+	font-size: 11px !important;
+	height: 24px !important;
+	padding: 1px 24px 1px 8px !important;
+	cursor: pointer;
+}
+
+/* Settings Tab: Color Styles Manager */
+.sgb-styles-manager-setting {
+	border-top: none !important;
+	padding-top: 0 !important;
+}
+
+.sgb-styles-manager-setting .setting-item-control {
+	width: 100% !important;
+	justify-content: flex-start !important;
+	text-align: left !important;
+}
+
+.sgb-styles-manager-container {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	width: 100%;
+	margin-top: 4px;
+	text-align: left !important;
+}
+
+.sgb-styles-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	width: 100%;
+}
+
+.sgb-style-card {
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	padding: 10px 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	text-align: left !important;
+	box-sizing: border-box;
+}
+
+.sgb-style-card-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	width: 100%;
+}
+
+.sgb-style-name-wrapper {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-grow: 1;
+	min-width: 0;
+}
+
+.sgb-style-name-label {
+	font-size: 11px;
+	font-weight: 500;
+	color: var(--text-muted);
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.sgb-style-name-input {
+	font-weight: 600 !important;
+	font-size: 12px !important;
+	width: 150px !important;
+	max-width: 180px !important;
+	height: 26px !important;
+	text-align: left !important;
+}
+
+.sgb-style-card-actions {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.sgb-style-action-btn {
+	width: 24px;
+	height: 24px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	border-radius: var(--radius-s);
+	color: var(--text-muted);
+}
+
+.sgb-style-action-btn:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
+.sgb-style-action-btn.mod-warning:hover {
+	color: var(--text-error);
+}
+
+.sgb-style-colors-grid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 8px 14px;
+	padding: 2px 0 4px 0;
+	align-items: start;
+	justify-items: start;
+	width: 100%;
+}
+
+@media (max-width: 520px) {
+	.sgb-style-colors-grid {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 8px 10px;
+	}
+}
+
+.sgb-style-color-item {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start !important;
+	justify-content: flex-start !important;
+	text-align: left !important;
+	gap: 4px;
+	width: 100%;
+	min-width: 0;
+}
+
+.sgb-style-color-label {
+	font-size: 11px;
+	font-weight: 500;
+	color: var(--text-muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	line-height: 1.2;
+	text-align: left !important;
+	width: 100%;
+	display: block;
+}
+
+.sgb-style-color-picker-wrapper {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start !important;
+	gap: 6px;
+	width: 100%;
+	min-width: 0;
+}
+
+.sgb-style-color-input {
+	width: 24px !important;
+	height: 24px !important;
+	min-width: 24px !important;
+	max-width: 24px !important;
+	min-height: 24px !important;
+	max-height: 24px !important;
+	border: 1.5px solid var(--background-modifier-border) !important;
+	border-radius: 50% !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	cursor: pointer;
+	background: transparent !important;
+	flex-shrink: 0 !important;
+	overflow: hidden !important;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+	-webkit-appearance: none !important;
+	appearance: none !important;
+}
+
+.sgb-style-color-input::-webkit-color-swatch-wrapper {
+	padding: 0 !important;
+	border-radius: 50% !important;
+}
+
+.sgb-style-color-input::-webkit-color-swatch {
+	border: none !important;
+	border-radius: 50% !important;
+}
+
+.sgb-style-hex-input {
+	width: 68px !important;
+	min-width: 52px !important;
+	max-width: 74px !important;
+	height: 24px !important;
+	font-size: 11px !important;
+	font-family: var(--font-monospace);
+	font-variant-numeric: tabular-nums;
+	padding: 2px 4px !important;
+	text-align: left !important;
+	box-sizing: border-box;
+	flex-shrink: 1 !important;
+}
+
+.sgb-styles-footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding-top: 4px;
+}
+
+.sgb-add-style-btn {
+	font-size: 11px;
+}
+
+.sgb-reset-all-styles-btn {
+	width: 28px;
+	height: 28px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-muted);
+}
+
+.sgb-reset-all-styles-btn:hover {
+	color: var(--text-normal);
 }

@@ -6,6 +6,7 @@ export interface FileGoalData {
 	defaultSectionGoal?: number;
 	headingLevelGoals?: Record<number, number>;
 	sectionGoals: HeadingGoalItem[];
+	styleId?: number;
 }
 
 /**
@@ -28,6 +29,16 @@ export class FrontmatterManager {
 		const fileGoal = typeof frontmatter['goal-file'] === 'number' ? frontmatter['goal-file'] : undefined;
 		const defaultSectionGoal =
 			typeof frontmatter['goal-section'] === 'number' ? frontmatter['goal-section'] : undefined;
+
+		let styleId: number | undefined;
+		if (typeof frontmatter['goal-style'] === 'number') {
+			styleId = frontmatter['goal-style'];
+		} else if (typeof frontmatter['goal-style'] === 'string') {
+			const parsed = parseInt(frontmatter['goal-style'], 10);
+			if (!isNaN(parsed) && parsed > 0) {
+				styleId = parsed;
+			}
+		}
 
 		const headingLevelGoals: Record<number, number> = {};
 		for (let level = 1; level <= 6; level++) {
@@ -65,11 +76,12 @@ export class FrontmatterManager {
 			defaultSectionGoal,
 			headingLevelGoals: Object.keys(headingLevelGoals).length > 0 ? headingLevelGoals : undefined,
 			sectionGoals,
+			styleId,
 		};
 	}
 
 	/**
-	 * Save file goal, default section goal, level-specific default goals, and specific section goals to frontmatter.
+	 * Save file goal, default section goal, level-specific default goals, specific section goals, and color style to frontmatter.
 	 */
 	public async saveGoalData(
 		file: TFile,
@@ -77,6 +89,8 @@ export class FrontmatterManager {
 		defaultSectionGoal: number | undefined,
 		sectionGoals: HeadingGoalItem[],
 		headingLevelGoals?: Record<number, number>,
+		styleId?: number,
+		defaultStyleId = 1,
 	): Promise<void> {
 		await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
 			if (fileGoal !== undefined && fileGoal > 0) {
@@ -89,6 +103,12 @@ export class FrontmatterManager {
 				fm['goal-section'] = defaultSectionGoal;
 			} else {
 				delete fm['goal-section'];
+			}
+
+			if (styleId !== undefined && styleId !== defaultStyleId) {
+				fm['goal-style'] = styleId;
+			} else {
+				delete fm['goal-style'];
 			}
 
 			for (let level = 1; level <= 6; level++) {
@@ -115,7 +135,7 @@ export class FrontmatterManager {
 	 * Compares current headings in order and updates matching goals.
 	 */
 	public async syncHeadings(file: TFile, currentHeadings: string[]): Promise<void> {
-		const { fileGoal, defaultSectionGoal, headingLevelGoals, sectionGoals } = this.getGoalData(file);
+		const { fileGoal, defaultSectionGoal, headingLevelGoals, sectionGoals, styleId } = this.getGoalData(file);
 		if (sectionGoals.length === 0) return;
 
 		let hasChanges = false;
@@ -147,7 +167,7 @@ export class FrontmatterManager {
 		}
 
 		if (hasChanges) {
-			await this.saveGoalData(file, fileGoal, defaultSectionGoal, updatedGoals, headingLevelGoals);
+			await this.saveGoalData(file, fileGoal, defaultSectionGoal, updatedGoals, headingLevelGoals, styleId);
 		}
 	}
 }

@@ -154,8 +154,30 @@ export default {
 	MODAL_CONFIRM_OK: 'Set goals',
 	MODAL_CONFIRM_CANCEL: 'Cancel',
 
+	// Settings - Color Styles
+	SETTINGS_HEADING_STYLES: 'Color styles',
+	SETTINGS_DEFAULT_STYLE: 'Default color style',
+	SETTINGS_DEFAULT_STYLE_DESC: 'Color style to use when not specified in note frontmatter.',
+	SETTINGS_STYLE_ADD: 'Add style',
+	SETTINGS_STYLE_RESET_ALL: 'Reset all color styles',
+	SETTINGS_STYLE_RESET_ALL_CONFIRM: 'Reset all color styles to their default settings.\nAre you sure?',
+	SETTINGS_STYLE_RESET_ITEM: 'Reset to default',
+	SETTINGS_STYLE_DELETE: 'Delete',
+	SETTINGS_STYLE_NAME_LABEL: 'Style name',
+	SETTINGS_STYLE_NAME_PLACEHOLDER: 'Enter style name',
+	SETTINGS_COLOR_DEFAULT: 'Initial',
+	SETTINGS_COLOR_WARN: 'Medium',
+	SETTINGS_COLOR_GOOD: 'High',
+	SETTINGS_COLOR_DONE: 'Completed',
+	PRESET_STYLE_LIMIT: 'Limit goal',
+	PRESET_STYLE_TARGET: 'Target goal',
+
 	// Modal Columns
 	MODAL_COL_CURRENT: 'Current',
 	MODAL_COL_GOAL: 'Goal',
 	MODAL_COL_PROGRESS: 'Progress',
+
+	// Modal Color Style
+	MODAL_COLOR_STYLE_LABEL: 'Color style',
+	MODAL_COLOR_STYLE_DESC: 'Color style applied to badges and bars for this note.',
 };

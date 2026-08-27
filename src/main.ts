@@ -8,8 +8,8 @@ import {
 import { FrontmatterManager } from './frontmatter/frontmatter-manager';
 import { t } from './lang/helpers';
 import { ParsedDocumentSections, SectionParser } from './parser/section-parser';
-import { DEFAULT_SETTINGS, SectionGoalsBadgeSettingTab } from './settings';
-import { PluginSettings } from './types';
+import { DEFAULT_SETTINGS, getDefaultStyles, SectionGoalsBadgeSettingTab } from './settings';
+import { GoalColorStyle, PluginSettings } from './types';
 import { FloatingBadge } from './ui/floating-badge';
 import { GoalManagementModal } from './ui/goal-modal';
 import { debounce } from './utils/debounce';
@@ -161,10 +161,33 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 
 	async loadSettings(): Promise<void> {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, (await this.loadData()) as Partial<PluginSettings>);
+		if (!Array.isArray(this.settings.styles) || this.settings.styles.length === 0) {
+			this.settings.styles = getDefaultStyles();
+		} else {
+			// Ensure preset flags are set for preset IDs
+			for (const style of this.settings.styles) {
+				if (style.id === 1 || style.id === 2) {
+					style.isPreset = true;
+				}
+			}
+		}
+		if (typeof this.settings.defaultStyleId !== 'number') {
+			this.settings.defaultStyleId = 1;
+		}
 	}
 
 	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
+	}
+
+	public getActiveColorStyle(file: TFile): GoalColorStyle {
+		const goalData = this.fmManager.getGoalData(file);
+		const targetId = goalData.styleId ?? this.settings.defaultStyleId ?? 1;
+		const found = this.settings.styles.find((s) => s.id === targetId);
+		if (found) return found;
+		const defaultStyle = this.settings.styles.find((s) => s.id === this.settings.defaultStyleId);
+		if (defaultStyle) return defaultStyle;
+		return this.settings.styles[0] ?? getDefaultStyles()[0]!;
 	}
 
 	public refreshBadgeUI(): void {
@@ -172,12 +195,12 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 		// Force immediate progress re-calculation and badge update even while settings modal is open
 		const view = this.getActiveMarkdownEditorView();
 		if (view && view.file) {
-			this.updateBadgeWithCursor(view);
+			this.updateBadgeWithCursor(view, true);
 		} else {
 			const leaves = this.app.workspace.getLeavesOfType('markdown');
 			for (const leaf of leaves) {
 				if (leaf.view instanceof MarkdownView && leaf.view.file) {
-					this.updateBadgeWithCursor(leaf.view);
+					this.updateBadgeWithCursor(leaf.view, true);
 					break;
 				}
 			}
@@ -271,6 +294,10 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 
 	private updateBadgeWithCursor(view: MarkdownView, force = false): void {
 		if (!this.currentParsedDoc || !view.file || this.isComposing) return;
+
+		// Apply active note's color style
+		const activeStyle = this.getActiveColorStyle(view.file);
+		this.badge.applyColorStyle(activeStyle);
 
 		const cursor = view.editor.getCursor();
 		const cursorOffset = view.editor.posToOffset(cursor);

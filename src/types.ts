@@ -4,6 +4,16 @@ export interface HeadingGoalItem {
 	[heading: string]: number;
 }
 
+export interface GoalColorStyle {
+	id: number;
+	name: string;
+	colorDefault: string;
+	colorWarn: string;
+	colorGood: string;
+	colorDone: string;
+	isPreset?: boolean;
+}
+
 export interface GoalFrontmatter {
 	'goal-file'?: number;
 	'goal-section'?: number;
@@ -13,6 +23,7 @@ export interface GoalFrontmatter {
 	'goal-section-h4'?: number;
 	'goal-section-h5'?: number;
 	'goal-section-h6'?: number;
+	'goal-style'?: number;
 	goals?: Array<HeadingGoalItem | { heading: string; goal: number }>;
 }
 
@@ -94,10 +105,12 @@ export interface PluginSettings {
 	badgeOpacity: number;
 	fontSize: number;
 
-	// Thresholds for dynamic coloring (in percentage)
+	// Color Thresholds & Styles
 	colorThresholdWarn: number; // e.g. 50%
 	colorThresholdGood: number; // e.g. 80%
 	colorThresholdDone: number; // e.g. 100%
+	styles: GoalColorStyle[];
+	defaultStyleId: number;
 
 	// Counter options
 	countType: CountType;

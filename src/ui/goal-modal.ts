@@ -1,8 +1,8 @@
-import { App, MarkdownView, Modal, setIcon, TFile } from 'obsidian';
+import { App, DropdownComponent, MarkdownView, Modal, setIcon, TFile } from 'obsidian';
 import { FrontmatterManager } from '../frontmatter/frontmatter-manager';
 import { t } from '../lang/helpers';
 import { ParsedDocumentSections, SectionParser } from '../parser/section-parser';
-import { HeadingGoalItem, PluginSettings, SectionNode } from '../types';
+import { GoalColorStyle, HeadingGoalItem, PluginSettings, SectionNode } from '../types';
 import { debounce } from '../utils/debounce';
 import { setCssProps } from '../utils/dom';
 
@@ -18,6 +18,7 @@ export class GoalManagementModal extends Modal {
 
 	private fileGoalInput: number | undefined;
 	private defaultSectionGoalInput: number | undefined;
+	private styleIdInput!: number;
 	private headingLevelGoalsInput: Record<number, number> = {};
 	private isHeadingLevelGoalsOpen = false;
 	private sectionGoalsMap: Map<string, number> = new Map();
@@ -25,6 +26,7 @@ export class GoalManagementModal extends Modal {
 	private inputElements: Map<string, HTMLInputElement> = new Map();
 	private totalGoalInputElement: HTMLInputElement | null = null;
 	private defaultSectionGoalInputElement: HTMLInputElement | null = null;
+	private colorPreviewDots: HTMLElement[] = [];
 
 	// Viewport resize listener for mobile keyboard handling
 	private viewportResizeHandler: (() => void) | null = null;
@@ -73,10 +75,15 @@ export class GoalManagementModal extends Modal {
 			excludeCharacters: this.settings.excludeCharacters,
 		});
 
-		const { fileGoal, defaultSectionGoal, headingLevelGoals, sectionGoals } = this.fmManager.getGoalData(this.file);
+		const { fileGoal, defaultSectionGoal, headingLevelGoals, sectionGoals, styleId } = this.fmManager.getGoalData(this.file);
 		this.fileGoalInput = fileGoal;
 		this.defaultSectionGoalInput = defaultSectionGoal;
+		this.styleIdInput = styleId ?? this.settings.defaultStyleId ?? 1;
 		this.headingLevelGoalsInput = headingLevelGoals ? { ...headingLevelGoals } : {};
+
+		// Apply initial color style to modal
+		const currentStyle = this.getEffectiveStyle();
+		this.applyModalColorStyle(currentStyle);
 
 		// Build map of explicitly set goals
 		this.sectionGoalsMap.clear();
@@ -300,6 +307,45 @@ export class GoalManagementModal extends Modal {
 			});
 		}
 
+		// Row 4: Color Style Selection
+		const styleRowEl = topCardEl.createDiv({ cls: 'sgb-modal-card-row sgb-modal-style-row' });
+		const styleLabelGroup = styleRowEl.createDiv({ cls: 'sgb-card-label-group' });
+		const styleTitleEl = styleLabelGroup.createSpan({ cls: 'sgb-card-title' });
+		const styleIconEl = styleTitleEl.createSpan({ cls: 'sgb-card-title-icon' });
+		setIcon(styleIconEl, 'palette');
+		styleTitleEl.createSpan({ text: t('MODAL_COLOR_STYLE_LABEL') });
+		styleLabelGroup.createSpan({ cls: 'sgb-card-desc', text: t('MODAL_COLOR_STYLE_DESC') });
+
+		const styleControls = styleRowEl.createDiv({ cls: 'sgb-modal-style-controls' });
+
+		// 4-color preview swatches
+		const swatchesContainer = styleControls.createDiv({ cls: 'sgb-modal-color-swatches' });
+		this.colorPreviewDots = [
+			swatchesContainer.createSpan({ cls: 'sgb-color-preview-circle sgb-color-preview-default' }),
+			swatchesContainer.createSpan({ cls: 'sgb-color-preview-circle sgb-color-preview-warn' }),
+			swatchesContainer.createSpan({ cls: 'sgb-color-preview-circle sgb-color-preview-good' }),
+			swatchesContainer.createSpan({ cls: 'sgb-color-preview-circle sgb-color-preview-done' }),
+		];
+
+		const dropdownWrapper = styleControls.createDiv({ cls: 'sgb-modal-style-dropdown-wrapper' });
+		const dropdown = new DropdownComponent(dropdownWrapper);
+		for (const s of this.settings.styles) {
+			dropdown.addOption(String(s.id), s.name);
+		}
+		dropdown.setValue(String(this.styleIdInput));
+		this.updateColorPreviewDots(this.getEffectiveStyle());
+
+		dropdown.onChange((val) => {
+			const id = parseInt(val, 10);
+			if (!isNaN(id)) {
+				this.styleIdInput = id;
+				const selectedStyle = this.getEffectiveStyle();
+				this.applyModalColorStyle(selectedStyle);
+				this.updateColorPreviewDots(selectedStyle);
+				this.debouncedSaveGoals();
+			}
+		});
+
 		// --- Section 2: Headings tree goals & Set button ---
 		const sectionHeaderEl = contentEl.createDiv({ cls: 'sgb-modal-section-header' });
 		sectionHeaderEl.createEl('h3', { text: t('MODAL_SECTIONS_HEADER') });
@@ -498,8 +544,43 @@ export class GoalManagementModal extends Modal {
 			this.defaultSectionGoalInput,
 			sectionGoals,
 			this.headingLevelGoalsInput,
+			this.styleIdInput,
+			this.settings.defaultStyleId ?? 1,
 		);
 		this.onGoalsUpdated();
+	}
+
+	private getEffectiveStyle(): GoalColorStyle {
+		const found = this.settings.styles.find((s) => s.id === this.styleIdInput);
+		if (found) return found;
+		const defaultStyle = this.settings.styles.find((s) => s.id === this.settings.defaultStyleId);
+		if (defaultStyle) return defaultStyle;
+		return this.settings.styles[0] ?? {
+			id: 1,
+			name: 'Default',
+			colorDefault: '#ababab',
+			colorWarn: '#e2b93b',
+			colorGood: '#ff7843',
+			colorDone: '#ff4d4f',
+		};
+	}
+
+	private applyModalColorStyle(style: GoalColorStyle): void {
+		setCssProps(this.contentEl, {
+			'--sgb-color-default': style.colorDefault,
+			'--sgb-color-warn': style.colorWarn,
+			'--sgb-color-good': style.colorGood,
+			'--sgb-color-done': style.colorDone,
+		});
+	}
+
+	private updateColorPreviewDots(style: GoalColorStyle): void {
+		if (this.colorPreviewDots.length === 4) {
+			this.colorPreviewDots[0]!.style.backgroundColor = style.colorDefault;
+			this.colorPreviewDots[1]!.style.backgroundColor = style.colorWarn;
+			this.colorPreviewDots[2]!.style.backgroundColor = style.colorGood;
+			this.colorPreviewDots[3]!.style.backgroundColor = style.colorDone;
+		}
 	}
 
 	private jumpToSection(section: SectionNode): void {
