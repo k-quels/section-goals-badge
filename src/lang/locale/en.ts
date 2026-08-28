@@ -153,6 +153,7 @@ export default {
 	MODAL_SET_CONFIRM_MSG: 'Set the target values for all sections to the currently written counts.\nAre you sure?',
 	MODAL_CONFIRM_OK: 'Set goals',
 	MODAL_CONFIRM_CANCEL: 'Cancel',
+	MODAL_SCROLL_TO_TOP: 'Scroll to top',
 
 	// Settings - Color Styles
 	SETTINGS_HEADING_STYLES: 'Color styles',

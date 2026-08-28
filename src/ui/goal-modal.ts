@@ -1,4 +1,4 @@
-import { App, DropdownComponent, MarkdownView, Modal, setIcon, TFile } from 'obsidian';
+import { App, DropdownComponent, MarkdownView, Modal, setIcon, setTooltip, TFile } from 'obsidian';
 import { EffectiveGoalData, FrontmatterManager } from '../frontmatter/frontmatter-manager';
 import { t } from '../lang/helpers';
 import { ParsedDocumentSections, SectionParser } from '../parser/section-parser';
@@ -32,6 +32,7 @@ export class GoalManagementModal extends Modal {
 
 	// Viewport resize listener for mobile keyboard handling
 	private viewportResizeHandler: (() => void) | null = null;
+	private contentScrollHandler: (() => void) | null = null;
 
 	// Debounced saver to avoid aggressive disk/frontmatter writes during typing
 	private debouncedSaveGoals = debounce(() => {
@@ -65,6 +66,93 @@ export class GoalManagementModal extends Modal {
 		modalEl.addClass('sgb-goal-modal');
 		contentEl.empty();
 		contentEl.addClass('section-goals-badge-modal');
+
+		// Find native close button
+		const nativeCloseBtn = this.containerEl.querySelector('.modal-close-button');
+		const targetParent = nativeCloseBtn?.parentElement ?? modalEl;
+
+		// Add "Scroll to top" button matching standard modal close button
+		const scrollTopBtn = targetParent.createDiv({
+			cls: 'sgb-modal-scroll-top-button',
+			attr: {
+				'aria-label': t('MODAL_SCROLL_TO_TOP'),
+				role: 'button',
+			},
+		});
+		setIcon(scrollTopBtn, 'chevrons-up');
+		setTooltip(scrollTopBtn, t('MODAL_SCROLL_TO_TOP'));
+		scrollTopBtn.addEventListener('click', () => {
+			if (contentEl.scrollTop <= 10) return;
+			scrollTopBtn.blur();
+			contentEl.scrollTo({
+				top: 0,
+				behavior: 'smooth',
+			});
+		});
+
+		// Update scroll-top button state based on content scrollability and scroll position
+		const updateScrollButtonState = () => {
+			const canScroll = contentEl.scrollHeight > contentEl.clientHeight + 5;
+			if (!canScroll) {
+				scrollTopBtn.addClass('sgb-hidden');
+				return;
+			}
+			scrollTopBtn.removeClass('sgb-hidden');
+
+			if (contentEl.scrollTop <= 10) {
+				scrollTopBtn.addClass('is-disabled');
+			} else {
+				scrollTopBtn.removeClass('is-disabled');
+			}
+		};
+
+		this.contentScrollHandler = updateScrollButtonState;
+		contentEl.addEventListener('scroll', updateScrollButtonState, { passive: true });
+		updateScrollButtonState();
+
+		// Align scroll-top button and inherit theme styles directly from modal-close-button
+		const alignScrollTopButton = () => {
+			const closeBtn = this.containerEl.querySelector('.modal-close-button');
+			if (closeBtn instanceof HTMLElement) {
+				const isMobile = document.body.classList.contains('is-mobile') || document.body.classList.contains('is-phone');
+				const closeComputed = window.getComputedStyle(closeBtn);
+				const rawTop = closeBtn.offsetTop > 0 ? closeBtn.offsetTop : (parseFloat(closeComputed.top) || 8);
+				const closeTop = isMobile ? `${rawTop}px` : `${Math.max(0, rawTop - 2)}px`;
+				const closeWidth = closeBtn.offsetWidth > 0 ? closeBtn.offsetWidth : (parseFloat(closeComputed.width) || 28);
+				const closeHeight = closeBtn.offsetHeight > 0 ? closeBtn.offsetHeight : (parseFloat(closeComputed.height) || 28);
+				const closeRight = parseFloat(closeComputed.right) || 12;
+				const gap = isMobile ? 6 : -2;
+
+				scrollTopBtn.style.top = closeTop;
+				scrollTopBtn.style.right = `${closeRight + closeWidth + gap}px`;
+				scrollTopBtn.style.width = `${closeWidth}px`;
+				scrollTopBtn.style.height = `${closeHeight}px`;
+
+				// Inherit visual styles directly from theme's close button
+				if (closeComputed.borderRadius) {
+					scrollTopBtn.style.borderRadius = closeComputed.borderRadius;
+				}
+				if (
+					closeComputed.backgroundColor &&
+					closeComputed.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
+					closeComputed.backgroundColor !== 'transparent'
+				) {
+					scrollTopBtn.style.backgroundColor = closeComputed.backgroundColor;
+				}
+				if (closeComputed.borderColor && closeComputed.borderStyle !== 'none') {
+					scrollTopBtn.style.border = closeComputed.border;
+				}
+				if (closeComputed.boxShadow && closeComputed.boxShadow !== 'none') {
+					scrollTopBtn.style.boxShadow = closeComputed.boxShadow;
+				}
+			}
+		};
+
+		alignScrollTopButton();
+		window.requestAnimationFrame(alignScrollTopButton);
+		window.setTimeout(alignScrollTopButton, 50);
+		window.setTimeout(alignScrollTopButton, 200);
+		window.setTimeout(alignScrollTopButton, 400);
 
 		// Handle mobile visual viewport resizing (when virtual keyboard pops up)
 		this.setupViewportListener();
@@ -115,6 +203,7 @@ export class GoalManagementModal extends Modal {
 
 	private setupViewportListener(): void {
 		const updateLayout = () => {
+			this.contentScrollHandler?.();
 			// Keep currently active input row visible in center when keyboard/IME resizes viewport
 			const activeEl = document.activeElement;
 			if (activeEl instanceof HTMLInputElement && this.contentEl.contains(activeEl)) {
@@ -389,6 +478,7 @@ export class GoalManagementModal extends Modal {
 				this.contentEl.parentElement.scrollLeft = 0;
 			}
 			this.updateScrollbarOffset();
+			this.contentScrollHandler?.();
 		});
 
 		const levelGrid = accordionBody.createDiv({ cls: 'sgb-level-goals-grid' });
@@ -572,12 +662,14 @@ export class GoalManagementModal extends Modal {
 			window.setTimeout(() => {
 				if (activeItemEl) {
 					this.scrollToItem(activeItemEl, false);
+					this.contentScrollHandler?.();
 				}
 			}, 0);
 		}
 
 		// Calculate scrollbar width and sync layout
 		this.updateScrollbarOffset();
+		this.contentScrollHandler?.();
 	}
 
 	private refreshSectionMiniProgress(): void {
@@ -735,6 +827,11 @@ export class GoalManagementModal extends Modal {
 		if (this.viewportResizeHandler && window.visualViewport) {
 			window.visualViewport.removeEventListener('resize', this.viewportResizeHandler);
 			this.viewportResizeHandler = null;
+		}
+
+		if (this.contentScrollHandler) {
+			this.contentEl.removeEventListener('scroll', this.contentScrollHandler);
+			this.contentScrollHandler = null;
 		}
 
 		// Sync any pending inputs immediately

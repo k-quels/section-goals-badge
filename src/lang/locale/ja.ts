@@ -173,6 +173,7 @@ const ja: typeof en = {
 	MODAL_SET_CONFIRM_MSG: '全セクションの目標値を現在執筆済みの数値に設定します。\nよろしいですか？',
 	MODAL_CONFIRM_OK: '設定する',
 	MODAL_CONFIRM_CANCEL: 'キャンセル',
+	MODAL_SCROLL_TO_TOP: '一番上へスクロール',
 
 	// Modal Columns
 	MODAL_COL_CURRENT: '現在値',

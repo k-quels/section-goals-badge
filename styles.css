@@ -366,6 +366,84 @@ settings:
    ========================================================================== */
 .modal.sgb-goal-modal {
 	overflow-x: hidden;
+	position: relative;
+}
+
+.sgb-modal-scroll-top-button {
+	position: absolute;
+	top: calc(var(--size-4-2, 8px) - 2px);
+	right: calc(var(--size-4-3, 12px) + 28px - 2px);
+	width: 28px;
+	height: 28px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: var(--cursor, pointer);
+	color: var(--text-normal);
+	background-color: var(--background-primary);
+	border: none;
+	border-radius: var(--radius-s, 4px);
+	box-shadow: none;
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
+	transition: color 0.15s ease, background-color 0.15s ease, opacity 0.2s ease, transform 0.1s ease;
+	z-index: var(--layer-popover, 20);
+	padding: 0;
+	box-sizing: border-box;
+	outline: none;
+	-webkit-tap-highlight-color: transparent;
+	user-select: none;
+}
+
+.sgb-modal-scroll-top-button.is-disabled {
+	opacity: 0.35;
+	cursor: default;
+	pointer-events: none;
+}
+
+.sgb-modal-scroll-top-button:focus,
+.sgb-modal-scroll-top-button:focus-visible {
+	outline: none;
+	border: none;
+	box-shadow: none;
+}
+
+@media (hover: hover) {
+	.sgb-modal-scroll-top-button:hover {
+		color: var(--text-normal);
+		background-color: var(--background-modifier-hover);
+	}
+}
+
+.sgb-modal-scroll-top-button:active {
+	transform: scale(0.95);
+	background-color: var(--background-modifier-active-hover, var(--background-modifier-hover));
+}
+
+.sgb-modal-scroll-top-button svg {
+	width: 16px;
+	height: 16px;
+	stroke-width: 2.2px;
+	display: block;
+	color: var(--text-normal);
+}
+
+.is-mobile .sgb-modal-scroll-top-button,
+.is-phone .sgb-modal-scroll-top-button {
+	top: var(--size-4-3, 12px);
+	right: calc(var(--size-4-3, 12px) + var(--input-height, 40px) + 6px);
+	width: var(--input-height, 40px);
+	height: var(--input-height, 40px);
+	border: none;
+	border-radius: var(--radius-round, 50%);
+	background-color: var(--background-modifier-form-field, var(--background-secondary-alt, var(--background-secondary)));
+	color: var(--text-normal);
+}
+
+.is-mobile .sgb-modal-scroll-top-button svg,
+.is-phone .sgb-modal-scroll-top-button svg {
+	width: 20px;
+	height: 20px;
 }
 
 .modal.sgb-goal-modal .modal-content,
@@ -391,7 +469,7 @@ settings:
 
 .is-mobile .sgb-modal-header-title,
 .is-phone .sgb-modal-header-title {
-	padding: 2px 14px 0 14px;
+	padding: 2px 105px 0 14px;
 }
 
 /* Table Column Header (Placed at the top to label all rows) */
