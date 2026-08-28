@@ -87,6 +87,10 @@ The following features and options can be customized:
   - ▼ e.g., Hide both for cursor, icon only for section, full for total:<br>
   <img src="doc/images/badge-icon-label.png" width="250">
 
+- **Display as Progress Bar**: Display the progress percentage using the badge background color as a gauge.
+  - ▼ e.g., Using cursor position and section badges as progress bars:<br>
+  <img src="doc/images/badge-color-gauge.png" width="250">
+
 ### 2. Counting Rules
 
 - **Counting Method**: Switch between Character count and Word count.

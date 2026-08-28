@@ -86,9 +86,11 @@ Obsidian で小説や長編ドキュメントを執筆する人のための、**
 - **表示 / 非表示**: 3種の進捗バッジを個別に ON/OFF 可能。
   - ▼ 例: 全体進捗を非表示<br>
   <img src="doc/images/badge-hide-all.png" width="200">
+
 - **見出しレベルごとの進捗表示（H1〜H6）**: セクション進捗バッジにH1〜H6の進捗を併記可能。
     - ▼ 例：H1とH2をONにすると、H2編集中にH1の進捗を同時に確認可能<br>
   <img src="doc/images/badge-headings.png" width="250">
+
 - **表示内容**: 「現在の文字数」「目標値」「進捗率」の表示を個別に ON/OFF 可能。
   - ▼ 例: カーソル位置は現在の文字数のみ表示、セクションは全項目を表示<br>
   <img src="doc/images/badge-hide-all.png" width="200">
@@ -96,6 +98,11 @@ Obsidian で小説や長編ドキュメントを執筆する人のための、**
 - **アイコン / ラベル**: バッジ先頭の「アイコン」「テキストラベル」の表示を切り替え可能。
   - ▼ 例: カーソル位置は両方非表示、セクションはアイコンのみ表示、全体は両方表示<br>
   <img src="doc/images/badge-icon-label.png" width="250">
+
+- **進捗バーとして表示**: バッジの背景色で進捗率を表示可能。
+  - ▼ 例: カーソル位置とセクションのバッジを進捗バーとして使用<br>
+  <img src="doc/images/badge-color-gauge.png" width="250">
+
 
 ### 2. カウントルール
 
