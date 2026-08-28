@@ -10,6 +10,7 @@ import {
 	PluginSettings,
 } from './types';
 
+import { interpolateGoalColors } from './utils/color';
 import { setCssProps } from './utils/dom';
 import { FolderSuggest } from './utils/folder-suggest';
 
@@ -1447,6 +1448,30 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 
 									const actionsEl = headerEl.createDiv({ cls: 'sgb-style-card-actions' });
 
+									const gradientBtn = actionsEl.createEl('button', {
+										cls: 'clickable-icon sgb-style-action-btn',
+										title: t('SETTINGS_STYLE_AUTO_GRADIENT'),
+									});
+									setIcon(gradientBtn, 'sparkles');
+									gradientBtn.addEventListener('click', () => {
+										new ConfirmAutoGradientModal(this.app, () => {
+											void (async () => {
+												const { colorWarn, colorGood } = interpolateGoalColors(
+													style.colorDefault,
+													style.colorDone,
+												);
+												style.colorWarn = colorWarn;
+												style.colorGood = colorGood;
+												await this.plugin.saveSettings();
+												this.plugin.refreshBadgeUI();
+												renderStylesList();
+												if (style.id === this.plugin.settings.defaultStyleId) {
+													this.updateSettingSwatches(stylesManagerSetting.settingEl);
+												}
+											})();
+										}).open();
+									});
+
 									if (style.isPreset || style.id === 1 || style.id === 2) {
 										const resetBtn = actionsEl.createEl('button', {
 											cls: 'clickable-icon sgb-style-action-btn',
@@ -2048,3 +2073,47 @@ class ConfirmResetStylesModal extends Modal {
 		contentEl.empty();
 	}
 }
+
+/**
+ * Confirmation dialog modal for auto-generating intermediate colors.
+ */
+class ConfirmAutoGradientModal extends Modal {
+	constructor(
+		app: App,
+		private onConfirm: () => void,
+	) {
+		super(app);
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.addClass('sgb-confirm-modal');
+
+		contentEl.createEl('p', { text: t('SETTINGS_STYLE_AUTO_GRADIENT_CONFIRM') });
+
+		const buttonContainer = contentEl.createDiv({ cls: 'sgb-confirm-buttons' });
+
+		const cancelBtn = buttonContainer.createEl('button', {
+			text: t('MODAL_CONFIRM_CANCEL'),
+		});
+		cancelBtn.addEventListener('click', () => {
+			this.close();
+		});
+
+		const confirmBtn = buttonContainer.createEl('button', {
+			cls: 'mod-cta',
+			text: t('MODAL_CONFIRM_OK'),
+		});
+		confirmBtn.addEventListener('click', () => {
+			this.close();
+			this.onConfirm();
+		});
+	}
+
+	onClose(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+

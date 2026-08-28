@@ -171,6 +171,8 @@ export default {
 	SETTINGS_STYLE_ADD: 'Add style',
 	SETTINGS_STYLE_RESET_ALL: 'Reset all color styles',
 	SETTINGS_STYLE_RESET_ALL_CONFIRM: 'Reset all color styles to their default settings.\nAre you sure?',
+	SETTINGS_STYLE_AUTO_GRADIENT: 'Auto-generate intermediate colors',
+	SETTINGS_STYLE_AUTO_GRADIENT_CONFIRM: 'Auto-generate intermediate colors based on default and done colors.\nAre you sure?',
 	SETTINGS_STYLE_RESET_ITEM: 'Reset to default',
 	SETTINGS_STYLE_DELETE: 'Delete',
 	SETTINGS_STYLE_NAME_LABEL: 'Style name',

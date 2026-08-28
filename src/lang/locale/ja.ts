@@ -142,6 +142,8 @@ const ja: typeof en = {
 	SETTINGS_STYLE_ADD: 'スタイルを追加',
 	SETTINGS_STYLE_RESET_ALL: 'すべてのカラースタイルをデフォルトに戻す',
 	SETTINGS_STYLE_RESET_ALL_CONFIRM: 'すべてのカラースタイルをデフォルト値に戻します。\nよろしいですか？',
+	SETTINGS_STYLE_AUTO_GRADIENT: '中間色を自動生成',
+	SETTINGS_STYLE_AUTO_GRADIENT_CONFIRM: '初期カラーと達成カラーを元に中間色を自動設定します。\nよろしいですか？',
 	SETTINGS_STYLE_RESET_ITEM: 'デフォルトに戻す',
 	SETTINGS_STYLE_DELETE: '削除',
 	SETTINGS_STYLE_NAME_LABEL: 'スタイル名',
