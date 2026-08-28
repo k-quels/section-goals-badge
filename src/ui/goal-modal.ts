@@ -134,14 +134,14 @@ export class GoalManagementModal extends Modal {
 	/**
 	 * Safely scrolls a tree item into center view of modal content container.
 	 */
-	private scrollToItem(itemEl: HTMLElement): void {
+	private scrollToItem(itemEl: HTMLElement, smooth = false): void {
 		const containerRect = this.contentEl.getBoundingClientRect();
 		const itemRect = itemEl.getBoundingClientRect();
 		const relativeTop = itemRect.top - containerRect.top + this.contentEl.scrollTop;
 		const targetScroll = relativeTop - containerRect.height / 2 + itemRect.height / 2;
 		this.contentEl.scrollTo({
 			top: Math.max(0, targetScroll),
-			behavior: 'smooth',
+			behavior: smooth ? 'smooth' : 'auto',
 		});
 	}
 
@@ -567,13 +567,13 @@ export class GoalManagementModal extends Modal {
 			});
 		}
 
-		// Scroll to active section if needed
+		// Scroll to active section immediately
 		if (activeItemEl) {
 			window.setTimeout(() => {
 				if (activeItemEl) {
-					this.scrollToItem(activeItemEl);
+					this.scrollToItem(activeItemEl, false);
 				}
-			}, 50);
+			}, 0);
 		}
 
 		// Calculate scrollbar width and sync layout
