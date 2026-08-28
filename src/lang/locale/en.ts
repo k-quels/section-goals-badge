@@ -34,6 +34,9 @@ export default {
 	SETTINGS_CUMULATIVE_GOAL: 'Show target goal',
 	SETTINGS_CUMULATIVE_GOAL_DESC: 'Display "/ target goal".',
 
+	SETTINGS_CUMULATIVE_PROGRESS_BAR: 'Show as progress bar',
+	SETTINGS_CUMULATIVE_PROGRESS_BAR_DESC: 'Display the badge background as a progress bar gauge based on completion rate.',
+
 	SETTINGS_CUMULATIVE_ICON: 'Show cursor icon',
 	SETTINGS_CUMULATIVE_ICON_DESC: 'Display an icon at the beginning of the badge.',
 
@@ -52,6 +55,9 @@ export default {
 
 	SETTINGS_SECTION_GOAL: 'Show target goal',
 	SETTINGS_SECTION_GOAL_DESC: 'Display "/ target goal".',
+
+	SETTINGS_SECTION_PROGRESS_BAR: 'Show as progress bar',
+	SETTINGS_SECTION_PROGRESS_BAR_DESC: 'Display the badge background as a progress bar gauge based on completion rate.',
 
 	SETTINGS_SECTION_ICON: 'Show section icon',
 	SETTINGS_SECTION_ICON_DESC: 'Display an icon at the beginning of the badge.',
@@ -87,6 +93,9 @@ export default {
 
 	SETTINGS_TOTAL_GOAL: 'Show target goal',
 	SETTINGS_TOTAL_GOAL_DESC: 'Display "/ target goal".',
+
+	SETTINGS_TOTAL_PROGRESS_BAR: 'Show as progress bar',
+	SETTINGS_TOTAL_PROGRESS_BAR_DESC: 'Display the badge background as a progress bar gauge based on completion rate.',
 
 	SETTINGS_TOTAL_ICON: 'Show icon',
 	SETTINGS_TOTAL_ICON_DESC: 'Display an icon at the beginning of the badge.',

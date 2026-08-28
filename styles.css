@@ -35,6 +35,16 @@ settings:
         format: hex
         default-light: '#2e3338'
         default-dark: '#dcddde'
+    - 
+        id: sgb-progress-bg-opacity
+        title: Progress Tint Opacity
+        description: Background tint opacity for progress pills and progress bar gauges
+        type: variable-number-slider
+        default: 28
+        min: 10
+        max: 80
+        step: 2
+        format: '%'
 
 */
 
@@ -51,6 +61,7 @@ settings:
 	--sgb-badge-border: var(--background-modifier-border);
 	--sgb-badge-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 	--sgb-badge-radius: 20px;
+	--sgb-progress-bg-opacity: 28%;
 	
 	/* Dynamic positioning variables */
 	--sgb-badge-top: auto;
@@ -298,22 +309,22 @@ settings:
 /* --- Progress Color Modifiers (Dynamic tint with color-mix) --- */
 .sgb-pill.is-progress-default {
 	color: var(--sgb-color-default, #ababab);
-	background-color: color-mix(in srgb, var(--sgb-color-default, #ababab) 18%, transparent);
+	background-color: color-mix(in srgb, var(--sgb-color-default, #ababab) var(--sgb-progress-bg-opacity, 28%), transparent);
 }
 
 .sgb-pill.is-progress-warn {
 	color: var(--sgb-color-warn, #e2b93b);
-	background-color: color-mix(in srgb, var(--sgb-color-warn, #e2b93b) 18%, transparent);
+	background-color: color-mix(in srgb, var(--sgb-color-warn, #e2b93b) var(--sgb-progress-bg-opacity, 28%), transparent);
 }
 
 .sgb-pill.is-progress-good {
 	color: var(--sgb-color-good, #ff7843);
-	background-color: color-mix(in srgb, var(--sgb-color-good, #ff7843) 18%, transparent);
+	background-color: color-mix(in srgb, var(--sgb-color-good, #ff7843) var(--sgb-progress-bg-opacity, 28%), transparent);
 }
 
 .sgb-pill.is-progress-done {
 	color: var(--sgb-color-done, #ff4d4f);
-	background-color: color-mix(in srgb, var(--sgb-color-done, #ff4d4f) 18%, transparent);
+	background-color: color-mix(in srgb, var(--sgb-color-done, #ff4d4f) var(--sgb-progress-bg-opacity, 28%), transparent);
 	font-weight: 600;
 }
 
@@ -348,6 +359,100 @@ settings:
 .sgb-section-row.is-progress-done {
 	color: var(--sgb-color-done, #ff4d4f);
 	font-weight: 600;
+}
+
+/* ==========================================================================
+   Progress Bar Mode Styles (Background Gauge via linear-gradient)
+   ========================================================================== */
+.sgb-pill:not(.sgb-section-pill-multiline).is-progress-bar {
+	background: var(--sgb-pill-bg);
+}
+
+.sgb-pill:not(.sgb-section-pill-multiline).is-progress-bar.is-progress-default {
+	background: linear-gradient(
+		to right,
+		color-mix(in srgb, var(--sgb-color-default, #ababab) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
+		color-mix(in srgb, var(--sgb-color-default, #ababab) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
+		var(--sgb-pill-bg) var(--sgb-fill-pct, 0%),
+		var(--sgb-pill-bg) 100%
+	);
+}
+
+.sgb-pill:not(.sgb-section-pill-multiline).is-progress-bar.is-progress-warn {
+	background: linear-gradient(
+		to right,
+		color-mix(in srgb, var(--sgb-color-warn, #e2b93b) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
+		color-mix(in srgb, var(--sgb-color-warn, #e2b93b) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
+		var(--sgb-pill-bg) var(--sgb-fill-pct, 0%),
+		var(--sgb-pill-bg) 100%
+	);
+}
+
+.sgb-pill:not(.sgb-section-pill-multiline).is-progress-bar.is-progress-good {
+	background: linear-gradient(
+		to right,
+		color-mix(in srgb, var(--sgb-color-good, #ff7843) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
+		color-mix(in srgb, var(--sgb-color-good, #ff7843) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
+		var(--sgb-pill-bg) var(--sgb-fill-pct, 0%),
+		var(--sgb-pill-bg) 100%
+	);
+}
+
+.sgb-pill:not(.sgb-section-pill-multiline).is-progress-bar.is-progress-done {
+	background: linear-gradient(
+		to right,
+		color-mix(in srgb, var(--sgb-color-done, #ff4d4f) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
+		color-mix(in srgb, var(--sgb-color-done, #ff4d4f) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
+		var(--sgb-pill-bg) var(--sgb-fill-pct, 0%),
+		var(--sgb-pill-bg) 100%
+	);
+}
+
+/* Multiline Section Rows in Progress Bar Mode */
+.sgb-section-pill-multiline .sgb-section-row.is-progress-bar {
+	border-radius: 4px;
+	padding: 1px 4px;
+	background: color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent);
+}
+
+.sgb-section-pill-multiline .sgb-section-row.is-progress-bar.is-progress-default {
+	background: linear-gradient(
+		to right,
+		color-mix(in srgb, var(--sgb-color-default, #ababab) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
+		color-mix(in srgb, var(--sgb-color-default, #ababab) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
+		color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) var(--sgb-fill-pct, 0%),
+		color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) 100%
+	);
+}
+
+.sgb-section-pill-multiline .sgb-section-row.is-progress-bar.is-progress-warn {
+	background: linear-gradient(
+		to right,
+		color-mix(in srgb, var(--sgb-color-warn, #e2b93b) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
+		color-mix(in srgb, var(--sgb-color-warn, #e2b93b) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
+		color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) var(--sgb-fill-pct, 0%),
+		color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) 100%
+	);
+}
+
+.sgb-section-pill-multiline .sgb-section-row.is-progress-bar.is-progress-good {
+	background: linear-gradient(
+		to right,
+		color-mix(in srgb, var(--sgb-color-good, #ff7843) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
+		color-mix(in srgb, var(--sgb-color-good, #ff7843) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
+		color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) var(--sgb-fill-pct, 0%),
+		color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) 100%
+	);
+}
+
+.sgb-section-pill-multiline .sgb-section-row.is-progress-bar.is-progress-done {
+	background: linear-gradient(
+		to right,
+		color-mix(in srgb, var(--sgb-color-done, #ff4d4f) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
+		color-mix(in srgb, var(--sgb-color-done, #ff4d4f) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
+		color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) var(--sgb-fill-pct, 0%),
+		color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) 100%
+	);
 }
 
 /* --- High Specificity Badge Pill Visibility --- */

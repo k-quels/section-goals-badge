@@ -81,6 +81,7 @@ export interface PluginSettings {
 	showSectionCurrent: boolean;
 	showSectionPercentage: boolean;
 	showSectionGoal: boolean;
+	showSectionProgressBar: boolean;
 	showSectionIcon: boolean;
 	sectionLabel: string;
 	showHeadingLevel1: boolean;
@@ -95,6 +96,7 @@ export interface PluginSettings {
 	showCumulativeCurrent: boolean;
 	showCumulativePercentage: boolean;
 	showCumulativeGoal: boolean;
+	showCumulativeProgressBar: boolean;
 	showCumulativeIcon: boolean;
 	cumulativeLabel: string;
 	cumulativeMode: CumulativeCountMode;
@@ -104,6 +106,7 @@ export interface PluginSettings {
 	showTotalCurrent: boolean;
 	showTotalPercentage: boolean;
 	showTotalGoal: boolean;
+	showTotalProgressBar: boolean;
 	showTotalIcon: boolean;
 	totalLabel: string;
 
@@ -133,5 +136,3 @@ export interface PluginSettings {
 	// Interaction
 	longPressToOpenModal: boolean;
 }
-
-

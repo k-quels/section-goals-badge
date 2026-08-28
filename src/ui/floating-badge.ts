@@ -272,6 +272,7 @@ export class FloatingBadge {
 				'text-cursor',
 				this.settings.showCumulativeIcon,
 				t('BADGE_TOOLTIP_CUMULATIVE'),
+				this.settings.showCumulativeProgressBar,
 			);
 		} else {
 			this.cumulativePillEl.addClass('sgb-hidden');
@@ -299,6 +300,7 @@ export class FloatingBadge {
 				'book-text',
 				this.settings.showTotalIcon,
 				t('BADGE_TOOLTIP_TOTAL'),
+				this.settings.showTotalProgressBar,
 			);
 		} else {
 			this.totalPillEl.addClass('sgb-hidden');
@@ -347,6 +349,7 @@ export class FloatingBadge {
 				'hash',
 				this.settings.showSectionIcon,
 				t('BADGE_TOOLTIP_SECTION', { heading: progress.currentSection.heading }),
+				this.settings.showSectionProgressBar,
 			);
 			return;
 		}
@@ -368,7 +371,7 @@ export class FloatingBadge {
 			activeItems
 				.map((it) => `${it.level}:${it.current}:${it.goal ?? ''}:${it.percentage ?? ''}:${it.heading}`)
 				.join(';') +
-			`|${baseLabel}|${this.settings.showSectionIcon}|${this.settings.showSectionCurrent ?? true}|${this.settings.showSectionPercentage}|${this.settings.showSectionGoal}`;
+			`|${baseLabel}|${this.settings.showSectionIcon}|${this.settings.showSectionCurrent ?? true}|${this.settings.showSectionPercentage}|${this.settings.showSectionGoal}|${this.settings.showSectionProgressBar}`;
 
 		if (this.sectionPillEl.dataset.sgbState === stateKey) {
 			return;
@@ -388,6 +391,7 @@ export class FloatingBadge {
 		for (const item of activeItems) {
 			const rowEl = this.sectionPillEl.createDiv({ cls: 'sgb-section-row' });
 			rowEl.title = t('BADGE_TOOLTIP_SECTION', { heading: item.heading });
+			rowEl.classList.toggle('is-progress-bar', !!this.settings.showSectionProgressBar);
 
 			// Icon
 			if (this.settings.showSectionIcon) {
@@ -441,6 +445,12 @@ export class FloatingBadge {
 			// Apply color individually per row
 			if (item.percentage !== undefined) {
 				this.applyProgressClass(rowEl, item.percentage);
+			} else {
+				rowEl.className = rowEl.className.replace(/\bis-progress-\w+/g, '');
+				setCssProps(rowEl, {
+					'--sgb-fill-pct': '0%',
+					'--sgb-progress-ratio': '0',
+				});
 			}
 		}
 	}
@@ -457,13 +467,15 @@ export class FloatingBadge {
 		iconName?: string,
 		showIcon?: boolean,
 		titleTooltip?: string,
+		isProgressBar?: boolean,
 	): void {
-		const stateKey = `${prefix}|${current}|${goal ?? ''}|${percentage ?? ''}|${showCurrent}|${showPercent}|${showGoal}|${showIcon}|${iconName ?? ''}|${titleTooltip ?? ''}`;
+		const stateKey = `${prefix}|${current}|${goal ?? ''}|${percentage ?? ''}|${showCurrent}|${showPercent}|${showGoal}|${showIcon}|${iconName ?? ''}|${titleTooltip ?? ''}|${isProgressBar ?? false}`;
 		if (el.dataset.sgbState === stateKey) {
 			return;
 		}
 		el.dataset.sgbState = stateKey;
 
+		el.classList.toggle('is-progress-bar', !!isProgressBar);
 		el.empty();
 		if (titleTooltip) {
 			el.title = titleTooltip;
@@ -511,6 +523,10 @@ export class FloatingBadge {
 			this.applyProgressClass(el, percentage);
 		} else {
 			el.className = el.className.replace(/\bis-progress-\w+/g, '');
+			setCssProps(el, {
+				'--sgb-fill-pct': '0%',
+				'--sgb-progress-ratio': '0',
+			});
 		}
 	}
 
@@ -530,8 +546,10 @@ export class FloatingBadge {
 			el.addClass('is-progress-default');
 		}
 
+		const clampedPct = Math.min(100, Math.max(0, percentage));
 		setCssProps(el, {
-			'--sgb-progress-ratio': `${Math.min(100, Math.max(0, percentage)) / 100}`,
+			'--sgb-fill-pct': `${clampedPct}%`,
+			'--sgb-progress-ratio': `${clampedPct / 100}`,
 		});
 	}
 

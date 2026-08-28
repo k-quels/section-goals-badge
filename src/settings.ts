@@ -54,6 +54,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	showSectionCurrent: true,
 	showSectionPercentage: true,
 	showSectionGoal: true,
+	showSectionProgressBar: false,
 	showSectionIcon: true,
 	sectionLabel: '',
 	showHeadingLevel1: false,
@@ -68,6 +69,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	showCumulativeCurrent: true,
 	showCumulativePercentage: false,
 	showCumulativeGoal: false,
+	showCumulativeProgressBar: false,
 	showCumulativeIcon: true,
 	cumulativeLabel: '',
 	cumulativeMode: 'from-section',
@@ -77,6 +79,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	showTotalCurrent: true,
 	showTotalPercentage: true,
 	showTotalGoal: true,
+	showTotalProgressBar: false,
 	showTotalIcon: true,
 	totalLabel: '',
 
@@ -432,6 +435,31 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						},
 					},
 					{
+						name: t('SETTINGS_CUMULATIVE_PROGRESS_BAR'),
+						desc: t('SETTINGS_CUMULATIVE_PROGRESS_BAR_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-cumulative');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showCumulativeProgress);
+							setting.settingEl.style.setProperty(
+								'display',
+								this.plugin.settings.showCumulativeProgress ? '' : 'none',
+								'important',
+							);
+							setting
+								.setName(t('SETTINGS_CUMULATIVE_PROGRESS_BAR'))
+								.setDesc(t('SETTINGS_CUMULATIVE_PROGRESS_BAR_DESC'))
+								.addToggle((toggle) =>
+									toggle
+										.setValue(this.plugin.settings.showCumulativeProgressBar)
+										.onChange(async (val) => {
+											this.plugin.settings.showCumulativeProgressBar = val;
+											await this.plugin.saveSettings();
+											this.plugin.refreshBadgeUI();
+										}),
+								);
+						},
+					},
+					{
 						name: t('SETTINGS_CUMULATIVE_ICON'),
 						desc: t('SETTINGS_CUMULATIVE_ICON_DESC'),
 						render: (setting: Setting) => {
@@ -566,6 +594,29 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 								.addToggle((toggle) =>
 									toggle.setValue(this.plugin.settings.showSectionPercentage).onChange(async (val) => {
 										this.plugin.settings.showSectionPercentage = val;
+										await this.plugin.saveSettings();
+										this.plugin.refreshBadgeUI();
+									}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_SECTION_PROGRESS_BAR'),
+						desc: t('SETTINGS_SECTION_PROGRESS_BAR_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-section');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showSectionProgress);
+							setting.settingEl.style.setProperty(
+								'display',
+								this.plugin.settings.showSectionProgress ? '' : 'none',
+								'important',
+							);
+							setting
+								.setName(t('SETTINGS_SECTION_PROGRESS_BAR'))
+								.setDesc(t('SETTINGS_SECTION_PROGRESS_BAR_DESC'))
+								.addToggle((toggle) =>
+									toggle.setValue(this.plugin.settings.showSectionProgressBar).onChange(async (val) => {
+										this.plugin.settings.showSectionProgressBar = val;
 										await this.plugin.saveSettings();
 										this.plugin.refreshBadgeUI();
 									}),
@@ -879,6 +930,29 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 								.addToggle((toggle) =>
 									toggle.setValue(this.plugin.settings.showTotalPercentage).onChange(async (val) => {
 										this.plugin.settings.showTotalPercentage = val;
+										await this.plugin.saveSettings();
+										this.plugin.refreshBadgeUI();
+									}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_TOTAL_PROGRESS_BAR'),
+						desc: t('SETTINGS_TOTAL_PROGRESS_BAR_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-total');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showTotalProgress);
+							setting.settingEl.style.setProperty(
+								'display',
+								this.plugin.settings.showTotalProgress ? '' : 'none',
+								'important',
+							);
+							setting
+								.setName(t('SETTINGS_TOTAL_PROGRESS_BAR'))
+								.setDesc(t('SETTINGS_TOTAL_PROGRESS_BAR_DESC'))
+								.addToggle((toggle) =>
+									toggle.setValue(this.plugin.settings.showTotalProgressBar).onChange(async (val) => {
+										this.plugin.settings.showTotalProgressBar = val;
 										await this.plugin.saveSettings();
 										this.plugin.refreshBadgeUI();
 									}),
