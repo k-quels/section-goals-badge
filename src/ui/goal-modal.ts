@@ -5,6 +5,7 @@ import { ParsedDocumentSections, SectionParser } from '../parser/section-parser'
 import { GoalColorStyle, HeadingGoalItem, PluginSettings, SectionNode } from '../types';
 import { debounce } from '../utils/debounce';
 import { setCssProps } from '../utils/dom';
+import { calculateOverflowSegments } from '../utils/progress';
 
 export class GoalManagementModal extends Modal {
 	private file: TFile;
@@ -397,12 +398,13 @@ export class GoalManagementModal extends Modal {
 		const totalPercentEl = totalProgressWrapper.createSpan({ cls: 'sgb-mini-percent' });
 		const totalProgressEl = totalProgressWrapper.createDiv({ cls: 'sgb-mini-progress' });
 		const totalProgressFill = totalProgressEl.createDiv({ cls: 'sgb-mini-progress-fill' });
-		this.updateMiniProgress(totalProgressFill, totalPercentEl, totalChars, this.fileGoalInput);
+		const totalOverflowEl = totalProgressWrapper.createDiv({ cls: 'sgb-mini-overflow-progress sgb-hidden' });
+		this.updateMiniProgress(totalProgressFill, totalPercentEl, totalChars, this.fileGoalInput, totalOverflowEl);
 
 		totalInput.addEventListener('input', () => {
 			const num = parseInt(totalInput.value, 10);
 			this.fileGoalInput = !isNaN(num) && num > 0 ? num : undefined;
-			this.updateMiniProgress(totalProgressFill, totalPercentEl, totalChars, this.fileGoalInput);
+			this.updateMiniProgress(totalProgressFill, totalPercentEl, totalChars, this.fileGoalInput, totalOverflowEl);
 			this.debouncedSaveGoals();
 		});
 
@@ -632,7 +634,8 @@ export class GoalManagementModal extends Modal {
 			const miniPercentEl = miniProgressWrapper.createSpan({ cls: 'sgb-mini-percent' });
 			const miniProgressEl = miniProgressWrapper.createDiv({ cls: 'sgb-mini-progress' });
 			const miniFillEl = miniProgressEl.createDiv({ cls: 'sgb-mini-progress-fill' });
-			this.updateMiniProgress(miniFillEl, miniPercentEl, section.charCount, effectiveGoal);
+			const miniOverflowEl = miniProgressWrapper.createDiv({ cls: 'sgb-mini-overflow-progress sgb-hidden' });
+			this.updateMiniProgress(miniFillEl, miniPercentEl, section.charCount, effectiveGoal, miniOverflowEl);
 
 			const onGoalChange = () => {
 				const num = parseInt(inputEl.value, 10);
@@ -642,7 +645,7 @@ export class GoalManagementModal extends Modal {
 					this.sectionGoalsMap.delete(section.heading);
 				}
 				const currentEffective = this.getEffectiveSectionGoal(section.heading, section.level);
-				this.updateMiniProgress(miniFillEl, miniPercentEl, section.charCount, currentEffective);
+				this.updateMiniProgress(miniFillEl, miniPercentEl, section.charCount, currentEffective, miniOverflowEl);
 				this.debouncedSaveGoals();
 			};
 
@@ -683,8 +686,9 @@ export class GoalManagementModal extends Modal {
 			const rowControlsEl = inputEl?.parentElement?.parentElement;
 			const miniFillEl = rowControlsEl?.querySelector('.sgb-mini-progress-fill') as HTMLElement | null;
 			const miniPercentEl = rowControlsEl?.querySelector('.sgb-mini-percent') as HTMLElement | null;
+			const miniOverflowEl = rowControlsEl?.querySelector('.sgb-mini-overflow-progress') as HTMLElement | null;
 			if (miniFillEl && miniPercentEl) {
-				this.updateMiniProgress(miniFillEl, miniPercentEl, sec.charCount, effective);
+				this.updateMiniProgress(miniFillEl, miniPercentEl, sec.charCount, effective, miniOverflowEl ?? undefined);
 			}
 		}
 
@@ -707,6 +711,7 @@ export class GoalManagementModal extends Modal {
 		percentEl: HTMLElement,
 		current: number,
 		goal?: number,
+		overflowEl?: HTMLElement,
 	): void {
 		if (goal && goal > 0) {
 			const percent = Math.round((current / goal) * 100);
@@ -728,6 +733,21 @@ export class GoalManagementModal extends Modal {
 				fillEl.addClass('is-progress-warn');
 				percentEl.addClass('is-progress-warn');
 			}
+
+			if (overflowEl) {
+				const segments = calculateOverflowSegments(percent);
+				overflowEl.empty();
+				if (segments.length > 0) {
+					overflowEl.removeClass('sgb-hidden');
+					for (const segFill of segments) {
+						const segEl = overflowEl.createDiv({ cls: 'sgb-mini-overflow-segment' });
+						const fill = segEl.createDiv({ cls: 'sgb-mini-overflow-fill' });
+						fill.style.width = `${segFill}%`;
+					}
+				} else {
+					overflowEl.addClass('sgb-hidden');
+				}
+			}
 		} else {
 			setCssProps(fillEl, {
 				'--sgb-mini-fill-width': '0%',
@@ -735,6 +755,10 @@ export class GoalManagementModal extends Modal {
 			percentEl.setText('-');
 			fillEl.className = 'sgb-mini-progress-fill';
 			percentEl.className = 'sgb-mini-percent';
+			if (overflowEl) {
+				overflowEl.empty();
+				overflowEl.addClass('sgb-hidden');
+			}
 		}
 	}
 

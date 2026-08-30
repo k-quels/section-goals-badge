@@ -2,6 +2,7 @@ import { setIcon } from 'obsidian';
 import { t } from '../lang/helpers';
 import { BadgePositionPreset, GoalColorStyle, PluginSettings, WritingProgress } from '../types';
 import { setCssProps } from '../utils/dom';
+import { calculateOverflowSegments } from '../utils/progress';
 import { ViewportTracker } from '../utils/viewport';
 
 export class FloatingBadge {
@@ -45,17 +46,17 @@ export class FloatingBadge {
 
 		// 1. Cumulative progress pill (Leftmost)
 		this.cumulativePillEl = this.containerEl.createDiv({
-			cls: 'sgb-pill sgb-cumulative-pill sgb-hidden',
+			cls: 'sgb-pill-wrapper sgb-cumulative-pill sgb-hidden',
 		});
 
 		// 2. Section progress pill (Center)
 		this.sectionPillEl = this.containerEl.createDiv({
-			cls: 'sgb-pill sgb-section-pill sgb-hidden',
+			cls: 'sgb-pill-wrapper sgb-section-pill sgb-hidden',
 		});
 
 		// 3. Total progress pill (Right)
 		this.totalPillEl = this.containerEl.createDiv({
-			cls: 'sgb-pill sgb-total-pill sgb-hidden',
+			cls: 'sgb-pill-wrapper sgb-total-pill sgb-hidden',
 		});
 
 		this.applyPosition();
@@ -273,6 +274,7 @@ export class FloatingBadge {
 				this.settings.showCumulativeIcon,
 				t('BADGE_TOOLTIP_CUMULATIVE'),
 				this.settings.showCumulativeProgressBar,
+				this.settings.showCumulativeOverflowBar,
 			);
 		} else {
 			this.cumulativePillEl.addClass('sgb-hidden');
@@ -301,6 +303,7 @@ export class FloatingBadge {
 				this.settings.showTotalIcon,
 				t('BADGE_TOOLTIP_TOTAL'),
 				this.settings.showTotalProgressBar,
+				this.settings.showTotalOverflowBar,
 			);
 		} else {
 			this.totalPillEl.addClass('sgb-hidden');
@@ -350,6 +353,7 @@ export class FloatingBadge {
 				this.settings.showSectionIcon,
 				t('BADGE_TOOLTIP_SECTION', { heading: progress.currentSection.heading }),
 				this.settings.showSectionProgressBar,
+				this.settings.showSectionOverflowBar,
 			);
 			return;
 		}
@@ -371,7 +375,7 @@ export class FloatingBadge {
 			activeItems
 				.map((it) => `${it.level}:${it.current}:${it.goal ?? ''}:${it.percentage ?? ''}:${it.heading}`)
 				.join(';') +
-			`|${baseLabel}|${this.settings.showSectionIcon}|${this.settings.showSectionCurrent ?? true}|${this.settings.showSectionPercentage}|${this.settings.showSectionGoal}|${this.settings.showSectionProgressBar}`;
+			`|${baseLabel}|${this.settings.showSectionIcon}|${this.settings.showSectionCurrent ?? true}|${this.settings.showSectionPercentage}|${this.settings.showSectionGoal}|${this.settings.showSectionProgressBar}|${this.settings.showSectionOverflowBar}`;
 
 		if (this.sectionPillEl.dataset.sgbState === stateKey) {
 			return;
@@ -389,8 +393,10 @@ export class FloatingBadge {
 
 		// Render each level as a row inside the section pill
 		for (const item of activeItems) {
-			const rowEl = this.sectionPillEl.createDiv({ cls: 'sgb-section-row' });
-			rowEl.title = t('BADGE_TOOLTIP_SECTION', { heading: item.heading });
+			const rowWrapperEl = this.sectionPillEl.createDiv({ cls: 'sgb-section-row-wrapper' });
+			rowWrapperEl.title = t('BADGE_TOOLTIP_SECTION', { heading: item.heading });
+
+			const rowEl = rowWrapperEl.createDiv({ cls: 'sgb-section-row' });
 			rowEl.classList.toggle('is-progress-bar', !!this.settings.showSectionProgressBar);
 
 			// Icon
@@ -445,6 +451,17 @@ export class FloatingBadge {
 			// Apply color individually per row
 			if (item.percentage !== undefined) {
 				this.applyProgressClass(rowEl, item.percentage);
+				if (this.settings.showSectionProgressBar && this.settings.showSectionOverflowBar) {
+					const segments = calculateOverflowSegments(item.percentage);
+					if (segments.length > 0) {
+						const overflowBarEl = rowWrapperEl.createDiv({ cls: 'sgb-pill-overflow-bar' });
+						for (const segFill of segments) {
+							const segEl = overflowBarEl.createDiv({ cls: 'sgb-pill-overflow-segment' });
+							const fill = segEl.createDiv({ cls: 'sgb-pill-overflow-fill' });
+							fill.style.width = `${segFill}%`;
+						}
+					}
+				}
 			} else {
 				rowEl.className = rowEl.className.replace(/\bis-progress-\w+/g, '');
 				setCssProps(rowEl, {
@@ -456,7 +473,7 @@ export class FloatingBadge {
 	}
 
 	private renderPill(
-		el: HTMLElement,
+		wrapperEl: HTMLElement,
 		prefix: string,
 		current: number,
 		goal: number | undefined,
@@ -468,28 +485,32 @@ export class FloatingBadge {
 		showIcon?: boolean,
 		titleTooltip?: string,
 		isProgressBar?: boolean,
+		isOverflowBar?: boolean,
 	): void {
-		const stateKey = `${prefix}|${current}|${goal ?? ''}|${percentage ?? ''}|${showCurrent}|${showPercent}|${showGoal}|${showIcon}|${iconName ?? ''}|${titleTooltip ?? ''}|${isProgressBar ?? false}`;
-		if (el.dataset.sgbState === stateKey) {
+		const stateKey = `${prefix}|${current}|${goal ?? ''}|${percentage ?? ''}|${showCurrent}|${showPercent}|${showGoal}|${showIcon}|${iconName ?? ''}|${titleTooltip ?? ''}|${isProgressBar ?? false}|${isOverflowBar ?? false}`;
+		if (wrapperEl.dataset.sgbState === stateKey) {
 			return;
 		}
-		el.dataset.sgbState = stateKey;
+		wrapperEl.dataset.sgbState = stateKey;
 
-		el.classList.toggle('is-progress-bar', !!isProgressBar);
-		el.empty();
+		wrapperEl.empty();
 		if (titleTooltip) {
-			el.title = titleTooltip;
+			wrapperEl.title = titleTooltip;
 		}
+
+		// Capsule element (main pill)
+		const capsuleEl = wrapperEl.createDiv({ cls: 'sgb-pill' });
+		capsuleEl.classList.toggle('is-progress-bar', !!isProgressBar);
 
 		// Render Lucide Icon if enabled
 		if (showIcon && iconName) {
-			const iconEl = el.createSpan({ cls: 'sgb-pill-icon' });
+			const iconEl = capsuleEl.createSpan({ cls: 'sgb-pill-icon' });
 			setIcon(iconEl, iconName);
 		}
 
 		// Render Prefix Text if configured
 		if (prefix && prefix.trim().length > 0) {
-			el.createSpan({ cls: 'sgb-pill-prefix', text: prefix });
+			capsuleEl.createSpan({ cls: 'sgb-pill-prefix', text: prefix });
 		}
 
 		// Format count text
@@ -516,14 +537,25 @@ export class FloatingBadge {
 		}
 
 		if (text.length > 0) {
-			el.createSpan({ cls: 'sgb-pill-text', text });
+			capsuleEl.createSpan({ cls: 'sgb-pill-text', text });
 		}
 
 		if (percentage !== undefined) {
-			this.applyProgressClass(el, percentage);
+			this.applyProgressClass(capsuleEl, percentage);
+			if (isProgressBar && isOverflowBar) {
+				const segments = calculateOverflowSegments(percentage);
+				if (segments.length > 0) {
+					const overflowBarEl = wrapperEl.createDiv({ cls: 'sgb-pill-overflow-bar' });
+					for (const segFill of segments) {
+						const segEl = overflowBarEl.createDiv({ cls: 'sgb-pill-overflow-segment' });
+						const fill = segEl.createDiv({ cls: 'sgb-pill-overflow-fill' });
+						fill.style.width = `${segFill}%`;
+					}
+				}
+			}
 		} else {
-			el.className = el.className.replace(/\bis-progress-\w+/g, '');
-			setCssProps(el, {
+			capsuleEl.className = capsuleEl.className.replace(/\bis-progress-\w+/g, '');
+			setCssProps(capsuleEl, {
 				'--sgb-fill-pct': '0%',
 				'--sgb-progress-ratio': '0',
 			});

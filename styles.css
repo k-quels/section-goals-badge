@@ -62,7 +62,7 @@ settings:
 	--sgb-badge-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 	--sgb-badge-radius: 20px;
 	--sgb-progress-bg-opacity: 28%;
-	
+
 	/* Dynamic positioning variables */
 	--sgb-badge-top: auto;
 	--sgb-badge-bottom: auto;
@@ -226,6 +226,7 @@ settings:
 	border-radius: var(--sgb-badge-radius);
 	background: var(--sgb-badge-bg);
 	color: var(--sgb-badge-text);
+	font-size: var(--sgb-badge-font-size, 11px);
 	border: 1px solid var(--sgb-badge-border);
 	box-shadow: var(--sgb-badge-shadow);
 	backdrop-filter: blur(8px);
@@ -253,7 +254,16 @@ settings:
 	cursor: grabbing;
 }
 
-/* --- Pill Items --- */
+/* --- Pill Items & Wrappers --- */
+.sgb-pill-wrapper {
+	display: inline-flex;
+	flex-direction: column;
+	align-items: stretch;
+	justify-content: center;
+	gap: 2px;
+	box-sizing: border-box;
+}
+
 .sgb-pill {
 	display: inline-flex;
 	align-items: center;
@@ -306,6 +316,35 @@ settings:
 	align-self: center;
 }
 
+/* Badge Overflow Progress Bar (Rendered independently under pill capsule when > 100%) */
+.sgb-pill-overflow-bar {
+	display: flex;
+	align-items: center;
+	gap: 1.5px;
+	width: calc(100% - 4px);
+	margin: 1px 2px 0 2px;
+	height: 4px;
+	box-sizing: border-box;
+	align-self: center;
+}
+
+.sgb-pill-overflow-segment {
+	flex: 1;
+	height: 100%;
+	background: var(--sgb-pill-bg, rgba(255, 255, 255, 0.08));
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.sgb-pill-overflow-fill {
+	height: 100%;
+	background: repeating-linear-gradient(-45deg,
+			color-mix(in srgb, var(--sgb-color-done, #ff4d4f) var(--sgb-progress-bg-opacity, 28%), transparent) 0px,
+			color-mix(in srgb, var(--sgb-color-done, #ff4d4f) var(--sgb-progress-bg-opacity, 28%), transparent) 4px,
+			color-mix(in srgb, var(--sgb-color-done, #ff4d4f) 85%, transparent) 4px,
+			color-mix(in srgb, var(--sgb-color-done, #ff4d4f) 85%, transparent) 5px);
+}
+
 /* --- Progress Color Modifiers (Dynamic tint with color-mix) --- */
 .sgb-pill.is-progress-default {
 	color: var(--sgb-color-default, #ababab);
@@ -336,11 +375,24 @@ settings:
 	align-items: flex-start;
 }
 
+.sgb-section-row-wrapper {
+	display: inline-flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 2px;
+	width: 100%;
+}
+
 .sgb-section-row {
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
 	width: 100%;
+	min-height: 18px;
+	font-size: var(--sgb-badge-font-size, 11px);
+	font-weight: 500;
+	line-height: 1.2;
+	box-sizing: border-box;
 }
 
 /* Individual row progress colors in multiline section pill */
@@ -369,100 +421,90 @@ settings:
 }
 
 .sgb-pill:not(.sgb-section-pill-multiline).is-progress-bar.is-progress-default {
-	background: linear-gradient(
-		to right,
-		color-mix(in srgb, var(--sgb-color-default, #ababab) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
-		color-mix(in srgb, var(--sgb-color-default, #ababab) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
-		var(--sgb-pill-bg) var(--sgb-fill-pct, 0%),
-		var(--sgb-pill-bg) 100%
-	);
+	background: linear-gradient(to right,
+			color-mix(in srgb, var(--sgb-color-default, #ababab) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
+			color-mix(in srgb, var(--sgb-color-default, #ababab) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
+			var(--sgb-pill-bg) var(--sgb-fill-pct, 0%),
+			var(--sgb-pill-bg) 100%);
 }
 
 .sgb-pill:not(.sgb-section-pill-multiline).is-progress-bar.is-progress-warn {
-	background: linear-gradient(
-		to right,
-		color-mix(in srgb, var(--sgb-color-warn, #e2b93b) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
-		color-mix(in srgb, var(--sgb-color-warn, #e2b93b) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
-		var(--sgb-pill-bg) var(--sgb-fill-pct, 0%),
-		var(--sgb-pill-bg) 100%
-	);
+	background: linear-gradient(to right,
+			color-mix(in srgb, var(--sgb-color-warn, #e2b93b) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
+			color-mix(in srgb, var(--sgb-color-warn, #e2b93b) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
+			var(--sgb-pill-bg) var(--sgb-fill-pct, 0%),
+			var(--sgb-pill-bg) 100%);
 }
 
 .sgb-pill:not(.sgb-section-pill-multiline).is-progress-bar.is-progress-good {
-	background: linear-gradient(
-		to right,
-		color-mix(in srgb, var(--sgb-color-good, #ff7843) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
-		color-mix(in srgb, var(--sgb-color-good, #ff7843) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
-		var(--sgb-pill-bg) var(--sgb-fill-pct, 0%),
-		var(--sgb-pill-bg) 100%
-	);
+	background: linear-gradient(to right,
+			color-mix(in srgb, var(--sgb-color-good, #ff7843) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
+			color-mix(in srgb, var(--sgb-color-good, #ff7843) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
+			var(--sgb-pill-bg) var(--sgb-fill-pct, 0%),
+			var(--sgb-pill-bg) 100%);
 }
 
 .sgb-pill:not(.sgb-section-pill-multiline).is-progress-bar.is-progress-done {
-	background: linear-gradient(
-		to right,
-		color-mix(in srgb, var(--sgb-color-done, #ff4d4f) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
-		color-mix(in srgb, var(--sgb-color-done, #ff4d4f) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
-		var(--sgb-pill-bg) var(--sgb-fill-pct, 0%),
-		var(--sgb-pill-bg) 100%
-	);
+	background: linear-gradient(to right,
+			color-mix(in srgb, var(--sgb-color-done, #ff4d4f) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
+			color-mix(in srgb, var(--sgb-color-done, #ff4d4f) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
+			var(--sgb-pill-bg) var(--sgb-fill-pct, 0%),
+			var(--sgb-pill-bg) 100%);
 }
 
 /* Multiline Section Rows in Progress Bar Mode */
 .sgb-section-pill-multiline .sgb-section-row.is-progress-bar {
 	border-radius: 4px;
 	padding: 1px 4px;
+	min-height: 18px;
+	line-height: 1.2;
+	box-sizing: border-box;
 	background: color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent);
 }
 
 .sgb-section-pill-multiline .sgb-section-row.is-progress-bar.is-progress-default {
-	background: linear-gradient(
-		to right,
-		color-mix(in srgb, var(--sgb-color-default, #ababab) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
-		color-mix(in srgb, var(--sgb-color-default, #ababab) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
-		color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) var(--sgb-fill-pct, 0%),
-		color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) 100%
-	);
+	background: linear-gradient(to right,
+			color-mix(in srgb, var(--sgb-color-default, #ababab) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
+			color-mix(in srgb, var(--sgb-color-default, #ababab) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
+			color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) var(--sgb-fill-pct, 0%),
+			color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) 100%);
 }
 
 .sgb-section-pill-multiline .sgb-section-row.is-progress-bar.is-progress-warn {
-	background: linear-gradient(
-		to right,
-		color-mix(in srgb, var(--sgb-color-warn, #e2b93b) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
-		color-mix(in srgb, var(--sgb-color-warn, #e2b93b) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
-		color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) var(--sgb-fill-pct, 0%),
-		color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) 100%
-	);
+	background: linear-gradient(to right,
+			color-mix(in srgb, var(--sgb-color-warn, #e2b93b) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
+			color-mix(in srgb, var(--sgb-color-warn, #e2b93b) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
+			color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) var(--sgb-fill-pct, 0%),
+			color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) 100%);
 }
 
 .sgb-section-pill-multiline .sgb-section-row.is-progress-bar.is-progress-good {
-	background: linear-gradient(
-		to right,
-		color-mix(in srgb, var(--sgb-color-good, #ff7843) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
-		color-mix(in srgb, var(--sgb-color-good, #ff7843) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
-		color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) var(--sgb-fill-pct, 0%),
-		color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) 100%
-	);
+	background: linear-gradient(to right,
+			color-mix(in srgb, var(--sgb-color-good, #ff7843) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
+			color-mix(in srgb, var(--sgb-color-good, #ff7843) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
+			color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) var(--sgb-fill-pct, 0%),
+			color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) 100%);
 }
 
 .sgb-section-pill-multiline .sgb-section-row.is-progress-bar.is-progress-done {
-	background: linear-gradient(
-		to right,
-		color-mix(in srgb, var(--sgb-color-done, #ff4d4f) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
-		color-mix(in srgb, var(--sgb-color-done, #ff4d4f) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
-		color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) var(--sgb-fill-pct, 0%),
-		color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) 100%
-	);
+	background: linear-gradient(to right,
+			color-mix(in srgb, var(--sgb-color-done, #ff4d4f) var(--sgb-progress-bg-opacity, 28%), transparent) 0%,
+			color-mix(in srgb, var(--sgb-color-done, #ff4d4f) var(--sgb-progress-bg-opacity, 28%), transparent) var(--sgb-fill-pct, 0%),
+			color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) var(--sgb-fill-pct, 0%),
+			color-mix(in srgb, var(--sgb-badge-text, currentColor) 6%, transparent) 100%);
 }
 
 /* --- High Specificity Badge Pill Visibility --- */
 .section-goals-badge.sgb-hidden,
+.section-goals-badge .sgb-pill-wrapper.sgb-hidden,
 .section-goals-badge .sgb-pill.sgb-hidden,
 .section-goals-badge .sgb-section-pill.sgb-hidden,
 .section-goals-badge .sgb-cumulative-pill.sgb-hidden,
 .section-goals-badge .sgb-total-pill.sgb-hidden,
+.sgb-pill-wrapper.sgb-hidden,
 .sgb-pill.sgb-hidden,
-.sgb-section-row.sgb-hidden {
+.sgb-section-row.sgb-hidden,
+.sgb-section-row-wrapper.sgb-hidden {
 	display: none;
 }
 
@@ -765,7 +807,8 @@ settings:
 	box-sizing: border-box;
 }
 
-@media (max-width: 520px), (max-device-width: 520px) {
+@media (max-width: 520px),
+(max-device-width: 520px) {
 	.sgb-level-goals-grid {
 		grid-template-columns: repeat(2, 1fr);
 		gap: 6px 12px;
@@ -860,12 +903,14 @@ settings:
 	gap: 4px;
 	flex: 1;
 	padding-right: 0px;
-	padding-bottom: 120px; /* Moderate bottom spacing to allow comfortable scrolling */
+	padding-bottom: 120px;
+	/* Moderate bottom spacing to allow comfortable scrolling */
 }
 
 .is-mobile .sgb-section-tree-container,
 .is-phone .sgb-section-tree-container {
-	padding-bottom: 220px; /* Extra bottom clearance for mobile virtual keyboard and IME conversion candidates */
+	padding-bottom: 220px;
+	/* Extra bottom clearance for mobile virtual keyboard and IME conversion candidates */
 }
 
 .sgb-section-tree-item {
@@ -890,12 +935,29 @@ settings:
 }
 
 /* Indent levels */
-.sgb-level-1 { margin-left: 0px; }
-.sgb-level-2 { margin-left: 10px; }
-.sgb-level-3 { margin-left: 20px; }
-.sgb-level-4 { margin-left: 30px; }
-.sgb-level-5 { margin-left: 40px; }
-.sgb-level-6 { margin-left: 50px; }
+.sgb-level-1 {
+	margin-left: 0px;
+}
+
+.sgb-level-2 {
+	margin-left: 10px;
+}
+
+.sgb-level-3 {
+	margin-left: 20px;
+}
+
+.sgb-level-4 {
+	margin-left: 30px;
+}
+
+.sgb-level-5 {
+	margin-left: 40px;
+}
+
+.sgb-level-6 {
+	margin-left: 50px;
+}
 
 .sgb-section-title {
 	display: flex;
@@ -1013,6 +1075,30 @@ settings:
 
 .sgb-mini-progress-fill.is-progress-done {
 	background: var(--sgb-color-done, #ff4d4f);
+}
+
+/* Mini Overflow Progress Bar (Rendered under mini progress bar when > 100%) */
+.sgb-mini-overflow-progress {
+	display: flex;
+	align-items: center;
+	gap: 1.5px;
+	width: 100%;
+	height: 2px;
+	box-sizing: border-box;
+}
+
+.sgb-mini-overflow-segment {
+	flex: 1;
+	height: 100%;
+	background: var(--background-modifier-border);
+	border-radius: 1px;
+	overflow: hidden;
+}
+
+.sgb-mini-overflow-fill {
+	height: 100%;
+	background: var(--sgb-color-done, #ff4d4f);
+	transition: width 0.2s ease;
 }
 
 .sgb-empty-notice {
@@ -1752,6 +1838,3 @@ button.sgb-folder-action-btn svg {
 	font-size: 12px;
 	padding: 6px 14px;
 }
-
-
-

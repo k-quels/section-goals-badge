@@ -39,6 +39,9 @@ const ja: typeof en = {
 	SETTINGS_CUMULATIVE_PROGRESS_BAR: '進捗バーとして表示',
 	SETTINGS_CUMULATIVE_PROGRESS_BAR_DESC: 'バッジの背景を進捗率ゲージにします。',
 
+	SETTINGS_CUMULATIVE_OVERFLOW_BAR: '超過分の進捗バーを表示',
+	SETTINGS_CUMULATIVE_OVERFLOW_BAR_DESC: '100%超過時、バッジの下に超過分の細い進捗率ゲージを表示します。',
+
 	SETTINGS_CUMULATIVE_ICON: 'カーソルアイコンを表示',
 	SETTINGS_CUMULATIVE_ICON_DESC: 'バッジの先頭にアイコンを表示します。',
 
@@ -60,6 +63,9 @@ const ja: typeof en = {
 
 	SETTINGS_SECTION_PROGRESS_BAR: '進捗バーとして表示',
 	SETTINGS_SECTION_PROGRESS_BAR_DESC: 'バッジの背景を進捗率ゲージにします。',
+
+	SETTINGS_SECTION_OVERFLOW_BAR: '超過分の進捗バーを表示',
+	SETTINGS_SECTION_OVERFLOW_BAR_DESC: '100%超過時、バッジの下に超過分の細い進捗率ゲージを表示します。',
 
 	SETTINGS_SECTION_ICON: 'セクションアイコンを表示',
 	SETTINGS_SECTION_ICON_DESC: 'バッジの先頭にアイコンを表示します。',
@@ -98,6 +104,9 @@ const ja: typeof en = {
 
 	SETTINGS_TOTAL_PROGRESS_BAR: '進捗バーとして表示',
 	SETTINGS_TOTAL_PROGRESS_BAR_DESC: 'バッジの背景を進捗率ゲージにします。',
+
+	SETTINGS_TOTAL_OVERFLOW_BAR: '超過分の進捗バーを表示',
+	SETTINGS_TOTAL_OVERFLOW_BAR_DESC: '100%超過時、バッジの下に超過分の細い進捗率ゲージを表示します。',
 
 	SETTINGS_TOTAL_ICON: 'アイコンを表示',
 	SETTINGS_TOTAL_ICON_DESC: 'バッジの先頭にアイコンを表示します。',

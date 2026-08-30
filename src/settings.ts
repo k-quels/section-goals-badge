@@ -56,6 +56,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	showSectionPercentage: true,
 	showSectionGoal: true,
 	showSectionProgressBar: false,
+	showSectionOverflowBar: false,
 	showSectionIcon: true,
 	sectionLabel: '',
 	showHeadingLevel1: false,
@@ -71,6 +72,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	showCumulativePercentage: false,
 	showCumulativeGoal: false,
 	showCumulativeProgressBar: false,
+	showCumulativeOverflowBar: false,
 	showCumulativeIcon: true,
 	cumulativeLabel: '',
 	cumulativeMode: 'from-section',
@@ -81,6 +83,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	showTotalPercentage: true,
 	showTotalGoal: true,
 	showTotalProgressBar: false,
+	showTotalOverflowBar: false,
 	showTotalIcon: true,
 	totalLabel: '',
 
@@ -235,10 +238,24 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 			el.style.setProperty('display', showCumulative ? '' : 'none', 'important');
 		});
 
+		// Cumulative overflow sub-item
+		const showCumulativeOverflow = showCumulative && this.plugin.settings.showCumulativeProgressBar;
+		root.querySelectorAll<HTMLElement>('.sgb-group-cumulative-overflow').forEach((el) => {
+			el.classList.toggle('sgb-is-hidden', !showCumulativeOverflow);
+			el.style.setProperty('display', showCumulativeOverflow ? '' : 'none', 'important');
+		});
+
 		// Section sub-items
 		root.querySelectorAll<HTMLElement>('.sgb-group-section').forEach((el) => {
 			el.classList.toggle('sgb-is-hidden', !showSection);
 			el.style.setProperty('display', showSection ? '' : 'none', 'important');
+		});
+
+		// Section overflow sub-item
+		const showSectionOverflow = showSection && this.plugin.settings.showSectionProgressBar;
+		root.querySelectorAll<HTMLElement>('.sgb-group-section-overflow').forEach((el) => {
+			el.classList.toggle('sgb-is-hidden', !showSectionOverflow);
+			el.style.setProperty('display', showSectionOverflow ? '' : 'none', 'important');
 		});
 
 		// Accordion row
@@ -263,6 +280,13 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 		root.querySelectorAll<HTMLElement>('.sgb-group-total').forEach((el) => {
 			el.classList.toggle('sgb-is-hidden', !showTotal);
 			el.style.setProperty('display', showTotal ? '' : 'none', 'important');
+		});
+
+		// Total overflow sub-item
+		const showTotalOverflow = showTotal && this.plugin.settings.showTotalProgressBar;
+		root.querySelectorAll<HTMLElement>('.sgb-group-total-overflow').forEach((el) => {
+			el.classList.toggle('sgb-is-hidden', !showTotalOverflow);
+			el.style.setProperty('display', showTotalOverflow ? '' : 'none', 'important');
 		});
 	}
 
@@ -456,6 +480,32 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 											this.plugin.settings.showCumulativeProgressBar = val;
 											await this.plugin.saveSettings();
 											this.plugin.refreshBadgeUI();
+											this.updateGroupVisibility(setting.settingEl);
+										}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_CUMULATIVE_OVERFLOW_BAR'),
+						desc: t('SETTINGS_CUMULATIVE_OVERFLOW_BAR_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-cumulative-overflow');
+							setting.settingEl.addClass('sgb-setting-sub-item');
+							const isVisible =
+								this.plugin.settings.showCumulativeProgress &&
+								this.plugin.settings.showCumulativeProgressBar;
+							setting.settingEl.classList.toggle('sgb-is-hidden', !isVisible);
+							setting.settingEl.style.setProperty('display', isVisible ? '' : 'none', 'important');
+							setting
+								.setName(t('SETTINGS_CUMULATIVE_OVERFLOW_BAR'))
+								.setDesc(t('SETTINGS_CUMULATIVE_OVERFLOW_BAR_DESC'))
+								.addToggle((toggle) =>
+									toggle
+										.setValue(this.plugin.settings.showCumulativeOverflowBar)
+										.onChange(async (val) => {
+											this.plugin.settings.showCumulativeOverflowBar = val;
+											await this.plugin.saveSettings();
+											this.plugin.refreshBadgeUI();
 										}),
 								);
 						},
@@ -618,6 +668,30 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 								.addToggle((toggle) =>
 									toggle.setValue(this.plugin.settings.showSectionProgressBar).onChange(async (val) => {
 										this.plugin.settings.showSectionProgressBar = val;
+										await this.plugin.saveSettings();
+										this.plugin.refreshBadgeUI();
+										this.updateGroupVisibility(setting.settingEl);
+									}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_SECTION_OVERFLOW_BAR'),
+						desc: t('SETTINGS_SECTION_OVERFLOW_BAR_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-section-overflow');
+							setting.settingEl.addClass('sgb-setting-sub-item');
+							const isVisible =
+								this.plugin.settings.showSectionProgress &&
+								this.plugin.settings.showSectionProgressBar;
+							setting.settingEl.classList.toggle('sgb-is-hidden', !isVisible);
+							setting.settingEl.style.setProperty('display', isVisible ? '' : 'none', 'important');
+							setting
+								.setName(t('SETTINGS_SECTION_OVERFLOW_BAR'))
+								.setDesc(t('SETTINGS_SECTION_OVERFLOW_BAR_DESC'))
+								.addToggle((toggle) =>
+									toggle.setValue(this.plugin.settings.showSectionOverflowBar).onChange(async (val) => {
+										this.plugin.settings.showSectionOverflowBar = val;
 										await this.plugin.saveSettings();
 										this.plugin.refreshBadgeUI();
 									}),
@@ -954,6 +1028,30 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 								.addToggle((toggle) =>
 									toggle.setValue(this.plugin.settings.showTotalProgressBar).onChange(async (val) => {
 										this.plugin.settings.showTotalProgressBar = val;
+										await this.plugin.saveSettings();
+										this.plugin.refreshBadgeUI();
+										this.updateGroupVisibility(setting.settingEl);
+									}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_TOTAL_OVERFLOW_BAR'),
+						desc: t('SETTINGS_TOTAL_OVERFLOW_BAR_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-total-overflow');
+							setting.settingEl.addClass('sgb-setting-sub-item');
+							const isVisible =
+								this.plugin.settings.showTotalProgress &&
+								this.plugin.settings.showTotalProgressBar;
+							setting.settingEl.classList.toggle('sgb-is-hidden', !isVisible);
+							setting.settingEl.style.setProperty('display', isVisible ? '' : 'none', 'important');
+							setting
+								.setName(t('SETTINGS_TOTAL_OVERFLOW_BAR'))
+								.setDesc(t('SETTINGS_TOTAL_OVERFLOW_BAR_DESC'))
+								.addToggle((toggle) =>
+									toggle.setValue(this.plugin.settings.showTotalOverflowBar).onChange(async (val) => {
+										this.plugin.settings.showTotalOverflowBar = val;
 										await this.plugin.saveSettings();
 										this.plugin.refreshBadgeUI();
 									}),

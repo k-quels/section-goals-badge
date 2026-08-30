@@ -37,6 +37,9 @@ export default {
 	SETTINGS_CUMULATIVE_PROGRESS_BAR: 'Show as progress bar',
 	SETTINGS_CUMULATIVE_PROGRESS_BAR_DESC: 'Display the badge background as a progress bar gauge based on completion rate.',
 
+	SETTINGS_CUMULATIVE_OVERFLOW_BAR: 'Show overflow progress bar',
+	SETTINGS_CUMULATIVE_OVERFLOW_BAR_DESC: 'Display a thin progress gauge under the badge for the overflow amount when exceeding 100%.',
+
 	SETTINGS_CUMULATIVE_ICON: 'Show cursor icon',
 	SETTINGS_CUMULATIVE_ICON_DESC: 'Display an icon at the beginning of the badge.',
 
@@ -58,6 +61,9 @@ export default {
 
 	SETTINGS_SECTION_PROGRESS_BAR: 'Show as progress bar',
 	SETTINGS_SECTION_PROGRESS_BAR_DESC: 'Display the badge background as a progress bar gauge based on completion rate.',
+
+	SETTINGS_SECTION_OVERFLOW_BAR: 'Show overflow progress bar',
+	SETTINGS_SECTION_OVERFLOW_BAR_DESC: 'Display a thin progress gauge under the badge for the overflow amount when exceeding 100%.',
 
 	SETTINGS_SECTION_ICON: 'Show section icon',
 	SETTINGS_SECTION_ICON_DESC: 'Display an icon at the beginning of the badge.',
@@ -96,6 +102,9 @@ export default {
 
 	SETTINGS_TOTAL_PROGRESS_BAR: 'Show as progress bar',
 	SETTINGS_TOTAL_PROGRESS_BAR_DESC: 'Display the badge background as a progress bar gauge based on completion rate.',
+
+	SETTINGS_TOTAL_OVERFLOW_BAR: 'Show overflow progress bar',
+	SETTINGS_TOTAL_OVERFLOW_BAR_DESC: 'Display a thin progress gauge under the badge for the overflow amount when exceeding 100%.',
 
 	SETTINGS_TOTAL_ICON: 'Show icon',
 	SETTINGS_TOTAL_ICON_DESC: 'Display an icon at the beginning of the badge.',
