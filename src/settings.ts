@@ -11,6 +11,14 @@ import {
 } from './types';
 
 import { interpolateGoalColors } from './utils/color';
+import {
+	DEFAULT_FONT_SIZE_PX,
+	DEFAULT_THRESHOLD_DONE,
+	DEFAULT_THRESHOLD_GOOD,
+	DEFAULT_THRESHOLD_WARN,
+	PRESET_STYLE_LIMIT_ID,
+	PRESET_STYLE_TARGET_ID,
+} from './utils/constants';
 import { setCssProps } from './utils/dom';
 import { FolderSuggest } from './utils/folder-suggest';
 
@@ -29,7 +37,7 @@ export interface SettingGroupDefinition {
 export function getDefaultStyles(): GoalColorStyle[] {
 	return [
 		{
-			id: 1,
+			id: PRESET_STYLE_LIMIT_ID,
 			name: t('PRESET_STYLE_LIMIT'),
 			colorDefault: '#ababab',
 			colorWarn: '#e2b93b',
@@ -38,7 +46,7 @@ export function getDefaultStyles(): GoalColorStyle[] {
 			isPreset: true,
 		},
 		{
-			id: 2,
+			id: PRESET_STYLE_TARGET_ID,
 			name: t('PRESET_STYLE_TARGET'),
 			colorDefault: '#ababab',
 			colorWarn: '#f09533',
@@ -92,14 +100,14 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	offsetX: 20,
 	offsetY: 40,
 	badgeOpacity: 0.9,
-	fontSize: 12,
+	fontSize: DEFAULT_FONT_SIZE_PX,
 
 	// Color Thresholds & Styles
-	colorThresholdWarn: 50,
-	colorThresholdGood: 80,
-	colorThresholdDone: 100,
+	colorThresholdWarn: DEFAULT_THRESHOLD_WARN,
+	colorThresholdGood: DEFAULT_THRESHOLD_GOOD,
+	colorThresholdDone: DEFAULT_THRESHOLD_DONE,
 	styles: getDefaultStyles(),
-	defaultStyleId: 1,
+	defaultStyleId: PRESET_STYLE_LIMIT_ID,
 
 	// Folder Goals
 	folderGoals: [],

@@ -13,6 +13,7 @@ import { GoalColorStyle, PluginSettings } from './types';
 import { FloatingBadge } from './ui/floating-badge';
 import { GoalManagementModal } from './ui/goal-modal';
 import { debounce } from './utils/debounce';
+import { TYPING_DEBOUNCE_MS } from './utils/constants';
 import { ViewportTracker } from './utils/viewport';
 
 export default class SectionGoalsBadgePlugin extends Plugin {
@@ -32,7 +33,7 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 	// Debounced recalculator for text typing
 	private debouncedRecalculate = debounce(() => {
 		this.performFullRecalculation();
-	}, 300);
+	}, TYPING_DEBOUNCE_MS);
 
 	private settingTab!: SectionGoalsBadgeSettingTab;
 

@@ -1,6 +1,13 @@
 import { setIcon } from 'obsidian';
 import { t } from '../lang/helpers';
 import { BadgePositionPreset, GoalColorStyle, PluginSettings, WritingProgress } from '../types';
+import {
+	DEFAULT_FONT_SIZE_PX,
+	DRAG_THRESHOLD_PX,
+	LONG_PRESS_DURATION_MS,
+	MIN_BADGE_OFFSET_PX,
+	MODAL_OPEN_DELAY_MS,
+} from '../utils/constants';
 import { setCssProps } from '../utils/dom';
 import { calculateOverflowSegments } from '../utils/progress';
 import { ViewportTracker } from '../utils/viewport';
@@ -41,7 +48,7 @@ export class FloatingBadge {
 		this.containerEl = createDiv({ cls: 'section-goals-badge' });
 		setCssProps(this.containerEl, {
 			'--sgb-badge-opacity': `${this.settings.badgeOpacity}`,
-			'--sgb-badge-font-size': `${this.settings.fontSize || 11}px`,
+			'--sgb-badge-font-size': `${this.settings.fontSize || DEFAULT_FONT_SIZE_PX}px`,
 		});
 
 		// 1. Cumulative progress pill (Leftmost)
@@ -79,7 +86,7 @@ export class FloatingBadge {
 		// Small delay ensures touch/click event lifecycle completes before modal mounts
 		window.setTimeout(() => {
 			this.onBadgeClick();
-		}, 60);
+		}, MODAL_OPEN_DELAY_MS);
 	}
 
 	private bindEvents(): void {
@@ -101,7 +108,7 @@ export class FloatingBadge {
 				this.pressTimer = window.setTimeout(() => {
 					this.isLongPress = true;
 					this.triggerModalOpen();
-				}, 600);
+				}, LONG_PRESS_DURATION_MS);
 			}
 		};
 
@@ -109,7 +116,7 @@ export class FloatingBadge {
 			const dx = clientX - this.dragStartX;
 			const dy = clientY - this.dragStartY;
 
-			if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
+			if (Math.abs(dx) > DRAG_THRESHOLD_PX || Math.abs(dy) > DRAG_THRESHOLD_PX) {
 				this.isDragging = true;
 				if (this.pressTimer !== null) {
 					window.clearTimeout(this.pressTimer);
@@ -153,8 +160,8 @@ export class FloatingBadge {
 				else if (isBottom && !isRight) badgePosition = 'bottom-left';
 				else if (!isBottom && isRight) badgePosition = 'top-right';
 				else badgePosition = 'top-left';
-				const offsetX = Math.max(4, Math.round(isRight ? rightDist : leftDist));
-				const offsetY = Math.max(4, Math.round(isBottom ? bottomDist : topDist));
+				const offsetX = Math.max(MIN_BADGE_OFFSET_PX, Math.round(isRight ? rightDist : leftDist));
+				const offsetY = Math.max(MIN_BADGE_OFFSET_PX, Math.round(isBottom ? bottomDist : topDist));
 
 				this.customPosition = null;
 				this.settings.badgePosition = badgePosition;

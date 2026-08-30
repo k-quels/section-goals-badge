@@ -3,6 +3,7 @@ import { EffectiveGoalData, FrontmatterManager } from '../frontmatter/frontmatte
 import { t } from '../lang/helpers';
 import { ParsedDocumentSections, SectionParser } from '../parser/section-parser';
 import { GoalColorStyle, HeadingGoalItem, PluginSettings, SectionNode } from '../types';
+import { FRONTMATTER_SAVE_DEBOUNCE_MS, PRESET_STYLE_LIMIT_ID } from '../utils/constants';
 import { debounce } from '../utils/debounce';
 import { setCssProps } from '../utils/dom';
 import { calculateOverflowSegments } from '../utils/progress';
@@ -38,7 +39,7 @@ export class GoalManagementModal extends Modal {
 	// Debounced saver to avoid aggressive disk/frontmatter writes during typing
 	private debouncedSaveGoals = debounce(() => {
 		void this.saveGoals();
-	}, 600);
+	}, FRONTMATTER_SAVE_DEBOUNCE_MS);
 
 	constructor(
 		app: App,
@@ -176,7 +177,7 @@ export class GoalManagementModal extends Modal {
 		const { fileGoal, defaultSectionGoal, headingLevelGoals, sectionGoals, styleId } = this.fmManager.getGoalData(this.file);
 		this.fileGoalInput = fileGoal;
 		this.defaultSectionGoalInput = defaultSectionGoal;
-		this.styleIdInput = styleId ?? this.effectiveData.styleId ?? this.settings.defaultStyleId ?? 1;
+		this.styleIdInput = styleId ?? this.effectiveData.styleId ?? this.settings.defaultStyleId ?? PRESET_STYLE_LIMIT_ID;
 		this.headingLevelGoalsInput = headingLevelGoals ? { ...headingLevelGoals } : {};
 
 		// Apply initial color style to modal
