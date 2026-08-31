@@ -161,7 +161,7 @@ export class GoalManagementModal extends Modal {
 
 		// Re-read file content and frontmatter to ensure freshness
 		const docContent = this.view.editor.getValue();
-		this.effectiveData = this.fmManager.getEffectiveGoalData(this.file, this.settings);
+		this.effectiveData = this.fmManager.getEffectiveGoalData(this.file, this.settings, docContent);
 		this.parsedData = this.parser.parseDocument(
 			this.file,
 			docContent,
@@ -174,7 +174,7 @@ export class GoalManagementModal extends Modal {
 			this.effectiveData,
 		);
 
-		const { fileGoal, defaultSectionGoal, headingLevelGoals, sectionGoals, styleId } = this.fmManager.getGoalData(this.file);
+		const { fileGoal, defaultSectionGoal, headingLevelGoals, sectionGoals, styleId } = this.fmManager.getGoalData(this.file, docContent);
 		this.fileGoalInput = fileGoal;
 		this.defaultSectionGoalInput = defaultSectionGoal;
 		this.styleIdInput = styleId ?? this.effectiveData.styleId ?? this.settings.defaultStyleId ?? PRESET_STYLE_LIMIT_ID;
@@ -777,15 +777,31 @@ export class GoalManagementModal extends Modal {
 		const inheritedDefaultStyleId =
 			this.effectiveData.inheritedDefaults?.styleId ?? this.settings.defaultStyleId ?? 1;
 
-		await this.fmManager.saveGoalData(
-			this.file,
-			this.fileGoalInput,
-			this.defaultSectionGoalInput,
-			sectionGoals,
-			this.headingLevelGoalsInput,
-			this.styleIdInput,
-			inheritedDefaultStyleId,
-		);
+		let saved = false;
+		if (this.view && this.view.editor) {
+			saved = this.fmManager.saveGoalDataToEditor(
+				this.view.editor,
+				this.fileGoalInput,
+				this.defaultSectionGoalInput,
+				sectionGoals,
+				this.headingLevelGoalsInput,
+				this.styleIdInput,
+				inheritedDefaultStyleId,
+			);
+		}
+
+		if (!saved) {
+			await this.fmManager.saveGoalData(
+				this.file,
+				this.fileGoalInput,
+				this.defaultSectionGoalInput,
+				sectionGoals,
+				this.headingLevelGoalsInput,
+				this.styleIdInput,
+				inheritedDefaultStyleId,
+			);
+		}
+
 		this.onGoalsUpdated();
 	}
 

@@ -5,7 +5,7 @@ import {
 	Plugin,
 	TFile,
 } from 'obsidian';
-import { FrontmatterManager } from './frontmatter/frontmatter-manager';
+import { EffectiveGoalData, FrontmatterManager } from './frontmatter/frontmatter-manager';
 import { t } from './lang/helpers';
 import { ParsedDocumentSections, SectionParser } from './parser/section-parser';
 import { DEFAULT_SETTINGS, getDefaultStyles, SectionGoalsBadgeSettingTab } from './settings';
@@ -25,9 +25,10 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 
 	// Document cache and state tracking
 	private currentParsedDoc: ParsedDocumentSections | null = null;
+	private currentEffectiveGoalData: EffectiveGoalData | null = null;
 	private currentActiveFile: TFile | null = null;
-	private lastCursorLine = -1;
-	private lastHeadingLineText = '';
+	private trackedHeadingLine = -1;
+	private trackedHeadingInitialText = '';
 	private isComposing = false;
 
 	// Debounced recalculator for text typing
@@ -47,7 +48,7 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 		this.badge = new FloatingBadge(
 			this.settings,
 			() => {
-				this.openGoalModal();
+				void this.openGoalModal();
 			},
 			(pos) => {
 				this.settings.badgePosition = pos.badgePosition;
@@ -74,7 +75,7 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 				const view = this.getActiveMarkdownEditorView();
 				if (view && view.file) {
 					if (!checking) {
-						this.openGoalModal();
+						void this.openGoalModal();
 					}
 					return true;
 				}
@@ -234,12 +235,23 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 		const view = this.getActiveMarkdownEditorView();
 		if (view && view.file) {
 			this.currentActiveFile = view.file;
+			const cursor = view.editor.getCursor();
+			const lineText = view.editor.getLine(cursor.line) ?? '';
+			if (/^#{1,6}\s+/.test(lineText)) {
+				this.trackedHeadingLine = cursor.line;
+				this.trackedHeadingInitialText = lineText;
+			} else {
+				this.trackedHeadingLine = -1;
+				this.trackedHeadingInitialText = '';
+			}
 			this.badge.attachToEditor(view.containerEl);
 			this.badge.show();
 			this.performFullRecalculation();
 		} else {
 			this.currentActiveFile = null;
 			this.currentParsedDoc = null;
+			this.trackedHeadingLine = -1;
+			this.trackedHeadingInitialText = '';
 			this.badge.hide();
 		}
 	}
@@ -255,7 +267,20 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 		}
 
 		const content = view.editor.getValue();
-		const effectiveGoalData = this.fmManager.getEffectiveGoalData(view.file, this.settings);
+		const effectiveGoalData = this.fmManager.getEffectiveGoalData(view.file, this.settings, content);
+
+		let editingOverride: { line: number; originalHeading: string } | undefined;
+		if (this.trackedHeadingLine !== -1 && this.trackedHeadingInitialText) {
+			const m = this.trackedHeadingInitialText.match(/^#{1,6}\s+(.*)$/);
+			if (m && m[1]) {
+				editingOverride = {
+					line: this.trackedHeadingLine,
+					originalHeading: m[1].trim(),
+				};
+			}
+		}
+
+		this.currentEffectiveGoalData = effectiveGoalData;
 		this.currentParsedDoc = this.parser.parseDocument(
 			view.file,
 			content,
@@ -266,6 +291,7 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 				excludeCharacters: this.settings.excludeCharacters,
 			},
 			effectiveGoalData,
+			editingOverride,
 		);
 
 		this.updateBadgeWithCursor(view, true);
@@ -314,7 +340,7 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 		}
 		this.lastCursorOffset = cursorOffset;
 
-		const goalData = this.fmManager.getEffectiveGoalData(view.file, this.settings);
+		const goalData = this.currentEffectiveGoalData ?? this.fmManager.getEffectiveGoalData(view.file, this.settings);
 
 		const progress = this.parser.calculateProgress(
 			this.currentParsedDoc,
@@ -335,34 +361,55 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 
 	/**
 	 * Detect when cursor moves away from a heading line that was edited,
-	 * and sync Frontmatter goals if necessary.
+	 * and rename Frontmatter goals safely without corrupting Undo history.
 	 */
-	private async checkHeadingFocusOut(view: MarkdownView): Promise<void> {
+	private async checkHeadingFocusOut(view: MarkdownView, forceFlush = false): Promise<void> {
 		if (!view.file) return;
 
 		const cursor = view.editor.getCursor();
 		const currentLineNum = cursor.line;
 
-		if (this.lastCursorLine !== -1 && this.lastCursorLine !== currentLineNum) {
-			// Cursor just left `this.lastCursorLine`
-			const prevLineText = view.editor.getLine(this.lastCursorLine);
-			const wasHeading = /^#{1,6}\s+/.test(this.lastHeadingLineText);
+		if (this.trackedHeadingLine !== -1 && (this.trackedHeadingLine !== currentLineNum || forceFlush)) {
+			const targetLine = this.trackedHeadingLine;
+			const targetLineText = view.editor.getLine(targetLine);
+			const oldMatch = this.trackedHeadingInitialText.match(/^(#{1,6})\s+(.*)$/);
 
-			if (wasHeading && prevLineText !== this.lastHeadingLineText) {
-				// The heading was modified and user moved away from that line
-				const cache = this.app.metadataCache.getFileCache(view.file);
-				const headings = (cache?.headings || []).map((h) => h.heading);
-				await this.fmManager.syncHeadings(view.file, headings);
+			if (oldMatch && targetLineText !== undefined) {
+				const newMatch = targetLineText.match(/^(#{1,6})\s+(.*)$/);
+				if (newMatch) {
+					const oldHeading = oldMatch[2]?.trim() ?? '';
+					const newHeading = newMatch[2]?.trim() ?? '';
+
+					if (oldHeading && newHeading && oldHeading !== newHeading) {
+						if (view.editor) {
+							this.fmManager.renameSectionGoalInEditor(view.editor, oldHeading, newHeading);
+						}
+						this.trackedHeadingInitialText = targetLineText;
+					}
+				}
+			}
+
+			if (this.trackedHeadingLine !== currentLineNum) {
+				this.trackedHeadingLine = -1;
+				this.trackedHeadingInitialText = '';
 			}
 		}
 
-		this.lastCursorLine = currentLineNum;
-		this.lastHeadingLineText = view.editor.getLine(currentLineNum) ?? '';
+		if (this.trackedHeadingLine === -1 || this.trackedHeadingLine !== currentLineNum) {
+			const lineText = view.editor.getLine(currentLineNum) ?? '';
+			if (/^#{1,6}\s+/.test(lineText)) {
+				this.trackedHeadingLine = currentLineNum;
+				this.trackedHeadingInitialText = lineText;
+			} else {
+				this.trackedHeadingLine = -1;
+				this.trackedHeadingInitialText = '';
+			}
+		}
 	}
 
 	private activeModal: GoalManagementModal | null = null;
 
-	public openGoalModal(): void {
+	public async openGoalModal(): Promise<void> {
 		const view = this.getActiveMarkdownEditorView();
 		if (!view || !view.file) return;
 
@@ -370,6 +417,10 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 		if (this.activeModal) {
 			return;
 		}
+
+		// Flush any pending heading edit before opening the modal
+		await this.checkHeadingFocusOut(view, true);
+		this.performFullRecalculation();
 
 		this.activeModal = new GoalManagementModal(
 			this.app,
@@ -384,8 +435,8 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 		);
 		const originalOnClose = this.activeModal.onClose.bind(this.activeModal);
 		this.activeModal.onClose = () => {
-			this.activeModal = null;
 			originalOnClose();
+			this.activeModal = null;
 		};
 		this.activeModal.open();
 	}

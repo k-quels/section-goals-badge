@@ -26,11 +26,12 @@ export class SectionParser {
 		content: string,
 		options: CounterOptions = {},
 		goalData?: FileGoalData,
+		editingHeadingOverride?: { line: number; originalHeading: string },
 	): ParsedDocumentSections {
 		// Scan headings directly from current content with accurate line numbers
 		const rawHeadings = this.scanHeadingsFast(content);
 		const frontmatterEndOffset = this.getFrontmatterEndOffset(file, content);
-		const { defaultSectionGoal, headingLevelGoals, sectionGoals } = goalData ?? this.fmManager.getGoalData(file);
+		const { defaultSectionGoal, headingLevelGoals, sectionGoals } = goalData ?? this.fmManager.getGoalData(file, content);
 
 		if (rawHeadings.length === 0) {
 			const totalCharCount = countText(content.slice(frontmatterEndOffset), options.countType, options);
@@ -79,13 +80,22 @@ export class SectionParser {
 			// Extract text in this scope, excluding internal heading lines
 			const charCount = this.calculateScopeCharCount(content, startOffset, endOffset, rawHeadings, i, options);
 
-			// Match goal by heading name queue, then heading level default, then defaultSectionGoal
+			// Match goal by heading name queue, or in-memory editing override, then heading level default, then defaultSectionGoal
 			let goalCount: number | undefined;
 			let isDefaultGoal = false;
 
 			const queue = goalsByHeading.get(heading.heading);
 			if (queue && queue.length > 0) {
 				goalCount = queue.shift();
+			} else if (
+				editingHeadingOverride &&
+				heading.position.start.line === editingHeadingOverride.line &&
+				editingHeadingOverride.originalHeading
+			) {
+				const overrideQueue = goalsByHeading.get(editingHeadingOverride.originalHeading);
+				if (overrideQueue && overrideQueue.length > 0) {
+					goalCount = overrideQueue.shift();
+				}
 			}
 
 			if (goalCount === undefined) {
