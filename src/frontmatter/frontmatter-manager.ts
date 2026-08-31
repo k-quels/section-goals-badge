@@ -402,7 +402,7 @@ export class FrontmatterManager {
 							updatedGoals.push({ [typedItem.heading]: typedItem.goal });
 						}
 					} else {
-						const entries = Object.entries(item);
+						const entries = Object.entries(item as Record<string, unknown>);
 						if (entries.length > 0) {
 							const [hName, goalVal] = entries[0]!;
 							if (hName === trimmedOld && !matched && typeof goalVal === 'number') {

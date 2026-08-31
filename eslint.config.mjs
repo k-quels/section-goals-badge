@@ -1,8 +1,7 @@
+import { defineConfig } from 'eslint/config';
 import obsidianmd from 'eslint-plugin-obsidianmd';
-import globals from 'globals';
-import tseslint from 'typescript-eslint';
 
-export default tseslint.config(
+export default defineConfig([
 	{
 		ignores: [
 			'node_modules/**',
@@ -21,26 +20,14 @@ export default tseslint.config(
 	},
 	...obsidianmd.configs.recommendedWithLocalesEn,
 	{
-		files: ['**/*.{ts,cts,mts,tsx}'],
 		languageOptions: {
-			globals: {
-				...globals.browser,
-			},
 			parserOptions: {
 				projectService: {
-					allowDefaultProject: ['eslint.config.mjs', 'manifest.json'],
+					allowDefaultProject: ['eslint.config.*'],
 				},
-				tsconfigRootDir: import.meta.dirname,
-				extraFileExtensions: ['.json'],
 			},
 		},
 		rules: {
-			'@typescript-eslint/no-unsafe-assignment': 'off',
-			'@typescript-eslint/no-unsafe-member-access': 'off',
-			'@typescript-eslint/no-unsafe-call': 'off',
-			'@typescript-eslint/no-unsafe-argument': 'off',
-			'@typescript-eslint/no-unsafe-return': 'off',
-			'@typescript-eslint/no-redundant-type-constituents': 'off',
 			'obsidianmd/ui/sentence-case': [
 				'warn',
 				{
@@ -81,4 +68,4 @@ export default tseslint.config(
 			],
 		},
 	},
-);
+]);
