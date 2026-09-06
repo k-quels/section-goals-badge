@@ -10,6 +10,7 @@ import {
 } from '../utils/constants';
 import { setCssProps } from '../utils/dom';
 import { calculateOverflowSegments } from '../utils/progress';
+import { getProgressColor } from '../utils/color';
 import { ViewportTracker } from '../utils/viewport';
 
 export class FloatingBadge {
@@ -252,7 +253,14 @@ export class FloatingBadge {
 
 	private currentColorStyle: GoalColorStyle | null = null;
 
+	private getStyleStateKey(): string {
+		if (!this.currentColorStyle) return '';
+		const s = this.currentColorStyle;
+		return `${s.id}:${s.type ?? 'discrete'}:${s.colorDefault}:${s.colorWarn}:${s.colorGood}:${s.colorDone}`;
+	}
+
 	public applyColorStyle(style: GoalColorStyle): void {
+		const prevStyleKey = this.getStyleStateKey();
 		this.currentColorStyle = style;
 		setCssProps(this.containerEl, {
 			'--sgb-color-default': style.colorDefault,
@@ -260,6 +268,10 @@ export class FloatingBadge {
 			'--sgb-color-good': style.colorGood,
 			'--sgb-color-done': style.colorDone,
 		});
+		const newStyleKey = this.getStyleStateKey();
+		if (prevStyleKey !== newStyleKey && this.currentProgress) {
+			this.updateProgress(this.currentProgress);
+		}
 	}
 
 	public updateProgress(progress: WritingProgress): void {
@@ -377,12 +389,13 @@ export class FloatingBadge {
 		this.sectionPillEl.addClass('sgb-section-pill-multiline');
 
 		const baseLabel = this.settings.sectionLabel !== undefined ? this.settings.sectionLabel : 'Sec:';
+		const styleKey = this.getStyleStateKey();
 		const stateKey =
 			'multiline|' +
 			activeItems
 				.map((it) => `${it.level}:${it.current}:${it.goal ?? ''}:${it.percentage ?? ''}:${it.heading}`)
 				.join(';') +
-			`|${baseLabel}|${this.settings.showSectionIcon}|${this.settings.showSectionCurrent ?? true}|${this.settings.showSectionPercentage}|${this.settings.showSectionGoal}|${this.settings.showSectionProgressBar}|${this.settings.showSectionOverflowBar}`;
+			`|${baseLabel}|${this.settings.showSectionIcon}|${this.settings.showSectionCurrent ?? true}|${this.settings.showSectionPercentage}|${this.settings.showSectionGoal}|${this.settings.showSectionProgressBar}|${this.settings.showSectionOverflowBar}|${styleKey}`;
 
 		if (this.sectionPillEl.dataset.sgbState === stateKey) {
 			return;
@@ -494,7 +507,8 @@ export class FloatingBadge {
 		isProgressBar?: boolean,
 		isOverflowBar?: boolean,
 	): void {
-		const stateKey = `${prefix}|${current}|${goal ?? ''}|${percentage ?? ''}|${showCurrent}|${showPercent}|${showGoal}|${showIcon}|${iconName ?? ''}|${titleTooltip ?? ''}|${isProgressBar ?? false}|${isOverflowBar ?? false}`;
+		const styleKey = this.getStyleStateKey();
+		const stateKey = `${prefix}|${current}|${goal ?? ''}|${percentage ?? ''}|${showCurrent}|${showPercent}|${showGoal}|${showIcon}|${iconName ?? ''}|${titleTooltip ?? ''}|${isProgressBar ?? false}|${isOverflowBar ?? false}|${styleKey}`;
 		if (wrapperEl.dataset.sgbState === stateKey) {
 			return;
 		}
@@ -574,15 +588,32 @@ export class FloatingBadge {
 		el.removeClass('is-progress-warn');
 		el.removeClass('is-progress-good');
 		el.removeClass('is-progress-done');
+		el.removeClass('is-progress-gradient');
 
-		if (percentage >= this.settings.colorThresholdDone) {
-			el.addClass('is-progress-done');
-		} else if (percentage >= this.settings.colorThresholdGood) {
-			el.addClass('is-progress-good');
-		} else if (percentage >= this.settings.colorThresholdWarn) {
-			el.addClass('is-progress-warn');
+		const style = this.currentColorStyle;
+		if (style?.type === 'gradient') {
+			el.addClass('is-progress-gradient');
+			if (percentage >= 100) {
+				el.addClass('is-progress-done');
+			}
+			const currentColor = getProgressColor(style, percentage, {
+				warn: this.settings.colorThresholdWarn,
+				good: this.settings.colorThresholdGood,
+				done: this.settings.colorThresholdDone,
+			});
+			setCssProps(el, {
+				'--sgb-color-current': currentColor,
+			});
 		} else {
-			el.addClass('is-progress-default');
+			if (percentage >= this.settings.colorThresholdDone) {
+				el.addClass('is-progress-done');
+			} else if (percentage >= this.settings.colorThresholdGood) {
+				el.addClass('is-progress-good');
+			} else if (percentage >= this.settings.colorThresholdWarn) {
+				el.addClass('is-progress-warn');
+			} else {
+				el.addClass('is-progress-default');
+			}
 		}
 
 		const clampedPct = Math.min(100, Math.max(0, percentage));

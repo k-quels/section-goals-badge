@@ -1,3 +1,5 @@
+import { GoalColorStyle } from '../types';
+
 /**
  * Parses a hex color string (#RGB, #RRGGBB) to [r, g, b] in range [0, 255].
  * Returns null if invalid.
@@ -115,3 +117,28 @@ export function interpolateGoalColors(
 		colorGood: interpolateOklab(colorDefault, colorDone, 2 / 3),
 	};
 }
+
+/**
+ * Calculates the progress color according to the style and percentage.
+ * If style is 'gradient', interpolates in Oklab space between colorDefault (0%) and colorDone (100%).
+ * If style is 'discrete', uses thresholds to return colorDefault, colorWarn, colorGood, or colorDone.
+ */
+export function getProgressColor(
+	style: GoalColorStyle,
+	percentage: number,
+	thresholds: { warn: number; good: number; done: number },
+): string {
+	if (style.type === 'gradient') {
+		const t = Math.max(0, Math.min(1, percentage / 100));
+		return interpolateOklab(style.colorDefault, style.colorDone, t);
+	}
+	if (percentage >= thresholds.done) {
+		return style.colorDone;
+	} else if (percentage >= thresholds.good) {
+		return style.colorGood;
+	} else if (percentage >= thresholds.warn) {
+		return style.colorWarn;
+	}
+	return style.colorDefault;
+}
+

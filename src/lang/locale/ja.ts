@@ -138,11 +138,11 @@ const ja: typeof en = {
 	SETTINGS_RESET_DEFAULT: 'デフォルトに戻す',
 
 	SETTINGS_THRESH_WARN: '中間カラーの閾値 (%)',
-	SETTINGS_THRESH_WARN_DESC: '進捗カラーを中間色に切り替える進捗率です（例: 50%）。',
+	SETTINGS_THRESH_WARN_DESC: '閾値タイプのカラースタイルでカラーを中間色に切り替える進捗率です。',
 	SETTINGS_THRESH_GOOD: '高進捗カラーの閾値 (%)',
-	SETTINGS_THRESH_GOOD_DESC: '進捗カラーを高進捗色に切り替える進捗率です（例: 80%）。',
+	SETTINGS_THRESH_GOOD_DESC: '閾値タイプのカラースタイルでカラーを高進捗色に切り替える進捗率です。',
 	SETTINGS_THRESH_DONE: '達成カラーの閾値 (%)',
-	SETTINGS_THRESH_DONE_DESC: '進捗カラーを達成色に切り替える進捗率です（例: 100%）。',
+	SETTINGS_THRESH_DONE_DESC: '閾値タイプのカラースタイルでカラーを達成色に切り替える進捗率です。',
 
 	// Settings - Color Styles
 	SETTINGS_HEADING_STYLES: 'カラースタイル',
@@ -157,10 +157,16 @@ const ja: typeof en = {
 	SETTINGS_STYLE_DELETE: '削除',
 	SETTINGS_STYLE_NAME_LABEL: 'スタイル名',
 	SETTINGS_STYLE_NAME_PLACEHOLDER: 'スタイル名を入力',
+	SETTINGS_STYLE_TYPE_LABEL: 'タイプ',
+	SETTINGS_STYLE_TYPE_DISCRETE: '閾値で切り替え',
+	SETTINGS_STYLE_TYPE_GRADIENT: 'グラデーション',
 	SETTINGS_COLOR_DEFAULT: '初期カラー',
 	SETTINGS_COLOR_WARN: '中間カラー',
 	SETTINGS_COLOR_GOOD: '高進捗カラー',
 	SETTINGS_COLOR_DONE: '達成カラー',
+	SETTINGS_COLOR_START: '開始カラー (0%)',
+	SETTINGS_COLOR_END: '終了カラー (100%)',
+	SETTINGS_STYLE_PREVIEW: 'プレビュー (0% → 100%)',
 	PRESET_STYLE_LIMIT: '制限目標',
 	PRESET_STYLE_TARGET: '達成目標',
 

@@ -1,4 +1,4 @@
-import { App, Modal, Notice, PluginSettingTab, setIcon, Setting } from 'obsidian';
+import { App, DropdownComponent, Modal, Notice, PluginSettingTab, setIcon, Setting } from 'obsidian';
 
 import { t } from './lang/helpers';
 import type SectionGoalsBadgePlugin from './main';
@@ -39,6 +39,7 @@ export function getDefaultStyles(): GoalColorStyle[] {
 		{
 			id: PRESET_STYLE_LIMIT_ID,
 			name: t('PRESET_STYLE_LIMIT'),
+			type: 'discrete',
 			colorDefault: '#ababab',
 			colorWarn: '#e2b93b',
 			colorGood: '#ff7843',
@@ -48,6 +49,7 @@ export function getDefaultStyles(): GoalColorStyle[] {
 		{
 			id: PRESET_STYLE_TARGET_ID,
 			name: t('PRESET_STYLE_TARGET'),
+			type: 'discrete',
 			colorDefault: '#ababab',
 			colorWarn: '#f09533',
 			colorGood: '#24b750',
@@ -213,18 +215,26 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 			this.plugin.settings.styles[0] ??
 			getDefaultStyles()[0]!;
 
+		const isGradient = defaultStyle.type === 'gradient';
+		const warnColor = isGradient
+			? interpolateGoalColors(defaultStyle.colorDefault, defaultStyle.colorDone).colorWarn
+			: defaultStyle.colorWarn;
+		const goodColor = isGradient
+			? interpolateGoalColors(defaultStyle.colorDefault, defaultStyle.colorDone).colorGood
+			: defaultStyle.colorGood;
+
 		setCssProps(root, {
 			'--sgb-color-default': defaultStyle.colorDefault,
-			'--sgb-color-warn': defaultStyle.colorWarn,
-			'--sgb-color-good': defaultStyle.colorGood,
+			'--sgb-color-warn': warnColor,
+			'--sgb-color-good': goodColor,
 			'--sgb-color-done': defaultStyle.colorDone,
 		});
 
 		root.querySelectorAll<HTMLElement>('.sgb-color-preview-warn').forEach((el) => {
-			el.style.backgroundColor = defaultStyle.colorWarn;
+			el.style.backgroundColor = warnColor;
 		});
 		root.querySelectorAll<HTMLElement>('.sgb-color-preview-good').forEach((el) => {
-			el.style.backgroundColor = defaultStyle.colorGood;
+			el.style.backgroundColor = goodColor;
 		});
 		root.querySelectorAll<HTMLElement>('.sgb-color-preview-done').forEach((el) => {
 			el.style.backgroundColor = defaultStyle.colorDone;
@@ -1341,91 +1351,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 				],
 			},
 
-			// Group 6: Progress Thresholds
-			{
-				type: 'group',
-				heading: t('SETTINGS_HEADING_THRESHOLDS'),
-				items: [
-					{
-						name: t('SETTINGS_THRESH_WARN'),
-						desc: t('SETTINGS_THRESH_WARN_DESC'),
-						render: (setting: Setting) => {
-							this.attachHeadingIcon(setting, 'gauge');
-							setting
-								.setName(t('SETTINGS_THRESH_WARN'))
-								.setDesc(t('SETTINGS_THRESH_WARN_DESC'));
-							const circle = createSpan({ cls: 'sgb-color-preview-circle sgb-color-preview-warn' });
-							setting.nameEl.prepend(circle);
-							setting.addText((text) => {
-								text.inputEl.type = 'number';
-								text.setPlaceholder(String(DEFAULT_SETTINGS.colorThresholdWarn));
-								text.setValue(String(this.plugin.settings.colorThresholdWarn));
-								text.onChange(async (newVal) => {
-									const num = parseFloat(newVal);
-									this.plugin.settings.colorThresholdWarn = !isNaN(num)
-										? num
-										: DEFAULT_SETTINGS.colorThresholdWarn;
-									await this.plugin.saveSettings();
-									this.plugin.refreshBadgeUI();
-								});
-							});
-							this.updateSettingSwatches(setting.settingEl);
-						},
-					},
-					{
-						name: t('SETTINGS_THRESH_GOOD'),
-						desc: t('SETTINGS_THRESH_GOOD_DESC'),
-						render: (setting: Setting) => {
-							setting
-								.setName(t('SETTINGS_THRESH_GOOD'))
-								.setDesc(t('SETTINGS_THRESH_GOOD_DESC'));
-							const circle = createSpan({ cls: 'sgb-color-preview-circle sgb-color-preview-good' });
-							setting.nameEl.prepend(circle);
-							setting.addText((text) => {
-								text.inputEl.type = 'number';
-								text.setPlaceholder(String(DEFAULT_SETTINGS.colorThresholdGood));
-								text.setValue(String(this.plugin.settings.colorThresholdGood));
-								text.onChange(async (newVal) => {
-									const num = parseFloat(newVal);
-									this.plugin.settings.colorThresholdGood = !isNaN(num)
-										? num
-										: DEFAULT_SETTINGS.colorThresholdGood;
-									await this.plugin.saveSettings();
-									this.plugin.refreshBadgeUI();
-								});
-							});
-							this.updateSettingSwatches(setting.settingEl);
-						},
-					},
-					{
-						name: t('SETTINGS_THRESH_DONE'),
-						desc: t('SETTINGS_THRESH_DONE_DESC'),
-						render: (setting: Setting) => {
-							setting
-								.setName(t('SETTINGS_THRESH_DONE'))
-								.setDesc(t('SETTINGS_THRESH_DONE_DESC'));
-							const circle = createSpan({ cls: 'sgb-color-preview-circle sgb-color-preview-done' });
-							setting.nameEl.prepend(circle);
-							setting.addText((text) => {
-								text.inputEl.type = 'number';
-								text.setPlaceholder(String(DEFAULT_SETTINGS.colorThresholdDone));
-								text.setValue(String(this.plugin.settings.colorThresholdDone));
-								text.onChange(async (newVal) => {
-									const num = parseFloat(newVal);
-									this.plugin.settings.colorThresholdDone = !isNaN(num)
-										? num
-										: DEFAULT_SETTINGS.colorThresholdDone;
-									await this.plugin.saveSettings();
-									this.plugin.refreshBadgeUI();
-								});
-							});
-							this.updateSettingSwatches(setting.settingEl);
-						},
-					},
-				],
-			},
-
-			// Group 7: Color Styles
+			// Group 6: Color Styles
 			{
 				type: 'group',
 				heading: t('SETTINGS_HEADING_STYLES'),
@@ -1554,29 +1480,31 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 
 									const actionsEl = headerEl.createDiv({ cls: 'sgb-style-card-actions' });
 
-									const gradientBtn = actionsEl.createEl('button', {
-										cls: 'clickable-icon sgb-style-action-btn',
-										title: t('SETTINGS_STYLE_AUTO_GRADIENT'),
-									});
-									setIcon(gradientBtn, 'sparkles');
-									gradientBtn.addEventListener('click', () => {
-										new ConfirmAutoGradientModal(this.app, () => {
-											void (async () => {
-												const { colorWarn, colorGood } = interpolateGoalColors(
-													style.colorDefault,
-													style.colorDone,
-												);
-												style.colorWarn = colorWarn;
-												style.colorGood = colorGood;
-												await this.plugin.saveSettings();
-												this.plugin.refreshBadgeUI();
-												renderStylesList();
-												if (style.id === this.plugin.settings.defaultStyleId) {
-													this.updateSettingSwatches(stylesManagerSetting.settingEl);
-												}
-											})();
-										}).open();
-									});
+									if (style.type !== 'gradient') {
+										const gradientBtn = actionsEl.createEl('button', {
+											cls: 'clickable-icon sgb-style-action-btn',
+											title: t('SETTINGS_STYLE_AUTO_GRADIENT'),
+										});
+										setIcon(gradientBtn, 'sparkles');
+										gradientBtn.addEventListener('click', () => {
+											new ConfirmAutoGradientModal(this.app, () => {
+												void (async () => {
+													const { colorWarn, colorGood } = interpolateGoalColors(
+														style.colorDefault,
+														style.colorDone,
+													);
+													style.colorWarn = colorWarn;
+													style.colorGood = colorGood;
+													await this.plugin.saveSettings();
+													this.plugin.refreshBadgeUI();
+													renderStylesList();
+													if (style.id === this.plugin.settings.defaultStyleId) {
+														this.updateSettingSwatches(stylesManagerSetting.settingEl);
+													}
+												})();
+											}).open();
+										});
+									}
 
 									if (style.isPreset || style.id === 1 || style.id === 2) {
 										const resetBtn = actionsEl.createEl('button', {
@@ -1590,6 +1518,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 												const defaultPreset = defaults.find((d) => d.id === style.id);
 												if (defaultPreset) {
 													style.name = defaultPreset.name;
+													style.type = defaultPreset.type ?? 'discrete';
 													style.colorDefault = defaultPreset.colorDefault;
 													style.colorWarn = defaultPreset.colorWarn;
 													style.colorGood = defaultPreset.colorGood;
@@ -1631,20 +1560,47 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 										});
 									}
 
-									// Card Body: 4 Color Pickers Grid
-									const colorsGrid = cardEl.createDiv({ cls: 'sgb-style-colors-grid' });
+									// Sub-row: Type Dropdown
+									const subRowEl = cardEl.createDiv({ cls: 'sgb-style-card-subrow' });
+									subRowEl.createSpan({
+										cls: 'sgb-style-type-label',
+										text: t('SETTINGS_STYLE_TYPE_LABEL'),
+									});
+									const typeDropdown = new DropdownComponent(subRowEl);
+									typeDropdown.selectEl.addClass('sgb-style-type-dropdown');
+									typeDropdown
+										.addOption('discrete', t('SETTINGS_STYLE_TYPE_DISCRETE'))
+										.addOption('gradient', t('SETTINGS_STYLE_TYPE_GRADIENT'))
+										.setValue(style.type === 'gradient' ? 'gradient' : 'discrete')
+										.onChange((val) => {
+											void (async () => {
+												style.type = val as 'discrete' | 'gradient';
+												await this.plugin.saveSettings();
+												this.plugin.refreshBadgeUI();
+												renderStylesList();
+												if (style.id === this.plugin.settings.defaultStyleId) {
+													this.updateSettingSwatches(stylesManagerSetting.settingEl);
+												}
+											})();
+										});
 
-									const colorConfigs: Array<{
-										key: 'colorDefault' | 'colorWarn' | 'colorGood' | 'colorDone';
-										label: string;
-									}> = [
-										{ key: 'colorDefault', label: t('SETTINGS_COLOR_DEFAULT') },
-										{ key: 'colorWarn', label: t('SETTINGS_COLOR_WARN') },
-										{ key: 'colorGood', label: t('SETTINGS_COLOR_GOOD') },
-										{ key: 'colorDone', label: t('SETTINGS_COLOR_DONE') },
-									];
+									// Card Body: Color Pickers Grid
+									const isGradient = style.type === 'gradient';
+									const colorsGrid = cardEl.createDiv({
+										cls: isGradient ? 'sgb-style-colors-grid is-gradient' : 'sgb-style-colors-grid',
+									});
 
-									colorConfigs.forEach(({ key, label }) => {
+									let gradientBarEl: HTMLElement | null = null;
+									const updateGradientBar = () => {
+										if (gradientBarEl) {
+											gradientBarEl.style.background = `linear-gradient(to right, ${style.colorDefault}, ${style.colorDone})`;
+										}
+									};
+
+									const createColorItem = (
+										key: 'colorDefault' | 'colorWarn' | 'colorGood' | 'colorDone',
+										label: string,
+									) => {
 										const colorItemEl = colorsGrid.createDiv({ cls: 'sgb-style-color-item' });
 										colorItemEl.createSpan({ cls: 'sgb-style-color-label', text: label });
 
@@ -1667,6 +1623,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 											void (async () => {
 												style[key] = colorInput.value;
 												hexInput.value = colorInput.value;
+												updateGradientBar();
 												await this.plugin.saveSettings();
 												this.plugin.refreshBadgeUI();
 												if (style.id === this.plugin.settings.defaultStyleId) {
@@ -1688,6 +1645,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 													style[key] = val;
 													colorInput.value = val;
 													hexInput.value = val;
+													updateGradientBar();
 													await this.plugin.saveSettings();
 													this.plugin.refreshBadgeUI();
 													if (style.id === this.plugin.settings.defaultStyleId) {
@@ -1701,7 +1659,23 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 
 										hexInput.addEventListener('change', handleHexChange);
 										hexInput.addEventListener('blur', handleHexChange);
-									});
+									};
+
+									if (isGradient) {
+										createColorItem('colorDefault', t('SETTINGS_COLOR_START'));
+
+										const previewItem = colorsGrid.createDiv({ cls: 'sgb-style-gradient-preview-item' });
+										previewItem.createSpan({ cls: 'sgb-style-color-label', text: t('SETTINGS_STYLE_PREVIEW') });
+										gradientBarEl = previewItem.createDiv({ cls: 'sgb-style-gradient-bar' });
+										updateGradientBar();
+
+										createColorItem('colorDone', t('SETTINGS_COLOR_END'));
+									} else {
+										createColorItem('colorDefault', t('SETTINGS_COLOR_DEFAULT'));
+										createColorItem('colorWarn', t('SETTINGS_COLOR_WARN'));
+										createColorItem('colorGood', t('SETTINGS_COLOR_GOOD'));
+										createColorItem('colorDone', t('SETTINGS_COLOR_DONE'));
+									}
 								});
 
 								// Footer: Add Button & Reset All Button
@@ -1724,6 +1698,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 										this.plugin.settings.styles.push({
 											id: nextId,
 											name: `Style ${nextId}`,
+											type: 'discrete',
 											colorDefault: '#ababab',
 											colorWarn: '#e2b93b',
 											colorGood: '#ff7843',
@@ -1766,6 +1741,90 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 					},
 				],
 
+			},
+
+			// Group 7: Progress Thresholds
+			{
+				type: 'group',
+				heading: t('SETTINGS_HEADING_THRESHOLDS'),
+				items: [
+					{
+						name: t('SETTINGS_THRESH_WARN'),
+						desc: t('SETTINGS_THRESH_WARN_DESC'),
+						render: (setting: Setting) => {
+							this.attachHeadingIcon(setting, 'gauge');
+							setting
+								.setName(t('SETTINGS_THRESH_WARN'))
+								.setDesc(t('SETTINGS_THRESH_WARN_DESC'));
+							const circle = createSpan({ cls: 'sgb-color-preview-circle sgb-color-preview-warn' });
+							setting.nameEl.prepend(circle);
+							setting.addText((text) => {
+								text.inputEl.type = 'number';
+								text.setPlaceholder(String(DEFAULT_SETTINGS.colorThresholdWarn));
+								text.setValue(String(this.plugin.settings.colorThresholdWarn));
+								text.onChange(async (newVal) => {
+									const num = parseFloat(newVal);
+									this.plugin.settings.colorThresholdWarn = !isNaN(num)
+										? num
+										: DEFAULT_SETTINGS.colorThresholdWarn;
+									await this.plugin.saveSettings();
+									this.plugin.refreshBadgeUI();
+								});
+							});
+							this.updateSettingSwatches(setting.settingEl);
+						},
+					},
+					{
+						name: t('SETTINGS_THRESH_GOOD'),
+						desc: t('SETTINGS_THRESH_GOOD_DESC'),
+						render: (setting: Setting) => {
+							setting
+								.setName(t('SETTINGS_THRESH_GOOD'))
+								.setDesc(t('SETTINGS_THRESH_GOOD_DESC'));
+							const circle = createSpan({ cls: 'sgb-color-preview-circle sgb-color-preview-good' });
+							setting.nameEl.prepend(circle);
+							setting.addText((text) => {
+								text.inputEl.type = 'number';
+								text.setPlaceholder(String(DEFAULT_SETTINGS.colorThresholdGood));
+								text.setValue(String(this.plugin.settings.colorThresholdGood));
+								text.onChange(async (newVal) => {
+									const num = parseFloat(newVal);
+									this.plugin.settings.colorThresholdGood = !isNaN(num)
+										? num
+										: DEFAULT_SETTINGS.colorThresholdGood;
+									await this.plugin.saveSettings();
+									this.plugin.refreshBadgeUI();
+								});
+							});
+							this.updateSettingSwatches(setting.settingEl);
+						},
+					},
+					{
+						name: t('SETTINGS_THRESH_DONE'),
+						desc: t('SETTINGS_THRESH_DONE_DESC'),
+						render: (setting: Setting) => {
+							setting
+								.setName(t('SETTINGS_THRESH_DONE'))
+								.setDesc(t('SETTINGS_THRESH_DONE_DESC'));
+							const circle = createSpan({ cls: 'sgb-color-preview-circle sgb-color-preview-done' });
+							setting.nameEl.prepend(circle);
+							setting.addText((text) => {
+								text.inputEl.type = 'number';
+								text.setPlaceholder(String(DEFAULT_SETTINGS.colorThresholdDone));
+								text.setValue(String(this.plugin.settings.colorThresholdDone));
+								text.onChange(async (newVal) => {
+									const num = parseFloat(newVal);
+									this.plugin.settings.colorThresholdDone = !isNaN(num)
+										? num
+										: DEFAULT_SETTINGS.colorThresholdDone;
+									await this.plugin.saveSettings();
+									this.plugin.refreshBadgeUI();
+								});
+							});
+							this.updateSettingSwatches(setting.settingEl);
+						},
+					},
+				],
 			},
 
 			// Group 8: Folder Goals

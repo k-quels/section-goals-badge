@@ -4,9 +4,12 @@ export interface HeadingGoalItem {
 	[heading: string]: number;
 }
 
+export type ColorStyleType = 'discrete' | 'gradient';
+
 export interface GoalColorStyle {
 	id: number;
 	name: string;
+	type?: ColorStyleType;
 	colorDefault: string;
 	colorWarn: string;
 	colorGood: string;

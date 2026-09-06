@@ -7,6 +7,7 @@ import { FRONTMATTER_SAVE_DEBOUNCE_MS, PRESET_STYLE_LIMIT_ID } from '../utils/co
 import { debounce } from '../utils/debounce';
 import { setCssProps } from '../utils/dom';
 import { calculateOverflowSegments } from '../utils/progress';
+import { getProgressColor } from '../utils/color';
 
 export class GoalManagementModal extends Modal {
 	private file: TFile;
@@ -555,6 +556,13 @@ export class GoalManagementModal extends Modal {
 				const selectedStyle = this.getEffectiveStyle();
 				this.applyModalColorStyle(selectedStyle);
 				this.updateColorPreviewDots(selectedStyle);
+				const totalFill = this.contentEl.querySelector<HTMLElement>('.sgb-modal-card .sgb-mini-progress-fill');
+				const totalPercent = this.contentEl.querySelector<HTMLElement>('.sgb-modal-card .sgb-mini-percent');
+				const totalOverflow = this.contentEl.querySelector<HTMLElement>('.sgb-modal-card .sgb-mini-overflow-progress');
+				if (totalFill && totalPercent) {
+					this.updateMiniProgress(totalFill, totalPercent, this.parsedData.totalCharCount, this.fileGoalInput, totalOverflow ?? undefined);
+				}
+				this.refreshSectionMiniProgress();
 				this.debouncedSaveGoals();
 			}
 		});
@@ -724,15 +732,32 @@ export class GoalManagementModal extends Modal {
 			fillEl.className = 'sgb-mini-progress-fill';
 			percentEl.className = 'sgb-mini-percent';
 
-			if (percent >= this.settings.colorThresholdDone) {
-				fillEl.addClass('is-progress-done');
-				percentEl.addClass('is-progress-done');
-			} else if (percent >= this.settings.colorThresholdGood) {
-				fillEl.addClass('is-progress-good');
-				percentEl.addClass('is-progress-good');
-			} else if (percent >= this.settings.colorThresholdWarn) {
-				fillEl.addClass('is-progress-warn');
-				percentEl.addClass('is-progress-warn');
+			const effectiveStyle = this.getEffectiveStyle();
+			if (effectiveStyle.type === 'gradient') {
+				fillEl.addClass('is-progress-gradient');
+				percentEl.addClass('is-progress-gradient');
+				if (percent >= 100) {
+					fillEl.addClass('is-progress-done');
+					percentEl.addClass('is-progress-done');
+				}
+				const currentColor = getProgressColor(effectiveStyle, percent, {
+					warn: this.settings.colorThresholdWarn,
+					good: this.settings.colorThresholdGood,
+					done: this.settings.colorThresholdDone,
+				});
+				setCssProps(fillEl, { '--sgb-color-current': currentColor });
+				setCssProps(percentEl, { '--sgb-color-current': currentColor });
+			} else {
+				if (percent >= this.settings.colorThresholdDone) {
+					fillEl.addClass('is-progress-done');
+					percentEl.addClass('is-progress-done');
+				} else if (percent >= this.settings.colorThresholdGood) {
+					fillEl.addClass('is-progress-good');
+					percentEl.addClass('is-progress-good');
+				} else if (percent >= this.settings.colorThresholdWarn) {
+					fillEl.addClass('is-progress-warn');
+					percentEl.addClass('is-progress-warn');
+				}
 			}
 
 			if (overflowEl) {
@@ -832,10 +857,23 @@ export class GoalManagementModal extends Modal {
 
 	private updateColorPreviewDots(style: GoalColorStyle): void {
 		if (this.colorPreviewDots.length === 4) {
-			this.colorPreviewDots[0]!.style.backgroundColor = style.colorDefault;
-			this.colorPreviewDots[1]!.style.backgroundColor = style.colorWarn;
-			this.colorPreviewDots[2]!.style.backgroundColor = style.colorGood;
-			this.colorPreviewDots[3]!.style.backgroundColor = style.colorDone;
+			if (style.type === 'gradient') {
+				this.colorPreviewDots[0]!.removeClass('sgb-hidden');
+				this.colorPreviewDots[0]!.style.backgroundColor = style.colorDefault;
+				this.colorPreviewDots[1]!.addClass('sgb-hidden');
+				this.colorPreviewDots[2]!.addClass('sgb-hidden');
+				this.colorPreviewDots[3]!.removeClass('sgb-hidden');
+				this.colorPreviewDots[3]!.style.backgroundColor = style.colorDone;
+			} else {
+				this.colorPreviewDots[0]!.removeClass('sgb-hidden');
+				this.colorPreviewDots[0]!.style.backgroundColor = style.colorDefault;
+				this.colorPreviewDots[1]!.removeClass('sgb-hidden');
+				this.colorPreviewDots[1]!.style.backgroundColor = style.colorWarn;
+				this.colorPreviewDots[2]!.removeClass('sgb-hidden');
+				this.colorPreviewDots[2]!.style.backgroundColor = style.colorGood;
+				this.colorPreviewDots[3]!.removeClass('sgb-hidden');
+				this.colorPreviewDots[3]!.style.backgroundColor = style.colorDone;
+			}
 		}
 	}
 
