@@ -12,6 +12,7 @@ import { setCssProps } from '../utils/dom';
 import { calculateOverflowSegments } from '../utils/progress';
 import { getProgressColor } from '../utils/color';
 import { ViewportTracker } from '../utils/viewport';
+import { SearchTracker } from '../utils/search-tracker';
 
 export class FloatingBadge {
 	private containerEl: HTMLElement;
@@ -24,6 +25,7 @@ export class FloatingBadge {
 	private onPositionChanged: (pos: { badgePosition: BadgePositionPreset; offsetX: number; offsetY: number }) => void;
 	private currentParentEl: HTMLElement | null = null;
 	private currentProgress: WritingProgress | null = null;
+	private searchTracker: SearchTracker;
 
 	// Dragging state
 	private isDragging = false;
@@ -45,6 +47,7 @@ export class FloatingBadge {
 		this.settings = settings;
 		this.onBadgeClick = onBadgeClick;
 		this.onPositionChanged = onPositionChanged;
+		this.searchTracker = new SearchTracker(() => this.applyPosition());
 
 		this.containerEl = createDiv({ cls: 'section-goals-badge' });
 		setCssProps(this.containerEl, {
@@ -79,6 +82,7 @@ export class FloatingBadge {
 		if (this.currentParentEl !== parentEl) {
 			this.currentParentEl = parentEl;
 			parentEl.appendChild(this.containerEl);
+			this.searchTracker.attach(parentEl);
 			this.applyPosition();
 		}
 	}
@@ -162,7 +166,11 @@ export class FloatingBadge {
 				else if (!isBottom && isRight) badgePosition = 'top-right';
 				else badgePosition = 'top-left';
 				const offsetX = Math.max(MIN_BADGE_OFFSET_PX, Math.round(isRight ? rightDist : leftDist));
-				const offsetY = Math.max(MIN_BADGE_OFFSET_PX, Math.round(isBottom ? bottomDist : topDist));
+
+				// Adjust offsetY if search bar is currently visible above top-positioned badge
+				const searchShift = !isBottom ? this.searchTracker.getSearchShiftOffset(topDist) : 0;
+				const effectiveTopDist = Math.max(MIN_BADGE_OFFSET_PX, topDist - searchShift);
+				const offsetY = Math.max(MIN_BADGE_OFFSET_PX, Math.round(isBottom ? bottomDist : effectiveTopDist));
 
 				this.customPosition = null;
 				this.settings.badgePosition = badgePosition;
@@ -639,9 +647,10 @@ export class FloatingBadge {
 		} else {
 			const { badgePosition, offsetX, offsetY } = this.settings;
 			const { bottomOffset } = ViewportTracker.getViewportOffset();
-
 			const isBottom = badgePosition.includes('bottom');
 			const isRight = badgePosition.includes('right');
+
+			const searchShift = !isBottom ? this.searchTracker.getSearchShiftOffset(offsetY) : 0;
 
 			this.containerEl.classList.toggle('is-pos-bottom', isBottom);
 			this.containerEl.classList.toggle('is-pos-top', !isBottom);
@@ -649,7 +658,7 @@ export class FloatingBadge {
 			setCssProps(this.containerEl, {
 				'--sgb-badge-left': isRight ? 'auto' : `${offsetX}px`,
 				'--sgb-badge-right': isRight ? `${offsetX}px` : 'auto',
-				'--sgb-badge-top': isBottom ? 'auto' : `${offsetY}px`,
+				'--sgb-badge-top': isBottom ? 'auto' : `${offsetY + searchShift}px`,
 				'--sgb-badge-bottom': isBottom ? `${offsetY + bottomOffset}px` : 'auto',
 				'--sgb-badge-opacity': `${this.settings.badgeOpacity}`,
 				'--sgb-badge-font-size': `${this.settings.fontSize || 11}px`,
@@ -670,6 +679,7 @@ export class FloatingBadge {
 			window.clearTimeout(this.pressTimer);
 			this.pressTimer = null;
 		}
+		this.searchTracker.destroy();
 		this.containerEl.remove();
 	}
 }
