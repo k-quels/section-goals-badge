@@ -152,6 +152,7 @@ export class SectionParser {
 		goalData: FileGoalData,
 		cumulativeMode: CumulativeCountMode = 'from-top',
 		options: CounterOptions = {},
+		currentLineText?: string,
 	): WritingProgress {
 		const { flatSections, totalCharCount, docText, frontmatterEndOffset } = parsed;
 		const { fileGoal, defaultSectionGoal, headingLevelGoals } = goalData;
@@ -164,7 +165,17 @@ export class SectionParser {
 		let currentSectionIndex = -1;
 		for (let i = flatSections.length - 1; i >= 0; i--) {
 			const sec = flatSections[i]!;
-			if (cursorLine >= sec.line) {
+			if (cursorLine > sec.line) {
+				currentSectionNode = sec;
+				currentSectionIndex = i;
+				break;
+			} else if (cursorLine === sec.line) {
+				// If cursor is on sec.line, verify if current line in editor is actually a heading.
+				// When a newline is inserted right before a heading, cursorLine temporarily lands on sec.line
+				// before background re-parsing updates heading positions.
+				if (currentLineText !== undefined && !/^#{1,6}\s+/.test(currentLineText)) {
+					continue;
+				}
 				currentSectionNode = sec;
 				currentSectionIndex = i;
 				break;

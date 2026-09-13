@@ -339,6 +339,7 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 
 		const cursor = view.editor.getCursor();
 		const cursorOffset = view.editor.posToOffset(cursor);
+		const currentLineText = view.editor.getLine(cursor.line);
 
 		if (!force && cursorOffset === this.lastCursorOffset) {
 			return;
@@ -357,6 +358,7 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 				excludeRuby: this.settings.excludeRuby,
 				excludeCharacters: this.settings.excludeCharacters,
 			},
+			currentLineText,
 		);
 
 		this.badge.updateProgress(progress);
