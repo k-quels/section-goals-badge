@@ -102,7 +102,11 @@ The following features and options can be customized:
 
 ### 4. Color Styles
 
-- In the plugin settings under **Color styles**, freely define and customize color schemes (up to 10 styles).
+- In the plugin settings under **Color styles**, freely define and customize color schemes (up to 20 styles).
+  - Two color modes available: **Threshold** (step-based) and **Gradient** (smooth transitions).<br>
+    <img src="./doc/images/color-styles.png" width="400">
+  - Progress thresholds for threshold-type styles (default: 50% / 80% / 100%) can be customized in settings.
+  
 - Default Presets:
   - **① Limit Goal Style**: Best for strict word/character caps (Gray → Yellow → Orange → Red)<br>
   　<img src="./doc/images/colorsample-style1.png" width="80">
@@ -111,8 +115,6 @@ The following features and options can be customized:
   　<img src="./doc/images/colorsample-style2.png" width="80">
 
 - In the Goal Management modal, **select your preferred style per note** from the "Color style" dropdown.
-
-- Progress color thresholds (default: 50% / 80% / 100%) can be customized in settings.
 
 ### 5. Folder-Level Defaults
 

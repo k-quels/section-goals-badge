@@ -31,3 +31,4 @@ export const DEFAULT_THRESHOLD_DONE = 100;
  */
 export const PRESET_STYLE_LIMIT_ID = 1;
 export const PRESET_STYLE_TARGET_ID = 2;
+export const MAX_COLOR_STYLES = 20;

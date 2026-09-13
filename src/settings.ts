@@ -16,6 +16,7 @@ import {
 	DEFAULT_THRESHOLD_DONE,
 	DEFAULT_THRESHOLD_GOOD,
 	DEFAULT_THRESHOLD_WARN,
+	MAX_COLOR_STYLES,
 	PRESET_STYLE_LIMIT_ID,
 	PRESET_STYLE_TARGET_ID,
 } from './utils/constants';
@@ -1681,7 +1682,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 								// Footer: Add Button & Reset All Button
 								const footerEl = stylesContainer.createDiv({ cls: 'sgb-styles-footer' });
 
-								const canAdd = this.plugin.settings.styles.length < 10;
+								const canAdd = this.plugin.settings.styles.length < MAX_COLOR_STYLES;
 								const addBtn = footerEl.createEl('button', {
 									cls: 'sgb-add-style-btn',
 									text: t('SETTINGS_STYLE_ADD'),
@@ -1691,7 +1692,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 								}
 								addBtn.addEventListener('click', () => {
 									void (async () => {
-										if (this.plugin.settings.styles.length >= 10) return;
+										if (this.plugin.settings.styles.length >= MAX_COLOR_STYLES) return;
 										const existingIds = this.plugin.settings.styles.map((s) => s.id);
 										const nextId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
 
