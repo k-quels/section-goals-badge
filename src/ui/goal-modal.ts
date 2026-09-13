@@ -563,7 +563,10 @@ export class GoalManagementModal extends Modal {
 					this.updateMiniProgress(totalFill, totalPercent, this.parsedData.totalCharCount, this.fileGoalInput, totalOverflow ?? undefined);
 				}
 				this.refreshSectionMiniProgress();
-				this.debouncedSaveGoals();
+				// Immediately save style changes to update editor frontmatter and badge without delay
+				void (async () => {
+					await this.saveGoals();
+				})();
 			}
 		});
 
@@ -736,10 +739,6 @@ export class GoalManagementModal extends Modal {
 			if (effectiveStyle.type === 'gradient') {
 				fillEl.addClass('is-progress-gradient');
 				percentEl.addClass('is-progress-gradient');
-				if (percent >= 100) {
-					fillEl.addClass('is-progress-done');
-					percentEl.addClass('is-progress-done');
-				}
 				const currentColor = getProgressColor(effectiveStyle, percent, {
 					warn: this.settings.colorThresholdWarn,
 					good: this.settings.colorThresholdGood,

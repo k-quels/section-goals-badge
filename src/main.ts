@@ -182,9 +182,12 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	public getActiveColorStyle(file: TFile): GoalColorStyle {
-		const goalData = this.fmManager.getEffectiveGoalData(file, this.settings);
-		const targetId = goalData.styleId ?? this.settings.defaultStyleId ?? 1;
+	public getActiveColorStyle(file: TFile, goalData?: EffectiveGoalData): GoalColorStyle {
+		const effectiveGoalData =
+			goalData ??
+			this.currentEffectiveGoalData ??
+			this.fmManager.getEffectiveGoalData(file, this.settings);
+		const targetId = effectiveGoalData.styleId ?? this.settings.defaultStyleId ?? 1;
 		const found = this.settings.styles.find((s) => s.id === targetId);
 		if (found) return found;
 		const defaultStyle = this.settings.styles.find((s) => s.id === this.settings.defaultStyleId);
@@ -259,8 +262,8 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 	/**
 	 * Recalculate sections and characters for current active document.
 	 */
-	private performFullRecalculation(): void {
-		const view = this.getActiveMarkdownEditorView();
+	private performFullRecalculation(targetView?: MarkdownView): void {
+		const view = targetView ?? this.getActiveMarkdownEditorView();
 		if (!view || !view.file) {
 			this.badge.hide();
 			return;
@@ -328,8 +331,10 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 	private updateBadgeWithCursor(view: MarkdownView, force = false): void {
 		if (!this.currentParsedDoc || !view.file || this.isComposing) return;
 
-		// Apply active note's color style
-		const activeStyle = this.getActiveColorStyle(view.file);
+		const goalData = this.currentEffectiveGoalData ?? this.fmManager.getEffectiveGoalData(view.file, this.settings);
+
+		// Apply active note's color style using effective goal data
+		const activeStyle = this.getActiveColorStyle(view.file, goalData);
 		this.badge.applyColorStyle(activeStyle);
 
 		const cursor = view.editor.getCursor();
@@ -339,8 +344,6 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 			return;
 		}
 		this.lastCursorOffset = cursorOffset;
-
-		const goalData = this.currentEffectiveGoalData ?? this.fmManager.getEffectiveGoalData(view.file, this.settings);
 
 		const progress = this.parser.calculateProgress(
 			this.currentParsedDoc,
@@ -430,7 +433,7 @@ export default class SectionGoalsBadgePlugin extends Plugin {
 			this.fmManager,
 			this.settings,
 			() => {
-				this.performFullRecalculation();
+				this.performFullRecalculation(view);
 			},
 		);
 		const originalOnClose = this.activeModal.onClose.bind(this.activeModal);

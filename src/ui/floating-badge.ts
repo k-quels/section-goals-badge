@@ -593,9 +593,6 @@ export class FloatingBadge {
 		const style = this.currentColorStyle;
 		if (style?.type === 'gradient') {
 			el.addClass('is-progress-gradient');
-			if (percentage >= 100) {
-				el.addClass('is-progress-done');
-			}
 			const currentColor = getProgressColor(style, percentage, {
 				warn: this.settings.colorThresholdWarn,
 				good: this.settings.colorThresholdGood,

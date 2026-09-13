@@ -376,7 +376,6 @@ settings:
 .sgb-pill.is-progress-done {
 	color: var(--sgb-color-done, #ff4d4f);
 	background-color: color-mix(in srgb, var(--sgb-color-done, #ff4d4f) var(--sgb-progress-bg-opacity, 28%), transparent);
-	font-weight: 600;
 }
 
 .sgb-pill.is-progress-gradient {
@@ -427,7 +426,6 @@ settings:
 
 .sgb-section-row.is-progress-done {
 	color: var(--sgb-color-done, #ff4d4f);
-	font-weight: 600;
 }
 
 .sgb-section-row.is-progress-gradient {
