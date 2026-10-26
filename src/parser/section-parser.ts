@@ -2,6 +2,7 @@ import { App, HeadingCache, TFile } from 'obsidian';
 import { countText, CounterOptions } from '../counter/counter';
 import { FileGoalData, FrontmatterManager } from '../frontmatter/frontmatter-manager';
 import { CumulativeCountMode, SectionNode, WritingProgress } from '../types';
+import { matchSectionGoals } from '../utils/date-goal';
 
 export interface ParsedDocumentSections {
 	sections: SectionNode[];
@@ -27,6 +28,7 @@ export class SectionParser {
 		options: CounterOptions = {},
 		goalData?: FileGoalData,
 		editingHeadingOverride?: { line: number; originalHeading: string },
+		occurrenceOverrides?: Map<number, number>,
 	): ParsedDocumentSections {
 		// Scan headings directly from current content with accurate line numbers
 		const rawHeadings = this.scanHeadingsFast(content);
@@ -44,19 +46,16 @@ export class SectionParser {
 			};
 		}
 
-		// Prepare map/queue of explicit section goals by heading name
-		const goalsByHeading: Map<string, number[]> = new Map();
-		for (const item of sectionGoals) {
-			const entries = Object.entries(item);
-			if (entries.length > 0) {
-				const [hName, goalVal] = entries[0]!;
-				if (typeof goalVal === 'number') {
-					const queue = goalsByHeading.get(hName) || [];
-					queue.push(goalVal);
-					goalsByHeading.set(hName, queue);
-				}
-			}
-		}
+		// Match explicit section goals using robust matching (1-to-1 unique match, occurrence match, fallback)
+		const matchingHeadings = editingHeadingOverride
+			? rawHeadings.map((h) => {
+					if (h.position.start.line === editingHeadingOverride.line) {
+						return { ...h, heading: editingHeadingOverride.originalHeading };
+					}
+					return h;
+			  })
+			: rawHeadings;
+		const matchedGoalsByIndex = matchSectionGoals(matchingHeadings, sectionGoals, occurrenceOverrides);
 
 		// Build section scopes: Each heading scope ends at the next heading with level <= current level, or EOF
 		const flatSections: SectionNode[] = [];
@@ -80,22 +79,13 @@ export class SectionParser {
 			// Extract text in this scope, excluding internal heading lines
 			const charCount = this.calculateScopeCharCount(content, startOffset, endOffset, rawHeadings, i, options);
 
-			// Match goal by heading name queue, or in-memory editing override, then heading level default, then defaultSectionGoal
+			// Match goal by heading name matching, then heading level default, then defaultSectionGoal
 			let goalCount: number | undefined;
 			let isDefaultGoal = false;
 
-			const queue = goalsByHeading.get(heading.heading);
-			if (queue && queue.length > 0) {
-				goalCount = queue.shift();
-			} else if (
-				editingHeadingOverride &&
-				heading.position.start.line === editingHeadingOverride.line &&
-				editingHeadingOverride.originalHeading
-			) {
-				const overrideQueue = goalsByHeading.get(editingHeadingOverride.originalHeading);
-				if (overrideQueue && overrideQueue.length > 0) {
-					goalCount = overrideQueue.shift();
-				}
+			const matchedItem = matchedGoalsByIndex.get(i);
+			if (matchedItem && typeof matchedItem.goal === 'number') {
+				goalCount = matchedItem.goal;
 			}
 
 			if (goalCount === undefined) {
@@ -233,6 +223,7 @@ export class SectionParser {
 				current,
 				goal,
 				percentage,
+				index: currentSectionIndex,
 			};
 
 			// Build ancestor level map (finding the active node for each heading level up the hierarchy)

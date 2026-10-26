@@ -8,7 +8,9 @@
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
     "version": "node version-bump.mjs && git add manifest.json versions.json",
-    "lint": "eslint .",
+    "lint": "npm run lint:js && npm run lint:css",
+    "lint:js": "eslint .",
+    "lint:css": "stylelint \"styles.css\"",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -23,8 +25,13 @@
     "globals": "^17.6.0",
     "jsdom": "^29.1.1",
     "obsidian": "latest",
+    "stylelint": "^17.16.0",
+    "stylelint-config-obsidianmd": "^0.1.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.59.1",
     "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "moment": "^2.31.0"
   }
 }

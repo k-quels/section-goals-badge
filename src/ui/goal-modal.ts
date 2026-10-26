@@ -2,12 +2,15 @@ import { App, DropdownComponent, MarkdownView, Modal, setIcon, setTooltip, TFile
 import { EffectiveGoalData, FrontmatterManager } from '../frontmatter/frontmatter-manager';
 import { t } from '../lang/helpers';
 import { ParsedDocumentSections, SectionParser } from '../parser/section-parser';
-import { GoalColorStyle, HeadingGoalItem, PluginSettings, SectionNode } from '../types';
+import { GoalColorStyle, PluginSettings, SectionGoalItem, SectionNode } from '../types';
 import { FRONTMATTER_SAVE_DEBOUNCE_MS, PRESET_STYLE_LIMIT_ID } from '../utils/constants';
 import { debounce } from '../utils/debounce';
 import { setCssProps } from '../utils/dom';
 import { calculateOverflowSegments } from '../utils/progress';
 import { getProgressColor } from '../utils/color';
+import { DateGoalsTabRenderer } from './goal-modal-date-tab';
+import { ConfirmModal } from './confirm-modal';
+import { matchSectionGoals } from '../utils/date-goal';
 
 export class GoalManagementModal extends Modal {
 	private file: TFile;
@@ -19,26 +22,33 @@ export class GoalManagementModal extends Modal {
 	private effectiveData!: EffectiveGoalData;
 	private currentCursorOffset: number;
 	private onGoalsUpdated: () => void;
+	private activeTab: 'count' | 'date';
+	private dateTabRenderer!: DateGoalsTabRenderer;
+	private occurrenceOverrides?: Map<number, number>;
 
 	private fileGoalInput: number | undefined;
 	private defaultSectionGoalInput: number | undefined;
 	private styleIdInput!: number;
 	private headingLevelGoalsInput: Record<number, number> = {};
 	private isHeadingLevelGoalsOpen = false;
-	private sectionGoalsMap: Map<string, number> = new Map();
-	private activeSectionHeading: string | null = null;
-	private inputElements: Map<string, HTMLInputElement> = new Map();
+	private sectionGoalsByIndex: Map<number, number> = new Map();
+	private activeSectionIndex: number | null = null;
+	private inputElements: Map<number, HTMLInputElement> = new Map();
 	private levelInputElements: Map<number, HTMLInputElement> = new Map();
 	private totalGoalInputElement: HTMLInputElement | null = null;
 	private defaultSectionGoalInputElement: HTMLInputElement | null = null;
 	private colorPreviewDots: HTMLElement[] = [];
+	private countTabBtn: HTMLElement | null = null;
+	private dateTabBtn: HTMLElement | null = null;
 
 	// Viewport resize listener for mobile keyboard handling
 	private viewportResizeHandler: (() => void) | null = null;
 	private contentScrollHandler: (() => void) | null = null;
+	private isDirty = false;
 
 	// Debounced saver to avoid aggressive disk/frontmatter writes during typing
 	private debouncedSaveGoals = debounce(() => {
+		this.isDirty = true;
 		void this.saveGoals();
 	}, FRONTMATTER_SAVE_DEBOUNCE_MS);
 
@@ -50,6 +60,8 @@ export class GoalManagementModal extends Modal {
 		fmManager: FrontmatterManager,
 		settings: PluginSettings,
 		onGoalsUpdated: () => void,
+		initialTab: 'count' | 'date' = 'count',
+		occurrenceOverrides?: Map<number, number>,
 	) {
 		super(app);
 		this.file = file;
@@ -58,6 +70,8 @@ export class GoalManagementModal extends Modal {
 		this.fmManager = fmManager;
 		this.settings = settings;
 		this.onGoalsUpdated = onGoalsUpdated;
+		this.activeTab = initialTab;
+		this.occurrenceOverrides = occurrenceOverrides;
 
 		// Calculate initial cursor offset
 		const cursor = view.editor.getCursor();
@@ -70,13 +84,52 @@ export class GoalManagementModal extends Modal {
 		contentEl.empty();
 		contentEl.addClass('section-goals-badge-modal');
 
-		// Find native close button
-		const nativeCloseBtn = this.containerEl.querySelector('.modal-close-button');
-		const targetParent = nativeCloseBtn?.parentElement ?? modalEl;
+		// Container for header action buttons placed beside the native close button
+		const headerActions = modalEl.createDiv({
+			cls: 'sgb-modal-header-actions',
+		});
+
+		// Add "Word count goals" mode toggle button
+		const countTabBtn = headerActions.createDiv({
+			cls: 'sgb-modal-action-button sgb-modal-count-tab-button',
+			attr: {
+				'aria-label': t('MODAL_TAB_COUNT'),
+				role: 'button',
+			},
+		});
+		setIcon(countTabBtn, 'whole-word');
+		setTooltip(countTabBtn, t('MODAL_TAB_COUNT'));
+		countTabBtn.addEventListener('click', () => {
+			if (this.activeTab !== 'count') {
+				this.activeTab = 'count';
+				this.renderModal();
+				this.updateHeaderActionButtons();
+			}
+		});
+		this.countTabBtn = countTabBtn;
+
+		// Add "Date goals" mode toggle button
+		const dateTabBtn = headerActions.createDiv({
+			cls: 'sgb-modal-action-button sgb-modal-date-tab-button',
+			attr: {
+				'aria-label': t('MODAL_TAB_DATE'),
+				role: 'button',
+			},
+		});
+		setIcon(dateTabBtn, 'calendar');
+		setTooltip(dateTabBtn, t('MODAL_TAB_DATE'));
+		dateTabBtn.addEventListener('click', () => {
+			if (this.activeTab !== 'date') {
+				this.activeTab = 'date';
+				this.renderModal();
+				this.updateHeaderActionButtons();
+			}
+		});
+		this.dateTabBtn = dateTabBtn;
 
 		// Add "Scroll to top" button matching standard modal close button
-		const scrollTopBtn = targetParent.createDiv({
-			cls: 'sgb-modal-scroll-top-button',
+		const scrollTopBtn = headerActions.createDiv({
+			cls: 'sgb-modal-action-button sgb-modal-scroll-top-button',
 			attr: {
 				'aria-label': t('MODAL_SCROLL_TO_TOP'),
 				role: 'button',
@@ -92,6 +145,8 @@ export class GoalManagementModal extends Modal {
 				behavior: 'smooth',
 			});
 		});
+
+		this.updateHeaderActionButtons();
 
 		// Update scroll-top button state based on content scrollability and scroll position
 		const updateScrollButtonState = () => {
@@ -113,49 +168,45 @@ export class GoalManagementModal extends Modal {
 		contentEl.addEventListener('scroll', updateScrollButtonState, { passive: true });
 		updateScrollButtonState();
 
-		// Align scroll-top button and inherit theme styles directly from modal-close-button
-		const alignScrollTopButton = () => {
-			const closeBtn = this.containerEl.querySelector('.modal-close-button');
+		// Align header actions precisely with native modal-close-button on desktop
+		const alignHeaderActions = () => {
+			const isMobile = document.body.classList.contains('is-mobile') || document.body.classList.contains('is-phone');
+			if (isMobile) return;
+
+			const closeBtn = modalEl.querySelector('.modal-close-button');
 			if (closeBtn instanceof HTMLElement) {
-				const isMobile = document.body.classList.contains('is-mobile') || document.body.classList.contains('is-phone');
 				const closeComputed = window.getComputedStyle(closeBtn);
-				const rawTop = closeBtn.offsetTop > 0 ? closeBtn.offsetTop : (parseFloat(closeComputed.top) || 8);
-				const closeTop = isMobile ? `${rawTop}px` : `${Math.max(0, rawTop - 2)}px`;
-				const closeWidth = closeBtn.offsetWidth > 0 ? closeBtn.offsetWidth : (parseFloat(closeComputed.width) || 28);
-				const closeHeight = closeBtn.offsetHeight > 0 ? closeBtn.offsetHeight : (parseFloat(closeComputed.height) || 28);
-				const closeRight = parseFloat(closeComputed.right) || 12;
-				const gap = isMobile ? 6 : -2;
+				const topVal = closeComputed.top;
+				const heightVal = closeComputed.height;
+				const rightVal = parseFloat(closeComputed.right) || 8;
+				const widthVal = parseFloat(closeComputed.width) || 28;
 
-				scrollTopBtn.style.top = closeTop;
-				scrollTopBtn.style.right = `${closeRight + closeWidth + gap}px`;
-				scrollTopBtn.style.width = `${closeWidth}px`;
-				scrollTopBtn.style.height = `${closeHeight}px`;
+				if (topVal && topVal !== 'auto') {
+					headerActions.style.top = topVal;
+				}
+				if (heightVal && heightVal !== 'auto') {
+					headerActions.style.height = heightVal;
+				}
+				// Shift right so visual gap between scroll button and close button matches button gap (6px)
+				headerActions.style.right = `${rightVal + widthVal - 2}px`;
 
-				// Inherit visual styles directly from theme's close button
 				if (closeComputed.borderRadius) {
-					scrollTopBtn.style.borderRadius = closeComputed.borderRadius;
-				}
-				if (
-					closeComputed.backgroundColor &&
-					closeComputed.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
-					closeComputed.backgroundColor !== 'transparent'
-				) {
-					scrollTopBtn.style.backgroundColor = closeComputed.backgroundColor;
-				}
-				if (closeComputed.borderColor && closeComputed.borderStyle !== 'none') {
-					scrollTopBtn.style.border = closeComputed.border;
-				}
-				if (closeComputed.boxShadow && closeComputed.boxShadow !== 'none') {
-					scrollTopBtn.style.boxShadow = closeComputed.boxShadow;
+					const actionButtons = headerActions.querySelectorAll<HTMLElement>('.sgb-modal-action-button');
+					actionButtons.forEach((btn) => {
+						if (heightVal && heightVal !== 'auto') {
+							btn.style.height = heightVal;
+							btn.style.width = heightVal;
+						}
+						btn.style.borderRadius = closeComputed.borderRadius;
+					});
 				}
 			}
 		};
 
-		alignScrollTopButton();
-		window.requestAnimationFrame(alignScrollTopButton);
-		window.setTimeout(alignScrollTopButton, 50);
-		window.setTimeout(alignScrollTopButton, 200);
-		window.setTimeout(alignScrollTopButton, 400);
+		alignHeaderActions();
+		window.requestAnimationFrame(alignHeaderActions);
+		window.setTimeout(alignHeaderActions, 50);
+		window.setTimeout(alignHeaderActions, 200);
 
 		// Handle mobile visual viewport resizing (when virtual keyboard pops up)
 		this.setupViewportListener();
@@ -173,6 +224,8 @@ export class GoalManagementModal extends Modal {
 				excludeCharacters: this.settings.excludeCharacters,
 			},
 			this.effectiveData,
+			undefined,
+			this.occurrenceOverrides,
 		);
 
 		const { fileGoal, defaultSectionGoal, headingLevelGoals, sectionGoals, styleId } = this.fmManager.getGoalData(this.file, docContent);
@@ -185,21 +238,43 @@ export class GoalManagementModal extends Modal {
 		const currentStyle = this.getEffectiveStyle();
 		this.applyModalColorStyle(currentStyle);
 
-		// Build map of explicitly set goals
-		this.sectionGoalsMap.clear();
-		for (const item of sectionGoals) {
-			const [heading, goal] = Object.entries(item)[0] ?? [];
-			if (heading && typeof goal === 'number') {
-				this.sectionGoalsMap.set(heading, goal);
+		// Build map of explicitly set goals by section index
+		this.sectionGoalsByIndex.clear();
+		const matchedGoals = matchSectionGoals(this.parsedData.flatSections, sectionGoals, this.occurrenceOverrides);
+		for (const [idx, item] of matchedGoals.entries()) {
+			if (typeof item.goal === 'number') {
+				this.sectionGoalsByIndex.set(idx, item.goal);
 			}
 		}
 
+
 		// Find active section based on cursor
-		for (const sec of this.parsedData.flatSections) {
+		this.activeSectionIndex = null;
+		for (let i = 0; i < this.parsedData.flatSections.length; i++) {
+			const sec = this.parsedData.flatSections[i]!;
 			if (this.currentCursorOffset >= sec.startOffset && this.currentCursorOffset <= sec.endOffset) {
-				this.activeSectionHeading = sec.heading;
+				this.activeSectionIndex = i;
 			}
 		}
+
+		this.dateTabRenderer = new DateGoalsTabRenderer(
+			this.app,
+			this.settings,
+			this.fmManager,
+			this.parsedData,
+			this.effectiveData,
+			this.activeSectionIndex,
+			{
+				saveGoals: () => {
+					this.isDirty = true;
+					return this.saveGoals();
+				},
+				debouncedSaveGoals: () => this.debouncedSaveGoals(),
+				jumpToSection: (section) => this.jumpToSection(section),
+				scrollToItem: (itemEl, smooth) => this.scrollToItem(itemEl, smooth),
+			},
+			this.occurrenceOverrides,
+		);
 
 		this.renderModal();
 	}
@@ -266,9 +341,9 @@ export class GoalManagementModal extends Modal {
 		}
 	}
 
-	private getEffectiveSectionGoal(heading: string, level: number): number | undefined {
+	private getEffectiveSectionGoal(index: number, level: number): number | undefined {
 		// 1. Explicit section goal in note
-		const explicitGoal = this.sectionGoalsMap.get(heading);
+		const explicitGoal = this.sectionGoalsByIndex.get(index);
 		if (explicitGoal !== undefined && explicitGoal > 0) {
 			return explicitGoal;
 		}
@@ -313,6 +388,14 @@ export class GoalManagementModal extends Modal {
 		return t('MODAL_GOAL_PLACEHOLDER');
 	}
 
+	public switchToTab(tab: 'count' | 'date'): void {
+		if (this.activeTab !== tab) {
+			this.activeTab = tab;
+			this.renderModal();
+			this.updateHeaderActionButtons();
+		}
+	}
+
 	private renderModal(): void {
 		const { contentEl } = this;
 		contentEl.empty();
@@ -323,8 +406,17 @@ export class GoalManagementModal extends Modal {
 			this.contentEl.parentElement.scrollLeft = 0;
 		}
 
-		const titleText = this.settings.countType === 'word' ? t('MODAL_TITLE_WORDS') : t('MODAL_TITLE');
-		contentEl.createEl('h2', { cls: 'sgb-modal-header-title', text: titleText });
+		// Title Bar
+		const headerBarEl = contentEl.createDiv({ cls: 'sgb-modal-title-bar' });
+		const titleText =
+			this.activeTab === 'date'
+				? t('MODAL_TAB_DATE')
+				: this.settings.countType === 'word'
+					? t('MODAL_TITLE_WORDS')
+					: t('MODAL_TITLE');
+		headerBarEl.createEl('h2', { cls: 'sgb-modal-header-title', text: titleText });
+
+		this.updateHeaderActionButtons();
 
 		// Description for folder defaults with link to plugin settings
 		const descEl = contentEl.createDiv({ cls: 'sgb-modal-header-desc' });
@@ -350,6 +442,14 @@ export class GoalManagementModal extends Modal {
 			descEl.appendText(parts[1] ?? '');
 		} else {
 			descEl.setText(hintTemplate);
+		}
+
+		if (this.activeTab === 'date') {
+			const bodyContainerEl = contentEl.createDiv({ cls: 'sgb-modal-body-container sgb-date-body-container' });
+			this.dateTabRenderer.renderDateTab(bodyContainerEl);
+			this.updateScrollbarOffset();
+			this.contentScrollHandler?.();
+			return;
 		}
 
 		// --- Master Table Column Header (Labels all rows below) ---
@@ -565,6 +665,7 @@ export class GoalManagementModal extends Modal {
 				this.refreshSectionMiniProgress();
 				// Immediately save style changes to update editor frontmatter and badge without delay
 				void (async () => {
+					this.isDirty = true;
 					await this.saveGoals();
 				})();
 			}
@@ -580,8 +681,13 @@ export class GoalManagementModal extends Modal {
 				text: t('MODAL_SET_BUTTON'),
 			});
 			setBtn.addEventListener('click', () => {
-				new ConfirmSetModal(this.app, () => {
-					this.setAllGoalsFromCurrent();
+				new ConfirmModal(this.app, {
+					message: t('MODAL_SET_CONFIRM_MSG'),
+					confirmText: t('MODAL_CONFIRM_OK'),
+					isWarning: false,
+					onConfirm: () => {
+						this.setAllGoalsFromCurrent();
+					},
 				}).open();
 			});
 		}
@@ -599,12 +705,13 @@ export class GoalManagementModal extends Modal {
 
 		let activeItemEl: HTMLElement | null = null;
 
-		for (const section of this.parsedData.flatSections) {
+		for (let i = 0; i < this.parsedData.flatSections.length; i++) {
+			const section = this.parsedData.flatSections[i]!;
 			const itemEl = listContainer.createDiv({
 				cls: `sgb-section-tree-item sgb-level-${section.level}`,
 			});
 
-			if (section.heading === this.activeSectionHeading) {
+			if (i === this.activeSectionIndex) {
 				itemEl.addClass('is-active-section');
 				activeItemEl = itemEl;
 			}
@@ -626,8 +733,8 @@ export class GoalManagementModal extends Modal {
 				text: section.charCount.toLocaleString(),
 			});
 
-			const explicitGoal = this.sectionGoalsMap.get(section.heading);
-			const effectiveGoal = this.getEffectiveSectionGoal(section.heading, section.level);
+			const explicitGoal = this.sectionGoalsByIndex.get(i);
+			const effectiveGoal = this.getEffectiveSectionGoal(i, section.level);
 			const placeholderVal = this.getSectionPlaceholder(section.level);
 
 			const inputWrapperEl = controlsEl.createDiv({ cls: 'sgb-goal-input-wrapper' });
@@ -639,7 +746,7 @@ export class GoalManagementModal extends Modal {
 			if (explicitGoal !== undefined && explicitGoal > 0) {
 				inputEl.value = String(explicitGoal);
 			}
-			this.inputElements.set(section.heading, inputEl);
+			this.inputElements.set(i, inputEl);
 
 			// Stacked mini progress: percentage text on TOP, progress bar on BOTTOM
 			const miniProgressWrapper = controlsEl.createDiv({ cls: 'sgb-mini-progress-wrapper' });
@@ -652,11 +759,11 @@ export class GoalManagementModal extends Modal {
 			const onGoalChange = () => {
 				const num = parseInt(inputEl.value, 10);
 				if (!isNaN(num) && num > 0) {
-					this.sectionGoalsMap.set(section.heading, num);
+					this.sectionGoalsByIndex.set(i, num);
 				} else {
-					this.sectionGoalsMap.delete(section.heading);
+					this.sectionGoalsByIndex.delete(i);
 				}
-				const currentEffective = this.getEffectiveSectionGoal(section.heading, section.level);
+				const currentEffective = this.getEffectiveSectionGoal(i, section.level);
 				this.updateMiniProgress(miniFillEl, miniPercentEl, section.charCount, currentEffective, miniOverflowEl);
 				this.debouncedSaveGoals();
 			};
@@ -689,12 +796,13 @@ export class GoalManagementModal extends Modal {
 
 	private refreshSectionMiniProgress(): void {
 		// Update placeholders and mini progress without destroying current input focus
-		for (const sec of this.parsedData.flatSections) {
-			const inputEl = this.inputElements.get(sec.heading);
+		for (let i = 0; i < this.parsedData.flatSections.length; i++) {
+			const sec = this.parsedData.flatSections[i]!;
+			const inputEl = this.inputElements.get(i);
 			if (inputEl) {
 				inputEl.placeholder = this.getSectionPlaceholder(sec.level);
 			}
-			const effective = this.getEffectiveSectionGoal(sec.heading, sec.level);
+			const effective = this.getEffectiveSectionGoal(i, sec.level);
 			const rowControlsEl = inputEl?.parentElement?.parentElement;
 			const miniFillEl = rowControlsEl?.querySelector('.sgb-mini-progress-fill') as HTMLElement | null;
 			const miniPercentEl = rowControlsEl?.querySelector('.sgb-mini-percent') as HTMLElement | null;
@@ -705,12 +813,13 @@ export class GoalManagementModal extends Modal {
 		}
 
 		this.updateScrollbarOffset();
+		this.contentScrollHandler?.();
 	}
 
-
 	private setAllGoalsFromCurrent(): void {
-		for (const sec of this.parsedData.flatSections) {
-			this.sectionGoalsMap.set(sec.heading, sec.charCount);
+		for (let i = 0; i < this.parsedData.flatSections.length; i++) {
+			const sec = this.parsedData.flatSections[i]!;
+			this.sectionGoalsByIndex.set(i, sec.charCount);
 		}
 		void (async () => {
 			await this.saveGoals();
@@ -788,18 +897,68 @@ export class GoalManagementModal extends Modal {
 	}
 
 	private async saveGoals(): Promise<void> {
-		const sectionGoals: HeadingGoalItem[] = [];
+		this.isDirty = false;
+		if (this.dateTabRenderer) {
+			this.dateTabRenderer.cleanupInvalidDates();
+		}
 
+		const sectionGoals: SectionGoalItem[] = [];
+
+		const headingTotalCounts = new Map<string, number>();
+		for (const s of this.parsedData.flatSections) {
+			headingTotalCounts.set(s.heading, (headingTotalCounts.get(s.heading) ?? 0) + 1);
+		}
+
+		const headingOccCounter = new Map<string, number>();
 		// Maintain document order of flat sections
-		for (const sec of this.parsedData.flatSections) {
-			const goal = this.sectionGoalsMap.get(sec.heading);
-			if (goal !== undefined && goal > 0) {
-				sectionGoals.push({ [sec.heading]: goal });
+		for (let i = 0; i < this.parsedData.flatSections.length; i++) {
+			const sec = this.parsedData.flatSections[i]!;
+			const occ = (headingOccCounter.get(sec.heading) ?? 0) + 1;
+			headingOccCounter.set(sec.heading, occ);
+
+			const goal = this.sectionGoalsByIndex.get(i);
+			const dateData = this.dateTabRenderer?.getSectionGoal(i);
+			const hasGoal = goal !== undefined && goal > 0;
+			const hasDate = Boolean(dateData && (dateData.target || dateData.start || dateData.cycle));
+
+			if (hasGoal || hasDate) {
+				const isDuplicate = (headingTotalCounts.get(sec.heading) ?? 0) > 1;
+				const item: SectionGoalItem = {
+					heading: sec.heading,
+					index: isDuplicate ? occ : undefined,
+				};
+				if (hasGoal) {
+					item.goal = goal;
+				}
+				if (hasDate && dateData) {
+					if (dateData.target) {
+						item['target-date'] = dateData.target;
+						item.target = dateData.target;
+					}
+					if (dateData.start) {
+						item['start-date'] = dateData.start;
+						item.start = dateData.start;
+					}
+					if (dateData.cycle) {
+						item.cycle = dateData.cycle;
+					}
+				}
+				sectionGoals.push(item);
 			}
 		}
 
 		const inheritedDefaultStyleId =
 			this.effectiveData.inheritedDefaults?.styleId ?? this.settings.defaultStyleId ?? 1;
+
+		const dateGoals = this.dateTabRenderer
+			? {
+					fileTargetDate: this.dateTabRenderer.fileTargetDateInput,
+					fileStartDate: this.dateTabRenderer.fileStartDateInput,
+					fileCycle: this.dateTabRenderer.fileCycleInput,
+					fileDateReference: this.dateTabRenderer.fileDateReferenceInput,
+					sectionDateGoals: this.dateTabRenderer.getSectionDateGoalsList(),
+				}
+			: undefined;
 
 		let saved = false;
 		if (this.view && this.view.editor) {
@@ -811,6 +970,7 @@ export class GoalManagementModal extends Modal {
 				this.headingLevelGoalsInput,
 				this.styleIdInput,
 				inheritedDefaultStyleId,
+				dateGoals,
 			);
 		}
 
@@ -823,6 +983,7 @@ export class GoalManagementModal extends Modal {
 				this.headingLevelGoalsInput,
 				this.styleIdInput,
 				inheritedDefaultStyleId,
+				dateGoals,
 			);
 		}
 
@@ -888,16 +1049,28 @@ export class GoalManagementModal extends Modal {
 		);
 	}
 
-	private openPluginSettings(): void {
+	private openPluginSettings(targetSectionKey?: Parameters<typeof t>[0]): void {
 		const appWithSetting = this.app as unknown as {
 			setting?: {
 				open: () => void;
-				openTabById: (id: string) => void;
+				openTabById: (id: string) => { expandAndScrollToSection?: (heading: string) => void } | undefined;
 			};
 		};
 		if (appWithSetting.setting) {
 			appWithSetting.setting.open();
-			appWithSetting.setting.openTabById('section-goals-badge');
+			const tab = appWithSetting.setting.openTabById('section-goals-badge');
+			if (targetSectionKey && tab && typeof tab.expandAndScrollToSection === 'function') {
+				tab.expandAndScrollToSection(t(targetSectionKey));
+			}
+		}
+	}
+
+	private updateHeaderActionButtons(): void {
+		if (this.countTabBtn) {
+			this.countTabBtn.classList.toggle('is-active', this.activeTab === 'count');
+		}
+		if (this.dateTabBtn) {
+			this.dateTabBtn.classList.toggle('is-active', this.activeTab === 'date');
 		}
 	}
 
@@ -915,71 +1088,47 @@ export class GoalManagementModal extends Modal {
 		// Sync any pending inputs immediately
 		if (this.totalGoalInputElement) {
 			const num = parseInt(this.totalGoalInputElement.value, 10);
-			this.fileGoalInput = !isNaN(num) && num > 0 ? num : undefined;
+			const val = !isNaN(num) && num > 0 ? num : undefined;
+			if (val !== this.fileGoalInput) {
+				this.fileGoalInput = val;
+				this.isDirty = true;
+			}
 		}
 
 		if (this.defaultSectionGoalInputElement) {
 			const num = parseInt(this.defaultSectionGoalInputElement.value, 10);
-			this.defaultSectionGoalInput = !isNaN(num) && num > 0 ? num : undefined;
-		}
-
-		for (const [heading, inputEl] of this.inputElements.entries()) {
-			const num = parseInt(inputEl.value, 10);
-			if (!isNaN(num) && num > 0) {
-				this.sectionGoalsMap.set(heading, num);
-			} else {
-				this.sectionGoalsMap.delete(heading);
+			const val = !isNaN(num) && num > 0 ? num : undefined;
+			if (val !== this.defaultSectionGoalInput) {
+				this.defaultSectionGoalInput = val;
+				this.isDirty = true;
 			}
 		}
 
-		void (async () => {
-			await this.saveGoals();
-		})();
+		for (const [index, inputEl] of this.inputElements.entries()) {
+			const num = parseInt(inputEl.value, 10);
+			const val = !isNaN(num) && num > 0 ? num : undefined;
+			if (val !== this.sectionGoalsByIndex.get(index)) {
+				if (val !== undefined) {
+					this.sectionGoalsByIndex.set(index, val);
+				} else {
+					this.sectionGoalsByIndex.delete(index);
+				}
+				this.isDirty = true;
+			}
+		}
+
+		if (this.dateTabRenderer) {
+			this.dateTabRenderer.cleanupInvalidDates();
+		}
+
+		if (this.isDirty) {
+			void (async () => {
+				await this.saveGoals();
+			})();
+		}
 
 		const { contentEl } = this;
 		contentEl.empty();
 	}
 }
 
-/**
- * Confirmation dialog modal for setting goals from current character counts.
- */
-class ConfirmSetModal extends Modal {
-	constructor(
-		app: App,
-		private onConfirm: () => void,
-	) {
-		super(app);
-	}
-
-	onOpen(): void {
-		const { contentEl } = this;
-		contentEl.empty();
-		contentEl.addClass('sgb-confirm-modal');
-
-		contentEl.createEl('p', { text: t('MODAL_SET_CONFIRM_MSG') });
-
-		const buttonContainer = contentEl.createDiv({ cls: 'sgb-confirm-buttons' });
-
-		const cancelBtn = buttonContainer.createEl('button', {
-			text: t('MODAL_CONFIRM_CANCEL'),
-		});
-		cancelBtn.addEventListener('click', () => {
-			this.close();
-		});
-
-		const confirmBtn = buttonContainer.createEl('button', {
-			cls: 'mod-cta',
-			text: t('MODAL_CONFIRM_OK'),
-		});
-		confirmBtn.addEventListener('click', () => {
-			this.close();
-			this.onConfirm();
-		});
-	}
-
-	onClose(): void {
-		const { contentEl } = this;
-		contentEl.empty();
-	}
-}

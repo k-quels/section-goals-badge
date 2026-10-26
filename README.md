@@ -6,14 +6,14 @@ English | [日本語](README_ja.md)
 [![GitHub release](https://img.shields.io/github/v/release/k-quels/section-goals-badge?include_prereleases&color=blue)](https://github.com/k-quels/section-goals-badge/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-A floating character counter and writing goal tracker per heading for Obsidian, designed for novel writers and long-form document creators.
+A floating character/word counter and target date tracker per heading for Obsidian, designed for novel writers and long-form document creators.
 
-Display floating badges on your editor to keep track of character counts and progress rates for the active heading (section) or entire note in real time.
+Display floating badges on your editor to keep track of word/character counts, progress rates, and target dates for the active heading (section) or entire note in real time.
 
 ▼ Desktop<br>
 <img src="./doc/images/badges-en.png" width="450">
 
-▼ Mobile<br>
+▼ Mobile (with date badge hidden)<br>
 <img src="./doc/images/badges-mobile-en.jpg" width="300">
 
 ---
@@ -21,6 +21,8 @@ Display floating badges on your editor to keep track of character counts and pro
 ## Key Features
 
 - 🎯 **Goal Tracking per Section (Heading)**: Set target counts per folder, per note, or for each chapter and section.
+
+- 📅 **Target Dates & Deadline Tracking**: Set target dates, start dates, and recurring schedules per note or section.
 
 - 📛 **Unobtrusive Floating Badge**: Position at any corner of the editor, with drag-and-drop movement and opacity adjustments.
 
@@ -46,20 +48,28 @@ Display floating badges on your editor to keep track of character counts and pro
 ### 1. Open Goal Management Window
 
 - Tap or click the badge on the editor to open the goal management window.<br>
-<img src="./doc/images/goal-modal-en.png" width="450">
-
+  *Note: Tapping the date badge opens the modal directly in Target Dates mode.*
   - Tips: Change to "Long press to open" in settings to avoid accidental taps.
   - Tips: Click a section name to close the modal and jump directly to that heading.
 
-### 2. Set Target Counts
+### 2. Set Target Counts & Dates
 
-Enter target counts for each item (automatically saved to Frontmatter).<br>
+Enter target goals for each item (automatically saved to Frontmatter).<br>
 *Note: To configure goals per folder, add folder definitions in the plugin settings.*
 
-- **Note Total Goal**: Target count for the entire note being edited.
-- **Section Goal**: Default target count applied to headings without individual goals.
-- **Heading Level Goals**: Set default target counts for each heading level (H1–H6).
-- **Individual Section Goals**: Enter specific target counts for each row in the heading list.
+- Word / Character Count Goals<br>
+  <img src="./doc/images/goal-modal-en.png" width="450">
+  - **Note Total Goal**: Target count for the entire note being edited.
+  - **Section Goal**: Default target count applied to headings without individual goals.
+  - **Heading Level Goals**: Set default target counts for each heading level (H1–H6).
+  - **Individual Section Goals**: Enter specific target counts for each row in the heading list.
+- Target Date Goals<br>
+  <img src="./doc/images/goal-modal-date-en.png" width="450">
+  - **Note Total Goal**: Target date and time for the entire note.
+  - **Default Section Goals**
+    - **Reference**: Inherit recurring schedules or deadlines from note total or parent sections.
+    - **Recurring Schedule**: Automatically calculate deadlines by adding duration (days, weeks, months, etc.) to the preceding section.
+  - **Individual Section Goals**: Set individual target dates/times or custom recurring schedules for each heading.
 
 ### 3. Adjust Badge Position & Appearance
 
@@ -72,7 +82,7 @@ Enter target counts for each item (automatically saved to Frontmatter).<br>
 
 The following features and options can be customized:
 
-### 1. Badge Display Customization (Cursor / Section / Total)
+### 1. Badge Display Customization (Cursor / Section / Total / Target Date)
 
 - **Toggle Visibility**: Enable or disable the 3 progress badges independently.
   - ▼ e.g., Hide note total badge:<br>
@@ -90,6 +100,10 @@ The following features and options can be customized:
 - **Display as Progress Bar**: Display the progress percentage using the badge background color as a gauge.
   - ▼ e.g., Using cursor position and section badges as progress bars:<br>
   <img src="doc/images/badge-color-gauge.png" width="250">
+
+- **Independent Date Badge**: The target date badge can be separated into an independent badge.
+  - ▼ e.g., Setting position to "Independent", customizing its position, font size, and opacity separately:<br>
+  <img src="doc/images/badge-date-separate-en.png" width="400">
 
 ### 2. Counting Rules
 
@@ -116,9 +130,13 @@ The following features and options can be customized:
 
 - In the Goal Management modal, **select your preferred style per note** from the "Color style" dropdown.
 
-### 5. Folder-Level Defaults
+### 5. Date Goals & Deadlines
 
-- Set default target goals and color styles for notes under specified folders.
+- Configure date badge visibility, default start/target times, recurring schedules, and other date defaults.
+
+### 6. Folder-Level Defaults
+
+- Set default target goals, color styles, and date-related defaults for notes under specified folders.
   - *Note: Settings specified within individual notes take precedence.*
 
 ---
@@ -135,13 +153,24 @@ goal-file: 10000       # <- Target count for the entire note
 goal-section: 2000     # <- Default target count for sections
 goal-section-h1: 3000  # <- Default target count for H1 (H1–H6 supported)
 goal-style: 2          # <- Color style ID (omitted for default style)
+goal-target-date: 2026-10-31  # <- Target date for the note (optional)
+goal-start-date: 2026-10-01   # <- Start date for the note (optional)
+goal-cycle: 1w                # <- Recurring cycle (1d, 1w, 1m, etc., optional)
 goals:
-  - Chapter 1: 2500    # <- Target count for specific section
-  - Chapter 2: 3000
+  - Chapter 1: 2500    # <- Target count for specific section (simple format)
+  - heading: Chapter 2 # <- Unified section settings (word count, date, cycle)
+    goal: 3000
+    target-date: 2026-10-31
+    start-date: 2026-10-15
+    cycle: 1w
+  - heading: Notes     # <- Use index (1-based) to identify duplicate headings
+    index: 1
+    goal: 500
+    target-date: 2026-10-20
 ---
 ```
 
-- **Tips**: If you want to clear all goals at once, simply delete these lines from the Frontmatter.
+- **Tips**: If you want to clear all goals or target dates at once, simply delete these lines from the Frontmatter.
 
 ---
 

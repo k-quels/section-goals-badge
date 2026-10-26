@@ -4,6 +4,18 @@ export interface HeadingGoalItem {
 	[heading: string]: number;
 }
 
+export interface SectionGoalItem {
+	heading: string;
+	goal?: number;
+	index?: number;
+	occurrence?: number; // legacy alias for index
+	'target-date'?: string;
+	'start-date'?: string;
+	target?: string; // legacy alias for target-date
+	start?: string; // legacy alias for start-date
+	cycle?: string;
+}
+
 export type ColorStyleType = 'discrete' | 'gradient';
 
 export interface GoalColorStyle {
@@ -27,8 +39,38 @@ export interface GoalFrontmatter {
 	'goal-section-h5'?: number;
 	'goal-section-h6'?: number;
 	'goal-style'?: number;
-	goals?: Array<HeadingGoalItem | { heading: string; goal: number }>;
+	goals?: Array<HeadingGoalItem | SectionGoalItem>;
+	'goal-target-date'?: string;
+	'goal-start-date'?: string;
+	'goal-cycle'?: string;
+	'goal-date-reference'?: DateReferenceMode;
+	'goal-dates'?: SectionGoalItem[]; // legacy fallback for backward compatibility
 }
+
+export type DateReferenceMode = 'parent' | 'note' | 'none';
+export type DateCycleUnit = 'day' | 'week' | 'month' | 'year';
+export type DateBadgePositionMode = 'left' | 'custom';
+
+export interface DateCycle {
+	value: number;
+	unit: DateCycleUnit;
+}
+
+export type SectionDateGoalItem = SectionGoalItem;
+
+export interface DateProgressInfo {
+	targetDate?: string;
+	startDate?: string;
+	cycle?: string;
+	remainingDays?: number;
+	remainingHours?: number;
+	percentage?: number;
+	isOverdue: boolean;
+	currentCycleStart?: string;
+	currentCycleTarget?: string;
+	isFallback?: boolean;
+}
+
 
 export interface SectionNode {
 	heading: string;
@@ -49,7 +91,9 @@ export interface SectionProgressItem {
 	current: number;
 	goal?: number;
 	percentage?: number;
+	index?: number;
 }
+
 
 export interface WritingProgress {
 	currentSection: SectionProgressItem | null;
@@ -64,6 +108,7 @@ export interface WritingProgress {
 		goal?: number;
 		percentage?: number;
 	};
+	date?: DateProgressInfo | null;
 }
 
 export type BadgePositionPreset = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
@@ -76,9 +121,41 @@ export interface FolderGoalConfig {
 	defaultSectionGoal?: number;
 	headingLevelGoals?: Record<number, number>;
 	styleId?: number;
+	defaultDateReference?: DateReferenceMode;
+	defaultCycle?: string;
+	defaultStartTime?: string;
+	defaultTargetTime?: string;
 }
 
 export interface PluginSettings {
+	// Date Progress options
+	showDateProgress: boolean;
+	showDateWhenUnset: boolean;
+	showDateProgressBar: boolean;
+	showDateIcon: boolean;
+	dateLabel: string;
+	dateOverdueLabel: string;
+	dateUnitDays: string;
+	dateUnitHours: string;
+	dateThresholdWarn: number;
+	dateThresholdUrgent: number;
+	dateThresholdOverdue: number;
+	dateColorNormal: string;
+	dateColorWarn: string;
+	dateColorUrgent: string;
+	dateColorOverdue: string;
+	showDateHoursAlways: boolean;
+	defaultStartTime: string;
+	defaultTargetTime: string;
+	defaultDateReference: DateReferenceMode;
+	defaultDateCycle: string;
+	datePositionMode: DateBadgePositionMode;
+	dateBadgePosition: BadgePositionPreset;
+	dateOffsetX: number;
+	dateOffsetY: number;
+	dateFontSize: number;
+	dateBadgeOpacity: number;
+
 	// Section Progress options
 	showSectionProgress: boolean;
 	showSectionCurrent: boolean;

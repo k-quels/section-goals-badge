@@ -13,27 +13,36 @@ import { calculateOverflowSegments } from '../utils/progress';
 import { getProgressColor } from '../utils/color';
 import { ViewportTracker } from '../utils/viewport';
 import { SearchTracker } from '../utils/search-tracker';
+import { DateProgressInfo } from '../types';
+import { getDateProgressColor } from '../utils/date-goal';
 
 export class FloatingBadge {
 	private containerEl: HTMLElement;
+	private dateContainerEl: HTMLElement;
+	private countGroupEl: HTMLElement;
+	private datePillEl: HTMLElement;
 	private cumulativePillEl: HTMLElement;
 	private sectionPillEl: HTMLElement;
 	private totalPillEl: HTMLElement;
 
 	private settings: PluginSettings;
-	private onBadgeClick: () => void;
+	private onBadgeClick: (initialTab?: 'count' | 'date') => void;
 	private onPositionChanged: (pos: { badgePosition: BadgePositionPreset; offsetX: number; offsetY: number }) => void;
+	private onDatePositionChanged?: (pos: { dateBadgePosition: BadgePositionPreset; dateOffsetX: number; dateOffsetY: number }) => void;
 	private currentParentEl: HTMLElement | null = null;
 	private currentProgress: WritingProgress | null = null;
 	private searchTracker: SearchTracker;
+	private lastTargetEl: HTMLElement | null = null;
 
 	// Dragging state
 	private isDragging = false;
+	private activeDragTarget: 'main' | 'date' | null = null;
 	private dragStartX = 0;
 	private dragStartY = 0;
 	private initialLeft = 0;
 	private initialTop = 0;
 	private customPosition: { x: number; y: number } | null = null;
+	private customDatePosition: { x: number; y: number } | null = null;
 
 	// Long press timer
 	private pressTimer: number | null = null;
@@ -41,37 +50,54 @@ export class FloatingBadge {
 
 	constructor(
 		settings: PluginSettings,
-		onBadgeClick: () => void,
+		onBadgeClick: (initialTab?: 'count' | 'date') => void,
 		onPositionChanged: (pos: { badgePosition: BadgePositionPreset; offsetX: number; offsetY: number }) => void,
+		onDatePositionChanged?: (pos: { dateBadgePosition: BadgePositionPreset; dateOffsetX: number; dateOffsetY: number }) => void,
 	) {
 		this.settings = settings;
 		this.onBadgeClick = onBadgeClick;
 		this.onPositionChanged = onPositionChanged;
+		this.onDatePositionChanged = onDatePositionChanged;
 		this.searchTracker = new SearchTracker(() => this.applyPosition());
 
 		this.containerEl = createDiv({ cls: 'section-goals-badge' });
+		this.dateContainerEl = createDiv({ cls: 'section-goals-badge sgb-date-badge sgb-hidden' });
+		this.countGroupEl = createDiv({ cls: 'sgb-count-group' });
+
 		setCssProps(this.containerEl, {
 			'--sgb-badge-opacity': `${this.settings.badgeOpacity}`,
 			'--sgb-badge-font-size': `${this.settings.fontSize || DEFAULT_FONT_SIZE_PX}px`,
 		});
+		setCssProps(this.dateContainerEl, {
+			'--sgb-badge-opacity': `${this.settings.dateBadgeOpacity ?? this.settings.badgeOpacity}`,
+			'--sgb-date-badge-font-size': `${this.settings.dateFontSize || DEFAULT_FONT_SIZE_PX}px`,
+			'--sgb-badge-font-size': `${this.settings.dateFontSize || DEFAULT_FONT_SIZE_PX}px`,
+		});
 
-		// 1. Cumulative progress pill (Leftmost)
-		this.cumulativePillEl = this.containerEl.createDiv({
+		// 0. Date progress pill
+		this.datePillEl = createDiv({
+			cls: 'sgb-pill-wrapper sgb-date-pill sgb-hidden',
+		});
+
+		// 1. Cumulative progress pill (inside countGroupEl)
+		this.cumulativePillEl = this.countGroupEl.createDiv({
 			cls: 'sgb-pill-wrapper sgb-cumulative-pill sgb-hidden',
 		});
 
-		// 2. Section progress pill (Center)
-		this.sectionPillEl = this.containerEl.createDiv({
+		// 2. Section progress pill (inside countGroupEl)
+		this.sectionPillEl = this.countGroupEl.createDiv({
 			cls: 'sgb-pill-wrapper sgb-section-pill sgb-hidden',
 		});
 
-		// 3. Total progress pill (Right)
-		this.totalPillEl = this.containerEl.createDiv({
+		// 3. Total progress pill (inside countGroupEl)
+		this.totalPillEl = this.countGroupEl.createDiv({
 			cls: 'sgb-pill-wrapper sgb-total-pill sgb-hidden',
 		});
 
+		this.updateLayoutMode();
 		this.applyPosition();
-		this.bindEvents();
+		this.bindBadgeEvents(this.containerEl, false);
+		this.bindBadgeEvents(this.dateContainerEl, true);
 	}
 
 	/**
@@ -82,26 +108,50 @@ export class FloatingBadge {
 		if (this.currentParentEl !== parentEl) {
 			this.currentParentEl = parentEl;
 			parentEl.appendChild(this.containerEl);
+			parentEl.appendChild(this.dateContainerEl);
 			this.searchTracker.attach(parentEl);
 			this.applyPosition();
 		}
 	}
 
-	private triggerModalOpen(): void {
+	private updateLayoutMode(): void {
+		const mode = this.settings.datePositionMode === 'custom' ? 'custom' : 'left';
+
+		if (mode === 'custom') {
+			this.containerEl.appendChild(this.countGroupEl);
+			this.dateContainerEl.appendChild(this.datePillEl);
+		} else {
+			// 'left'
+			this.containerEl.appendChild(this.datePillEl);
+			this.containerEl.appendChild(this.countGroupEl);
+			this.dateContainerEl.addClass('sgb-hidden');
+		}
+	}
+
+	private triggerModalOpen(initialTab?: 'count' | 'date'): void {
+		let tab = initialTab;
+		if (!tab) {
+			const isDate = this.lastTargetEl
+				? Boolean(this.lastTargetEl.closest('.sgb-date-pill') || this.lastTargetEl.closest('.sgb-date-badge'))
+				: false;
+			tab = isDate ? 'date' : 'count';
+		}
 		// Small delay ensures touch/click event lifecycle completes before modal mounts
 		window.setTimeout(() => {
-			this.onBadgeClick();
+			this.onBadgeClick(tab);
 		}, MODAL_OPEN_DELAY_MS);
 	}
 
-	private bindEvents(): void {
-		const startHandler = (clientX: number, clientY: number) => {
+	private bindBadgeEvents(badgeEl: HTMLElement, isDateBadge: boolean): void {
+		const startHandler = (clientX: number, clientY: number, targetEl: HTMLElement | null) => {
 			this.isDragging = false;
 			this.isLongPress = false;
+			this.activeDragTarget = isDateBadge ? 'date' : 'main';
 			this.dragStartX = clientX;
 			this.dragStartY = clientY;
+			this.lastTargetEl = targetEl;
 
-			const rect = this.containerEl.getBoundingClientRect();
+			const rect = badgeEl.getBoundingClientRect();
 			const parentRect = this.currentParentEl
 				? this.currentParentEl.getBoundingClientRect()
 				: { left: 0, top: 0 };
@@ -112,12 +162,14 @@ export class FloatingBadge {
 			if (this.settings.longPressToOpenModal) {
 				this.pressTimer = window.setTimeout(() => {
 					this.isLongPress = true;
-					this.triggerModalOpen();
+					const targetIsDate = isDateBadge || (this.lastTargetEl ? Boolean(this.lastTargetEl.closest('.sgb-date-pill')) : false);
+					this.triggerModalOpen(targetIsDate ? 'date' : 'count');
 				}, LONG_PRESS_DURATION_MS);
 			}
 		};
 
 		const moveHandler = (clientX: number, clientY: number) => {
+			if (this.activeDragTarget !== (isDateBadge ? 'date' : 'main')) return;
 			const dx = clientX - this.dragStartX;
 			const dy = clientY - this.dragStartY;
 
@@ -131,72 +183,112 @@ export class FloatingBadge {
 				const parentWidth = this.currentParentEl ? this.currentParentEl.offsetWidth : window.innerWidth;
 				const parentHeight = this.currentParentEl ? this.currentParentEl.offsetHeight : window.innerHeight;
 
-				const newX = Math.max(0, Math.min(parentWidth - this.containerEl.offsetWidth, this.initialLeft + dx));
-				const newY = Math.max(0, Math.min(parentHeight - this.containerEl.offsetHeight, this.initialTop + dy));
+				const newX = Math.max(0, Math.min(parentWidth - badgeEl.offsetWidth, this.initialLeft + dx));
+				const newY = Math.max(0, Math.min(parentHeight - badgeEl.offsetHeight, this.initialTop + dy));
 
-				this.customPosition = { x: newX, y: newY };
-				this.applyPosition();
+				if (isDateBadge) {
+					this.customDatePosition = { x: newX, y: newY };
+					this.applyDatePosition();
+				} else {
+					this.customPosition = { x: newX, y: newY };
+					this.applyPosition();
+				}
 			}
 		};
 
 		const endHandler = () => {
+			if (this.activeDragTarget !== (isDateBadge ? 'date' : 'main')) return;
+
 			if (this.pressTimer !== null) {
 				window.clearTimeout(this.pressTimer);
 				this.pressTimer = null;
 			}
 
-			if (this.isDragging && this.customPosition && this.currentParentEl) {
-				// Persist dragged position to settings by finding nearest corner preset & offsets
+			if (this.isDragging && this.currentParentEl) {
 				const parentWidth = this.currentParentEl.offsetWidth;
 				const parentHeight = this.currentParentEl.offsetHeight;
-				const badgeWidth = this.containerEl.offsetWidth;
-				const badgeHeight = this.containerEl.offsetHeight;
+				const badgeWidth = badgeEl.offsetWidth;
+				const badgeHeight = badgeEl.offsetHeight;
 
-				const leftDist = this.customPosition.x;
-				const rightDist = parentWidth - (this.customPosition.x + badgeWidth);
-				const topDist = this.customPosition.y;
-				const bottomDist = parentHeight - (this.customPosition.y + badgeHeight);
+				if (isDateBadge && this.customDatePosition) {
+					const leftDist = this.customDatePosition.x;
+					const rightDist = parentWidth - (this.customDatePosition.x + badgeWidth);
+					const topDist = this.customDatePosition.y;
+					const bottomDist = parentHeight - (this.customDatePosition.y + badgeHeight);
 
-				const isRight = rightDist < leftDist;
-				const isBottom = bottomDist < topDist;
+					const isRight = rightDist < leftDist;
+					const isBottom = bottomDist < topDist;
 
-				let badgePosition: BadgePositionPreset = 'bottom-right';
-				if (isBottom && isRight) badgePosition = 'bottom-right';
-				else if (isBottom && !isRight) badgePosition = 'bottom-left';
-				else if (!isBottom && isRight) badgePosition = 'top-right';
-				else badgePosition = 'top-left';
-				const offsetX = Math.max(MIN_BADGE_OFFSET_PX, Math.round(isRight ? rightDist : leftDist));
+					let dateBadgePosition: BadgePositionPreset = 'bottom-right';
+					if (isBottom && isRight) dateBadgePosition = 'bottom-right';
+					else if (isBottom && !isRight) dateBadgePosition = 'bottom-left';
+					else if (!isBottom && isRight) dateBadgePosition = 'top-right';
+					else dateBadgePosition = 'top-left';
 
-				// Adjust offsetY if search bar is currently visible above top-positioned badge
-				const searchShift = !isBottom ? this.searchTracker.getSearchShiftOffset(topDist) : 0;
-				const effectiveTopDist = Math.max(MIN_BADGE_OFFSET_PX, topDist - searchShift);
-				const offsetY = Math.max(MIN_BADGE_OFFSET_PX, Math.round(isBottom ? bottomDist : effectiveTopDist));
+					const offsetX = Math.max(MIN_BADGE_OFFSET_PX, Math.round(isRight ? rightDist : leftDist));
+					const searchShift = !isBottom ? this.searchTracker.getSearchShiftOffset(topDist) : 0;
+					const effectiveTopDist = Math.max(MIN_BADGE_OFFSET_PX, topDist - searchShift);
+					const offsetY = Math.max(MIN_BADGE_OFFSET_PX, Math.round(isBottom ? bottomDist : effectiveTopDist));
 
-				this.customPosition = null;
-				this.settings.badgePosition = badgePosition;
-				this.settings.offsetX = offsetX;
-				this.settings.offsetY = offsetY;
-				this.applyPosition();
+					this.customDatePosition = null;
+					this.settings.dateBadgePosition = dateBadgePosition;
+					this.settings.dateOffsetX = offsetX;
+					this.settings.dateOffsetY = offsetY;
+					this.applyDatePosition();
 
-				this.onPositionChanged({
-					badgePosition,
-					offsetX,
-					offsetY,
-				});
+					this.onDatePositionChanged?.({
+						dateBadgePosition,
+						dateOffsetX: offsetX,
+						dateOffsetY: offsetY,
+					});
+				} else if (!isDateBadge && this.customPosition) {
+					const leftDist = this.customPosition.x;
+					const rightDist = parentWidth - (this.customPosition.x + badgeWidth);
+					const topDist = this.customPosition.y;
+					const bottomDist = parentHeight - (this.customPosition.y + badgeHeight);
+
+					const isRight = rightDist < leftDist;
+					const isBottom = bottomDist < topDist;
+
+					let badgePosition: BadgePositionPreset = 'bottom-right';
+					if (isBottom && isRight) badgePosition = 'bottom-right';
+					else if (isBottom && !isRight) badgePosition = 'bottom-left';
+					else if (!isBottom && isRight) badgePosition = 'top-right';
+					else badgePosition = 'top-left';
+
+					const offsetX = Math.max(MIN_BADGE_OFFSET_PX, Math.round(isRight ? rightDist : leftDist));
+					const searchShift = !isBottom ? this.searchTracker.getSearchShiftOffset(topDist) : 0;
+					const effectiveTopDist = Math.max(MIN_BADGE_OFFSET_PX, topDist - searchShift);
+					const offsetY = Math.max(MIN_BADGE_OFFSET_PX, Math.round(isBottom ? bottomDist : effectiveTopDist));
+
+					this.customPosition = null;
+					this.settings.badgePosition = badgePosition;
+					this.settings.offsetX = offsetX;
+					this.settings.offsetY = offsetY;
+					this.applyPosition();
+
+					this.onPositionChanged({
+						badgePosition,
+						offsetX,
+						offsetY,
+					});
+				}
 			} else if (!this.isDragging) {
 				if (!this.settings.longPressToOpenModal) {
-					this.triggerModalOpen();
+					const targetIsDate = isDateBadge || (this.lastTargetEl ? Boolean(this.lastTargetEl.closest('.sgb-date-pill')) : false);
+					this.triggerModalOpen(targetIsDate ? 'date' : 'count');
 				}
 			}
 
 			this.isDragging = false;
 			this.isLongPress = false;
+			this.activeDragTarget = null;
 		};
 
 		// Mouse Events
-		this.containerEl.addEventListener('mousedown', (e: MouseEvent) => {
+		badgeEl.addEventListener('mousedown', (e: MouseEvent) => {
 			if (e.button !== 0) return;
-			startHandler(e.clientX, e.clientY);
+			startHandler(e.clientX, e.clientY, e.target as HTMLElement);
 
 			const onMouseMove = (moveEvent: MouseEvent) => {
 				moveHandler(moveEvent.clientX, moveEvent.clientY);
@@ -213,19 +305,19 @@ export class FloatingBadge {
 		});
 
 		// Touch Events
-		this.containerEl.addEventListener(
+		badgeEl.addEventListener(
 			'touchstart',
 			(e: TouchEvent) => {
 				e.stopPropagation();
 				const touch = e.touches[0];
 				if (touch) {
-					startHandler(touch.clientX, touch.clientY);
+					startHandler(touch.clientX, touch.clientY, e.target as HTMLElement);
 				}
 			},
 			{ passive: true },
 		);
 
-		this.containerEl.addEventListener(
+		badgeEl.addEventListener(
 			'touchmove',
 			(e: TouchEvent) => {
 				const touch = e.touches[0];
@@ -236,7 +328,7 @@ export class FloatingBadge {
 			{ passive: true },
 		);
 
-		this.containerEl.addEventListener('touchend', (e: TouchEvent) => {
+		badgeEl.addEventListener('touchend', (e: TouchEvent) => {
 			e.stopPropagation();
 			if (!this.isDragging) {
 				// Prevent synthesized mouse/click event from hitting modal close button in top-right corner
@@ -250,6 +342,7 @@ export class FloatingBadge {
 
 	public updateSettings(settings: PluginSettings): void {
 		this.settings = settings;
+		this.updateLayoutMode();
 		this.applyPosition();
 		if (this.currentColorStyle) {
 			this.applyColorStyle(this.currentColorStyle);
@@ -270,12 +363,14 @@ export class FloatingBadge {
 	public applyColorStyle(style: GoalColorStyle): void {
 		const prevStyleKey = this.getStyleStateKey();
 		this.currentColorStyle = style;
-		setCssProps(this.containerEl, {
+		const colorProps = {
 			'--sgb-color-default': style.colorDefault,
 			'--sgb-color-warn': style.colorWarn,
 			'--sgb-color-good': style.colorGood,
 			'--sgb-color-done': style.colorDone,
-		});
+		};
+		setCssProps(this.containerEl, colorProps);
+		setCssProps(this.dateContainerEl, colorProps);
 		const newStyleKey = this.getStyleStateKey();
 		if (prevStyleKey !== newStyleKey && this.currentProgress) {
 			this.updateProgress(this.currentProgress);
@@ -285,7 +380,10 @@ export class FloatingBadge {
 	public updateProgress(progress: WritingProgress): void {
 		this.currentProgress = progress;
 
-		// 1. Cumulative progress (Leftmost)
+		// 0. Target date progress (Leftmost)
+		this.renderDatePill(progress.date);
+
+		// 1. Cumulative progress (Center-left)
 		if (this.settings.showCumulativeProgress) {
 			this.cumulativePillEl.removeClass('sgb-hidden');
 			this.renderPill(
@@ -336,17 +434,170 @@ export class FloatingBadge {
 			this.totalPillEl.addClass('sgb-hidden');
 		}
 
-		// If all pills are hidden, hide the outer badge capsule as well
+		// Manage visibility of outer capsules
+		const isCustomMode = this.settings.datePositionMode === 'custom';
+		const hasDatePillVisible = !this.datePillEl.classList.contains('sgb-hidden');
 		const hasSectionPillVisible = !this.sectionPillEl.classList.contains('sgb-hidden');
-		const hasVisiblePill =
+		const hasCountPillsVisible =
 			this.settings.showCumulativeProgress ||
 			hasSectionPillVisible ||
 			this.settings.showTotalProgress;
 
-		if (!hasVisiblePill) {
-			this.containerEl.addClass('sgb-hidden');
+		if (isCustomMode) {
+			if (!hasCountPillsVisible) {
+				this.containerEl.addClass('sgb-hidden');
+			} else {
+				this.containerEl.removeClass('sgb-hidden');
+			}
+
+			if (hasDatePillVisible) {
+				this.dateContainerEl.removeClass('sgb-hidden');
+			} else {
+				this.dateContainerEl.addClass('sgb-hidden');
+			}
 		} else {
-			this.containerEl.removeClass('sgb-hidden');
+			this.dateContainerEl.addClass('sgb-hidden');
+			const hasVisiblePill = hasDatePillVisible || hasCountPillsVisible;
+			if (!hasVisiblePill) {
+				this.containerEl.addClass('sgb-hidden');
+			} else {
+				this.containerEl.removeClass('sgb-hidden');
+			}
+		}
+	}
+
+	private renderDatePill(dateInfo?: DateProgressInfo | null): void {
+		const hasDate = Boolean(
+			dateInfo && (dateInfo.targetDate !== undefined || dateInfo.startDate !== undefined),
+		);
+
+		if (
+			!this.settings.showDateProgress ||
+			(!hasDate && !this.settings.showDateWhenUnset)
+		) {
+			this.datePillEl.addClass('sgb-hidden');
+			return;
+		}
+
+		this.datePillEl.removeClass('sgb-hidden');
+
+		if (!hasDate || !dateInfo) {
+			const color = this.settings.dateColorNormal;
+			const stateKey = `unset|${this.settings.showDateIcon}|${color}`;
+
+			if (this.datePillEl.dataset.sgbState === stateKey) {
+				return;
+			}
+			this.datePillEl.dataset.sgbState = stateKey;
+			this.datePillEl.empty();
+
+			this.datePillEl.title = t('BADGE_TOOLTIP_DATE_UNSET');
+
+			const capsuleEl = this.datePillEl.createDiv({ cls: 'sgb-pill sgb-date-pill-capsule sgb-date-unset' });
+			capsuleEl.removeClass('is-progress-bar');
+			capsuleEl.removeClass('sgb-date-progress');
+			capsuleEl.removeClass('sgb-date-overdue');
+
+			// Icon
+			if (this.settings.showDateIcon) {
+				const iconEl = capsuleEl.createSpan({ cls: 'sgb-pill-icon' });
+				setIcon(iconEl, 'calendar');
+			}
+
+			// Dash placeholder text
+			const textWrapper = capsuleEl.createSpan({ cls: 'sgb-pill-text sgb-date-pill-text' });
+			textWrapper.createSpan({ cls: 'sgb-date-number sgb-date-unset-dash', text: '-' });
+
+			setCssProps(capsuleEl, {
+				'--sgb-date-fill-color': color,
+				'--sgb-fill-pct': '0%',
+			});
+			return;
+		}
+
+		const remaining = dateInfo.remainingDays;
+		const remainingHours = dateInfo.remainingHours;
+		const percentage = dateInfo.percentage;
+		const color = getDateProgressColor(dateInfo, this.settings);
+		const daysUnit = this.settings.dateUnitDays ?? '';
+		const hoursUnit = this.settings.dateUnitHours ?? '';
+		const isOverdue = !!dateInfo.isOverdue || (remaining !== undefined && remaining < 0) || (remaining === 0 && remainingHours !== undefined && remainingHours < 0);
+		const label = isOverdue
+			? (this.settings.dateOverdueLabel ?? '')
+			: (this.settings.dateLabel ?? '');
+
+		const stateKey = `${dateInfo.currentCycleTarget ?? ''}|${dateInfo.currentCycleStart ?? ''}|${remaining}|${remainingHours}|${percentage}|${this.settings.showDateIcon}|${label}|${this.settings.showDateProgressBar}|${this.settings.showDateHoursAlways}|${daysUnit}|${hoursUnit}|${color}|${isOverdue}`;
+
+		if (this.datePillEl.dataset.sgbState === stateKey) {
+			return;
+		}
+		this.datePillEl.dataset.sgbState = stateKey;
+		this.datePillEl.empty();
+
+		const targetDisplay = dateInfo.currentCycleTarget || dateInfo.targetDate || '';
+		this.datePillEl.title = t('BADGE_TOOLTIP_DATE', { date: targetDisplay });
+
+		const capsuleEl = this.datePillEl.createDiv({ cls: 'sgb-pill sgb-date-pill-capsule' });
+		capsuleEl.classList.toggle('is-progress-bar', !!this.settings.showDateProgressBar);
+
+		// Icon
+		if (this.settings.showDateIcon) {
+			const iconEl = capsuleEl.createSpan({ cls: 'sgb-pill-icon' });
+			setIcon(iconEl, 'calendar');
+		}
+
+		// Days/Hours text with label, numbers, and units separated for fine typography
+		if (remaining !== undefined) {
+			const textWrapper = capsuleEl.createSpan({ cls: 'sgb-pill-text sgb-date-pill-text' });
+			if (label && label.length > 0) {
+				textWrapper.createSpan({ cls: 'sgb-date-label', text: label });
+			}
+
+			const absDays = Math.abs(remaining);
+			const absHours = remainingHours !== undefined ? Math.abs(remainingHours) : undefined;
+
+			// When under 24 hours (absDays is 0), show remaining hours
+			if (absDays === 0 && absHours !== undefined) {
+				textWrapper.createSpan({ cls: 'sgb-date-number', text: String(absHours) });
+				if (hoursUnit && hoursUnit.length > 0) {
+					textWrapper.createSpan({ cls: 'sgb-date-unit', text: hoursUnit });
+				}
+			} else {
+				// 1 day or more (or overdue by 1 day or more)
+				textWrapper.createSpan({ cls: 'sgb-date-number', text: String(absDays) });
+				if (daysUnit && daysUnit.length > 0) {
+					textWrapper.createSpan({ cls: 'sgb-date-unit', text: daysUnit });
+				}
+				// If showDateHoursAlways option is enabled, also append remaining hours
+				if (this.settings.showDateHoursAlways && absHours !== undefined) {
+					textWrapper.createSpan({ cls: 'sgb-date-number sgb-date-sub-number', text: String(absHours) });
+					if (hoursUnit && hoursUnit.length > 0) {
+						textWrapper.createSpan({ cls: 'sgb-date-unit sgb-date-sub-unit', text: hoursUnit });
+					}
+				}
+			}
+		}
+
+		// Color & Progress Gauge
+		setCssProps(capsuleEl, {
+			'--sgb-date-fill-color': color,
+		});
+
+		if (percentage !== undefined && this.settings.showDateProgressBar) {
+			const clampedPct = Math.min(100, Math.max(0, percentage));
+			setCssProps(capsuleEl, {
+				'--sgb-fill-pct': `${clampedPct}%`,
+			});
+			capsuleEl.addClass('is-progress-bar');
+			capsuleEl.addClass('sgb-date-progress');
+		} else {
+			setCssProps(capsuleEl, {
+				'--sgb-fill-pct': '0%',
+			});
+			capsuleEl.removeClass('is-progress-bar');
+			if (dateInfo.isOverdue) {
+				capsuleEl.addClass('sgb-date-overdue');
+			}
 		}
 	}
 
@@ -633,8 +884,13 @@ export class FloatingBadge {
 			const isBottom = this.currentParentEl
 				? this.customPosition.y > this.currentParentEl.offsetHeight / 2
 				: true;
+			const isRight = this.currentParentEl
+				? this.customPosition.x > this.currentParentEl.offsetWidth / 2
+				: true;
 			this.containerEl.classList.toggle('is-pos-bottom', isBottom);
 			this.containerEl.classList.toggle('is-pos-top', !isBottom);
+			this.containerEl.classList.toggle('is-pos-right', isRight);
+			this.containerEl.classList.toggle('is-pos-left', !isRight);
 
 			setCssProps(this.containerEl, {
 				'--sgb-badge-left': `${this.customPosition.x}px`,
@@ -642,7 +898,7 @@ export class FloatingBadge {
 				'--sgb-badge-right': 'auto',
 				'--sgb-badge-bottom': 'auto',
 				'--sgb-badge-opacity': `${this.settings.badgeOpacity}`,
-				'--sgb-badge-font-size': `${this.settings.fontSize || 11}px`,
+				'--sgb-badge-font-size': `${this.settings.fontSize || DEFAULT_FONT_SIZE_PX}px`,
 			});
 		} else {
 			const { badgePosition, offsetX, offsetY } = this.settings;
@@ -654,6 +910,8 @@ export class FloatingBadge {
 
 			this.containerEl.classList.toggle('is-pos-bottom', isBottom);
 			this.containerEl.classList.toggle('is-pos-top', !isBottom);
+			this.containerEl.classList.toggle('is-pos-right', isRight);
+			this.containerEl.classList.toggle('is-pos-left', !isRight);
 
 			setCssProps(this.containerEl, {
 				'--sgb-badge-left': isRight ? 'auto' : `${offsetX}px`,
@@ -661,17 +919,72 @@ export class FloatingBadge {
 				'--sgb-badge-top': isBottom ? 'auto' : `${offsetY + searchShift}px`,
 				'--sgb-badge-bottom': isBottom ? `${offsetY + bottomOffset}px` : 'auto',
 				'--sgb-badge-opacity': `${this.settings.badgeOpacity}`,
-				'--sgb-badge-font-size': `${this.settings.fontSize || 11}px`,
+				'--sgb-badge-font-size': `${this.settings.fontSize || DEFAULT_FONT_SIZE_PX}px`,
+			});
+		}
+
+		this.applyDatePosition();
+	}
+
+	public applyDatePosition(): void {
+		if (this.customDatePosition) {
+			const isBottom = this.currentParentEl
+				? this.customDatePosition.y > this.currentParentEl.offsetHeight / 2
+				: true;
+			const isRight = this.currentParentEl
+				? this.customDatePosition.x > this.currentParentEl.offsetWidth / 2
+				: true;
+			this.dateContainerEl.classList.toggle('is-pos-bottom', isBottom);
+			this.dateContainerEl.classList.toggle('is-pos-top', !isBottom);
+			this.dateContainerEl.classList.toggle('is-pos-right', isRight);
+			this.dateContainerEl.classList.toggle('is-pos-left', !isRight);
+
+			setCssProps(this.dateContainerEl, {
+				'--sgb-date-badge-left': `${this.customDatePosition.x}px`,
+				'--sgb-date-badge-top': `${this.customDatePosition.y}px`,
+				'--sgb-date-badge-right': 'auto',
+				'--sgb-date-badge-bottom': 'auto',
+				'--sgb-date-badge-font-size': `${this.settings.dateFontSize || DEFAULT_FONT_SIZE_PX}px`,
+				'--sgb-badge-font-size': `${this.settings.dateFontSize || DEFAULT_FONT_SIZE_PX}px`,
+				'--sgb-badge-opacity': `${this.settings.dateBadgeOpacity ?? this.settings.badgeOpacity}`,
+			});
+		} else {
+			const dateBadgePosition = this.settings.dateBadgePosition || 'top-left';
+			const offsetX = this.settings.dateOffsetX ?? 20;
+			const offsetY = this.settings.dateOffsetY ?? 40;
+			const { bottomOffset } = ViewportTracker.getViewportOffset();
+			const isBottom = dateBadgePosition.includes('bottom');
+			const isRight = dateBadgePosition.includes('right');
+
+			const searchShift = !isBottom ? this.searchTracker.getSearchShiftOffset(offsetY) : 0;
+
+			this.dateContainerEl.classList.toggle('is-pos-bottom', isBottom);
+			this.dateContainerEl.classList.toggle('is-pos-top', !isBottom);
+			this.dateContainerEl.classList.toggle('is-pos-right', isRight);
+			this.dateContainerEl.classList.toggle('is-pos-left', !isRight);
+
+			setCssProps(this.dateContainerEl, {
+				'--sgb-date-badge-left': isRight ? 'auto' : `${offsetX}px`,
+				'--sgb-date-badge-right': isRight ? `${offsetX}px` : 'auto',
+				'--sgb-date-badge-top': isBottom ? 'auto' : `${offsetY + searchShift}px`,
+				'--sgb-date-badge-bottom': isBottom ? `${offsetY + bottomOffset}px` : 'auto',
+				'--sgb-date-badge-font-size': `${this.settings.dateFontSize || DEFAULT_FONT_SIZE_PX}px`,
+				'--sgb-badge-font-size': `${this.settings.dateFontSize || DEFAULT_FONT_SIZE_PX}px`,
+				'--sgb-badge-opacity': `${this.settings.dateBadgeOpacity ?? this.settings.badgeOpacity}`,
 			});
 		}
 	}
 
 	public show(): void {
 		this.containerEl.removeClass('sgb-hidden');
+		if (this.settings.datePositionMode === 'custom' && !this.datePillEl.classList.contains('sgb-hidden')) {
+			this.dateContainerEl.removeClass('sgb-hidden');
+		}
 	}
 
 	public hide(): void {
 		this.containerEl.addClass('sgb-hidden');
+		this.dateContainerEl.addClass('sgb-hidden');
 	}
 
 	public destroy(): void {
@@ -681,5 +994,6 @@ export class FloatingBadge {
 		}
 		this.searchTracker.destroy();
 		this.containerEl.remove();
+		this.dateContainerEl.remove();
 	}
 }

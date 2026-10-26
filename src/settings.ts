@@ -1,11 +1,14 @@
-import { App, DropdownComponent, Modal, Notice, PluginSettingTab, setIcon, Setting } from 'obsidian';
+import { App, DropdownComponent, Notice, PluginSettingTab, setIcon, setTooltip, Setting, TextComponent } from 'obsidian';
 
+import { ConfirmModal } from './ui/confirm-modal';
 import { t } from './lang/helpers';
 import type SectionGoalsBadgePlugin from './main';
 import {
 	BadgePositionPreset,
 	CountType,
 	CumulativeCountMode,
+	DateCycle,
+	DateReferenceMode,
 	GoalColorStyle,
 	PluginSettings,
 } from './types';
@@ -22,6 +25,7 @@ import {
 } from './utils/constants';
 import { setCssProps } from './utils/dom';
 import { FolderSuggest } from './utils/folder-suggest';
+import { formatCycle, normalizeTimeInput, parseCycle } from './utils/date-goal';
 
 export interface SettingItemDefinition {
 	name?: string;
@@ -42,8 +46,8 @@ export function getDefaultStyles(): GoalColorStyle[] {
 			name: t('PRESET_STYLE_LIMIT'),
 			type: 'discrete',
 			colorDefault: '#ababab',
-			colorWarn: '#e2b93b',
-			colorGood: '#ff7843',
+			colorWarn: '#fafa48',
+			colorGood: '#ffa600',
 			colorDone: '#ff4d4f',
 			isPreset: true,
 		},
@@ -61,6 +65,34 @@ export function getDefaultStyles(): GoalColorStyle[] {
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
+	// Date options
+	showDateProgress: true,
+	showDateWhenUnset: false,
+	showDateProgressBar: true,
+	showDateIcon: true,
+	dateLabel: t('BADGE_DATE_LABEL'),
+	dateOverdueLabel: '+',
+	dateUnitDays: t('BADGE_DAYS_UNIT'),
+	dateUnitHours: t('BADGE_HOURS_UNIT'),
+	dateThresholdWarn: 50,
+	dateThresholdUrgent: 75,
+	dateThresholdOverdue: 100,
+	dateColorNormal: '#ababab',
+	dateColorWarn: '#fafa48',
+	dateColorUrgent: '#ffa600',
+	dateColorOverdue: '#ff4d4f',
+	showDateHoursAlways: false,
+	defaultStartTime: '00:00',
+	defaultTargetTime: '23:59',
+	defaultDateReference: 'parent',
+	defaultDateCycle: '',
+	datePositionMode: 'left',
+	dateBadgePosition: 'top-left',
+	dateOffsetX: 20,
+	dateOffsetY: 40,
+	dateFontSize: DEFAULT_FONT_SIZE_PX,
+	dateBadgeOpacity: 0.9,
+
 	// Section options
 	showSectionProgress: true,
 	showSectionCurrent: true,
@@ -130,7 +162,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 	private isHeadingLevelsAccordionOpen = false;
 	private expandedFolderCardIds: Set<string> = new Set();
 	private expandedFolderHeadingIds: Set<string> = new Set();
-
+	private expandedSectionIds: Set<string> = new Set();
 
 	constructor(app: App, plugin: SectionGoalsBadgePlugin) {
 		super(app, plugin);
@@ -138,13 +170,38 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 	}
 
 	display(): void {
-		this.renderLegacySettings(this.containerEl);
+		this.expandedSectionIds.clear();
+		this.plugin.hideBadge?.();
+		const tabRoot = this.containerEl.closest('.vertical-tab-content');
+		if (tabRoot) {
+			tabRoot.addClass('sgb-settings-root');
+		}
+		this.renderSettings(this.containerEl);
 	}
 
 	hide(): void {
+		const tabRoot = this.containerEl.closest('.vertical-tab-content');
+		if (tabRoot) {
+			tabRoot.removeClass('sgb-settings-root');
+		}
 		// When settings tab is closed on mobile/desktop, immediately refresh badge with saved settings
+		this.plugin.showBadge?.();
 		this.plugin.refreshBadgeUI();
 		this.plugin.recalculateCounts();
+	}
+
+	public expandAndScrollToSection(headingText: string): void {
+		this.expandedSectionIds.add(headingText);
+		this.renderSettings(this.containerEl);
+
+		window.requestAnimationFrame(() => {
+			const sectionEl = this.containerEl.querySelector<HTMLElement>(
+				`[data-section-key="${headingText}"]`,
+			);
+			if (sectionEl) {
+				sectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			}
+		});
 	}
 
 	public destroy(): void {
@@ -167,6 +224,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 	public applyHeadingIcons(targetEl?: HTMLElement): void {
 		const root = this.getTabRoot(targetEl);
 		const iconMap: Record<string, string> = {
+			[t('SETTINGS_HEADING_DATE')]: 'calendar',
 			[t('SETTINGS_HEADING_CUMULATIVE')]: 'text-cursor',
 			[t('SETTINGS_HEADING_SECTION')]: 'hash',
 			[t('SETTINGS_HEADING_TOTAL')]: 'book-text',
@@ -243,13 +301,38 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 		root.querySelectorAll<HTMLElement>('.sgb-color-preview-default').forEach((el) => {
 			el.style.backgroundColor = defaultStyle.colorDefault;
 		});
+
+		root.querySelectorAll<HTMLElement>('.sgb-date-swatch-warn').forEach((el) => {
+			el.style.backgroundColor = this.plugin.settings.dateColorWarn || DEFAULT_SETTINGS.dateColorWarn;
+		});
+		root.querySelectorAll<HTMLElement>('.sgb-date-swatch-urgent').forEach((el) => {
+			el.style.backgroundColor = this.plugin.settings.dateColorUrgent || DEFAULT_SETTINGS.dateColorUrgent;
+		});
+		root.querySelectorAll<HTMLElement>('.sgb-date-swatch-overdue').forEach((el) => {
+			el.style.backgroundColor = this.plugin.settings.dateColorOverdue || DEFAULT_SETTINGS.dateColorOverdue;
+		});
 	}
 
 	public updateGroupVisibility(targetEl?: HTMLElement): void {
 		const root = this.getTabRoot(targetEl);
+		const showDate = this.plugin.settings.showDateProgress;
 		const showCumulative = this.plugin.settings.showCumulativeProgress;
 		const showSection = this.plugin.settings.showSectionProgress;
 		const showTotal = this.plugin.settings.showTotalProgress;
+
+		// Date sub-items
+		root.querySelectorAll<HTMLElement>('.sgb-group-date').forEach((el) => {
+			el.classList.toggle('sgb-is-hidden', !showDate);
+			el.style.setProperty('display', showDate ? '' : 'none', 'important');
+		});
+
+		// Date independent position sub-items (custom mode)
+		const showDateCustom = showDate && this.plugin.settings.datePositionMode === 'custom';
+		root.querySelectorAll<HTMLElement>('.sgb-group-date-custom').forEach((el) => {
+			el.classList.toggle('sgb-is-hidden', !showDateCustom);
+			el.style.setProperty('display', showDateCustom ? '' : 'none', 'important');
+		});
+
 
 		// Cumulative sub-items
 		root.querySelectorAll<HTMLElement>('.sgb-group-cumulative').forEach((el) => {
@@ -309,18 +392,92 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 		});
 	}
 
-	private renderLegacySettings(containerEl: HTMLElement): void {
+	private renderSettings(containerEl: HTMLElement): void {
 		containerEl.empty();
-		const definitions = this.getSettingDefinitions();
+		containerEl.addClass('sgb-settings-container');
+		const definitions = this.buildSettingDefinitions();
+
+		const iconMap: Record<string, string> = {
+			[t('SETTINGS_HEADING_DATE')]: 'calendar',
+			[t('SETTINGS_HEADING_CUMULATIVE')]: 'text-cursor',
+			[t('SETTINGS_HEADING_SECTION')]: 'hash',
+			[t('SETTINGS_HEADING_TOTAL')]: 'book-text',
+			[t('SETTINGS_HEADING_RULES')]: 'calculator',
+			[t('SETTINGS_HEADING_APPEARANCE')]: 'layout',
+			[t('SETTINGS_HEADING_THRESHOLDS')]: 'gauge',
+			[t('SETTINGS_HEADING_STYLES')]: 'palette',
+			[t('SETTINGS_HEADING_FOLDER_GOALS')]: 'folder',
+			[t('SETTINGS_HEADING_SUPPORT')]: 'heart',
+		};
 
 		for (const def of definitions) {
 			if (def.type === 'group') {
 				const group = def;
-				if (group.heading) {
-					new Setting(containerEl).setName(group.heading).setHeading();
+				if (!group.heading) {
+					for (const item of group.items) {
+						const setting = new Setting(containerEl);
+						setting.settingEl.addClass('sgb-settings-item');
+						item.render(setting);
+					}
+					continue;
 				}
+
+				const sectionKey = group.heading;
+				const isExpanded = this.expandedSectionIds.has(sectionKey);
+
+				const sectionEl = containerEl.createDiv({
+					cls: `sgb-settings-section ${isExpanded ? 'is-expanded' : 'is-collapsed'}`,
+				});
+				sectionEl.setAttribute('data-section-key', sectionKey);
+
+				const headerSetting = new Setting(sectionEl);
+				headerSetting.setName(group.heading).setHeading();
+				headerSetting.settingEl.addClass('sgb-settings-section-header');
+
+				const nameEl = headerSetting.nameEl;
+				nameEl.addClass('sgb-setting-heading');
+
+				const chevronSpan = createSpan({ cls: 'sgb-settings-section-chevron' });
+				setIcon(chevronSpan, isExpanded ? 'chevron-down' : 'chevron-right');
+
+				const iconName = iconMap[group.heading];
+				if (iconName) {
+					const iconSpan = createSpan({ cls: 'sgb-heading-icon' });
+					setIcon(iconSpan, iconName);
+					nameEl.prepend(iconSpan);
+				}
+				nameEl.prepend(chevronSpan);
+
+				const bodyEl = sectionEl.createDiv({
+					cls: `sgb-settings-section-body${isExpanded ? '' : ' sgb-is-hidden'}`,
+				});
+				bodyEl.hidden = !isExpanded;
+
+				headerSetting.settingEl.addEventListener('click', (e) => {
+					if ((e.target as HTMLElement).closest('button, input, select')) return;
+					const currentlyExpanded = this.expandedSectionIds.has(sectionKey);
+					if (currentlyExpanded) {
+						this.expandedSectionIds.delete(sectionKey);
+						sectionEl.removeClass('is-expanded');
+						sectionEl.addClass('is-collapsed');
+						bodyEl.addClass('sgb-is-hidden');
+						bodyEl.hidden = true;
+						setIcon(chevronSpan, 'chevron-right');
+					} else {
+						this.expandedSectionIds.add(sectionKey);
+						sectionEl.removeClass('is-collapsed');
+						sectionEl.addClass('is-expanded');
+						bodyEl.removeClass('sgb-is-hidden');
+						bodyEl.hidden = false;
+						setIcon(chevronSpan, 'chevron-down');
+						this.updateGroupVisibility(sectionEl);
+						this.updateSettingSwatches(sectionEl);
+					}
+				});
+
 				for (const item of group.items) {
-					const setting = new Setting(containerEl);
+					const setting = new Setting(bodyEl);
+					setting.settingEl.addClass('sgb-settings-item');
 					item.render(setting);
 				}
 			}
@@ -330,7 +487,16 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 		this.updateSettingSwatches(containerEl);
 	}
 
+	/**
+	 * Returning an empty array signals Obsidian 1.13+ to fall back to the custom
+	 * imperative display() rendering, preserving the collapsible accordion sections
+	 * while satisfying the declarative settings interface and linter.
+	 */
 	getSettingDefinitions(): SettingGroupDefinition[] {
+		return [];
+	}
+
+	buildSettingDefinitions(): SettingGroupDefinition[] {
 		return [
 			// General (No heading at top per Obsidian guidelines)
 			{
@@ -349,6 +515,153 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 										await this.plugin.saveSettings();
 										this.plugin.refreshBadgeUI();
 									}),
+								);
+						},
+					},
+				],
+			},
+
+			// Group: Appearance & Position (Top)
+			{
+				type: 'group',
+				heading: t('SETTINGS_HEADING_APPEARANCE'),
+				items: [
+					{
+						name: t('SETTINGS_BADGE_POS'),
+						desc: t('SETTINGS_BADGE_POS_DESC'),
+						render: (setting: Setting) => {
+							this.attachHeadingIcon(setting, 'layout');
+							setting
+								.setName(t('SETTINGS_BADGE_POS'))
+								.setDesc(t('SETTINGS_BADGE_POS_DESC'))
+								.addDropdown((dropdown) =>
+									dropdown
+										.addOptions({
+											'bottom-right': t('POS_BOTTOM_RIGHT'),
+											'bottom-left': t('POS_BOTTOM_LEFT'),
+											'top-right': t('POS_TOP_RIGHT'),
+											'top-left': t('POS_TOP_LEFT'),
+										})
+										.setValue(this.plugin.settings.badgePosition)
+										.onChange(async (val) => {
+											this.plugin.settings.badgePosition = val as BadgePositionPreset;
+											await this.plugin.saveSettings();
+											this.plugin.updateBadgePosition();
+										}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_FONT_SIZE'),
+						desc: t('SETTINGS_FONT_SIZE_DESC'),
+						render: (setting: Setting) => {
+							setting
+								.setName(t('SETTINGS_FONT_SIZE'))
+								.setDesc(t('SETTINGS_FONT_SIZE_DESC'))
+								.addSlider((slider) =>
+									slider
+										.setLimits(8, 64, 1)
+										.setValue(this.plugin.settings.fontSize)
+										.setDynamicTooltip()
+										.onChange(async (val) => {
+											this.plugin.settings.fontSize = val;
+											await this.plugin.saveSettings();
+											this.plugin.updateBadgePosition();
+										}),
+								)
+								.addExtraButton((btn) =>
+									btn
+										.setIcon('rotate-ccw')
+										.setTooltip(t('SETTINGS_RESET_DEFAULT'))
+										.onClick(async () => {
+											this.plugin.settings.fontSize = DEFAULT_SETTINGS.fontSize;
+											await this.plugin.saveSettings();
+											this.plugin.updateBadgePosition();
+											const sliderInput = setting.controlEl.querySelector<HTMLInputElement>(
+												'input.slider, input[type="range"]',
+											);
+											if (sliderInput) {
+												sliderInput.value = String(DEFAULT_SETTINGS.fontSize);
+												sliderInput.dispatchEvent(new Event('input', { bubbles: true }));
+											}
+										}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_OFFSET_X'),
+						desc: t('SETTINGS_OFFSET_X_DESC'),
+						render: (setting: Setting) => {
+							setting
+								.setName(t('SETTINGS_OFFSET_X'))
+								.setDesc(t('SETTINGS_OFFSET_X_DESC'))
+								.addText((text) => {
+									text.inputEl.type = 'number';
+									text.setPlaceholder(String(DEFAULT_SETTINGS.offsetX));
+									text.setValue(String(this.plugin.settings.offsetX));
+									text.onChange(async (newVal) => {
+										const num = parseFloat(newVal);
+										this.plugin.settings.offsetX = !isNaN(num) ? num : DEFAULT_SETTINGS.offsetX;
+										await this.plugin.saveSettings();
+										this.plugin.updateBadgePosition();
+									});
+								});
+						},
+					},
+					{
+						name: t('SETTINGS_OFFSET_Y'),
+						desc: t('SETTINGS_OFFSET_Y_DESC'),
+						render: (setting: Setting) => {
+							setting
+								.setName(t('SETTINGS_OFFSET_Y'))
+								.setDesc(t('SETTINGS_OFFSET_Y_DESC'))
+								.addText((text) => {
+									text.inputEl.type = 'number';
+									text.setPlaceholder(String(DEFAULT_SETTINGS.offsetY));
+									text.setValue(String(this.plugin.settings.offsetY));
+									text.onChange(async (newVal) => {
+										const num = parseFloat(newVal);
+										this.plugin.settings.offsetY = !isNaN(num) ? num : DEFAULT_SETTINGS.offsetY;
+										await this.plugin.saveSettings();
+										this.plugin.updateBadgePosition();
+									});
+								});
+						},
+					},
+					{
+						name: t('SETTINGS_OPACITY'),
+						desc: t('SETTINGS_OPACITY_DESC'),
+						render: (setting: Setting) => {
+							setting
+								.setName(t('SETTINGS_OPACITY'))
+								.setDesc(t('SETTINGS_OPACITY_DESC'))
+								.addSlider((slider) =>
+									slider
+										.setLimits(0.1, 1.0, 0.05)
+										.setValue(this.plugin.settings.badgeOpacity)
+										.setDynamicTooltip()
+										.onChange(async (val) => {
+											this.plugin.settings.badgeOpacity = val;
+											await this.plugin.saveSettings();
+											this.plugin.updateBadgePosition();
+										}),
+								)
+								.addExtraButton((btn) =>
+									btn
+										.setIcon('rotate-ccw')
+										.setTooltip(t('SETTINGS_RESET_DEFAULT'))
+										.onClick(async () => {
+											this.plugin.settings.badgeOpacity = DEFAULT_SETTINGS.badgeOpacity;
+											await this.plugin.saveSettings();
+											this.plugin.updateBadgePosition();
+											const sliderInput = setting.controlEl.querySelector<HTMLInputElement>(
+												'input.slider, input[type="range"]',
+											);
+											if (sliderInput) {
+												sliderInput.value = String(DEFAULT_SETTINGS.badgeOpacity);
+												sliderInput.dispatchEvent(new Event('input', { bubbles: true }));
+											}
+										}),
 								);
 						},
 					},
@@ -509,7 +822,6 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						desc: t('SETTINGS_CUMULATIVE_OVERFLOW_BAR_DESC'),
 						render: (setting: Setting) => {
 							setting.settingEl.addClass('sgb-group-cumulative-overflow');
-							setting.settingEl.addClass('sgb-setting-sub-item');
 							const isVisible =
 								this.plugin.settings.showCumulativeProgress &&
 								this.plugin.settings.showCumulativeProgressBar;
@@ -699,7 +1011,6 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						desc: t('SETTINGS_SECTION_OVERFLOW_BAR_DESC'),
 						render: (setting: Setting) => {
 							setting.settingEl.addClass('sgb-group-section-overflow');
-							setting.settingEl.addClass('sgb-setting-sub-item');
 							const isVisible =
 								this.plugin.settings.showSectionProgress &&
 								this.plugin.settings.showSectionProgressBar;
@@ -1059,7 +1370,6 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 						desc: t('SETTINGS_TOTAL_OVERFLOW_BAR_DESC'),
 						render: (setting: Setting) => {
 							setting.settingEl.addClass('sgb-group-total-overflow');
-							setting.settingEl.addClass('sgb-setting-sub-item');
 							const isVisible =
 								this.plugin.settings.showTotalProgress &&
 								this.plugin.settings.showTotalProgressBar;
@@ -1205,154 +1515,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 				],
 			},
 
-			// Group 5: Appearance & Position
-			{
-				type: 'group',
-				heading: t('SETTINGS_HEADING_APPEARANCE'),
-				items: [
-					{
-						name: t('SETTINGS_BADGE_POS'),
-						desc: t('SETTINGS_BADGE_POS_DESC'),
-						render: (setting: Setting) => {
-							this.attachHeadingIcon(setting, 'layout');
-							setting
-								.setName(t('SETTINGS_BADGE_POS'))
-								.setDesc(t('SETTINGS_BADGE_POS_DESC'))
-								.addDropdown((dropdown) =>
-									dropdown
-										.addOptions({
-											'bottom-right': t('POS_BOTTOM_RIGHT'),
-											'bottom-left': t('POS_BOTTOM_LEFT'),
-											'top-right': t('POS_TOP_RIGHT'),
-											'top-left': t('POS_TOP_LEFT'),
-										})
-										.setValue(this.plugin.settings.badgePosition)
-										.onChange(async (val) => {
-											this.plugin.settings.badgePosition = val as BadgePositionPreset;
-											await this.plugin.saveSettings();
-											this.plugin.updateBadgePosition();
-										}),
-								);
-						},
-					},
-					{
-						name: t('SETTINGS_FONT_SIZE'),
-						desc: t('SETTINGS_FONT_SIZE_DESC'),
-						render: (setting: Setting) => {
-							setting
-								.setName(t('SETTINGS_FONT_SIZE'))
-								.setDesc(t('SETTINGS_FONT_SIZE_DESC'))
-								.addSlider((slider) =>
-									slider
-										.setLimits(9, 20, 1)
-										.setValue(this.plugin.settings.fontSize)
-										.setDynamicTooltip()
-										.onChange(async (val) => {
-											this.plugin.settings.fontSize = val;
-											await this.plugin.saveSettings();
-											this.plugin.updateBadgePosition();
-										}),
-								)
-								.addExtraButton((btn) =>
-									btn
-										.setIcon('rotate-ccw')
-										.setTooltip(t('SETTINGS_RESET_DEFAULT'))
-										.onClick(async () => {
-											this.plugin.settings.fontSize = DEFAULT_SETTINGS.fontSize;
-											await this.plugin.saveSettings();
-											this.plugin.updateBadgePosition();
-											const sliderInput = setting.controlEl.querySelector<HTMLInputElement>(
-												'input.slider, input[type="range"]',
-											);
-											if (sliderInput) {
-												sliderInput.value = String(DEFAULT_SETTINGS.fontSize);
-												sliderInput.dispatchEvent(new Event('input', { bubbles: true }));
-											}
-										}),
-								);
-						},
-					},
-					{
-						name: t('SETTINGS_OFFSET_X'),
-						desc: t('SETTINGS_OFFSET_X_DESC'),
-						render: (setting: Setting) => {
-							setting
-								.setName(t('SETTINGS_OFFSET_X'))
-								.setDesc(t('SETTINGS_OFFSET_X_DESC'))
-								.addText((text) => {
-									text.inputEl.type = 'number';
-									text.setPlaceholder(String(DEFAULT_SETTINGS.offsetX));
-									text.setValue(String(this.plugin.settings.offsetX));
-									text.onChange(async (newVal) => {
-										const num = parseFloat(newVal);
-										this.plugin.settings.offsetX = !isNaN(num) ? num : DEFAULT_SETTINGS.offsetX;
-										await this.plugin.saveSettings();
-										this.plugin.updateBadgePosition();
-									});
-								});
-						},
-					},
-					{
-						name: t('SETTINGS_OFFSET_Y'),
-						desc: t('SETTINGS_OFFSET_Y_DESC'),
-						render: (setting: Setting) => {
-							setting
-								.setName(t('SETTINGS_OFFSET_Y'))
-								.setDesc(t('SETTINGS_OFFSET_Y_DESC'))
-								.addText((text) => {
-									text.inputEl.type = 'number';
-									text.setPlaceholder(String(DEFAULT_SETTINGS.offsetY));
-									text.setValue(String(this.plugin.settings.offsetY));
-									text.onChange(async (newVal) => {
-										const num = parseFloat(newVal);
-										this.plugin.settings.offsetY = !isNaN(num) ? num : DEFAULT_SETTINGS.offsetY;
-										await this.plugin.saveSettings();
-										this.plugin.updateBadgePosition();
-									});
-								});
-						},
-					},
-					{
-						name: t('SETTINGS_OPACITY'),
-						desc: t('SETTINGS_OPACITY_DESC'),
-						render: (setting: Setting) => {
-							setting
-								.setName(t('SETTINGS_OPACITY'))
-								.setDesc(t('SETTINGS_OPACITY_DESC'))
-								.addSlider((slider) =>
-									slider
-										.setLimits(0.1, 1.0, 0.05)
-										.setValue(this.plugin.settings.badgeOpacity)
-										.setDynamicTooltip()
-										.onChange(async (val) => {
-											this.plugin.settings.badgeOpacity = val;
-											await this.plugin.saveSettings();
-											this.plugin.updateBadgePosition();
-										}),
-								)
-								.addExtraButton((btn) =>
-									btn
-										.setIcon('rotate-ccw')
-										.setTooltip(t('SETTINGS_RESET_DEFAULT'))
-										.onClick(async () => {
-											this.plugin.settings.badgeOpacity = DEFAULT_SETTINGS.badgeOpacity;
-											await this.plugin.saveSettings();
-											this.plugin.updateBadgePosition();
-											const sliderInput = setting.controlEl.querySelector<HTMLInputElement>(
-												'input.slider, input[type="range"]',
-											);
-											if (sliderInput) {
-												sliderInput.value = String(DEFAULT_SETTINGS.badgeOpacity);
-												sliderInput.dispatchEvent(new Event('input', { bubbles: true }));
-											}
-										}),
-								);
-						},
-					},
-				],
-			},
-
-			// Group 6: Color Styles
+			// Group: Color Styles
 			{
 				type: 'group',
 				heading: t('SETTINGS_HEADING_STYLES'),
@@ -1488,21 +1651,26 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 										});
 										setIcon(gradientBtn, 'sparkles');
 										gradientBtn.addEventListener('click', () => {
-											new ConfirmAutoGradientModal(this.app, () => {
-												void (async () => {
-													const { colorWarn, colorGood } = interpolateGoalColors(
-														style.colorDefault,
-														style.colorDone,
-													);
-													style.colorWarn = colorWarn;
-													style.colorGood = colorGood;
-													await this.plugin.saveSettings();
-													this.plugin.refreshBadgeUI();
-													renderStylesList();
-													if (style.id === this.plugin.settings.defaultStyleId) {
-														this.updateSettingSwatches(stylesManagerSetting.settingEl);
-													}
-												})();
+											new ConfirmModal(this.app, {
+												message: t('SETTINGS_STYLE_AUTO_GRADIENT_CONFIRM'),
+												confirmText: t('MODAL_CONFIRM_OK'),
+												isWarning: false,
+												onConfirm: () => {
+													void (async () => {
+														const { colorWarn, colorGood } = interpolateGoalColors(
+															style.colorDefault,
+															style.colorDone,
+														);
+														style.colorWarn = colorWarn;
+														style.colorGood = colorGood;
+														await this.plugin.saveSettings();
+														this.plugin.refreshBadgeUI();
+														renderStylesList();
+														if (style.id === this.plugin.settings.defaultStyleId) {
+															this.updateSettingSwatches(stylesManagerSetting.settingEl);
+														}
+													})();
+												},
 											}).open();
 										});
 									}
@@ -1718,21 +1886,26 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 								});
 								setIcon(resetAllBtn, 'rotate-ccw');
 								resetAllBtn.addEventListener('click', () => {
-									new ConfirmResetStylesModal(this.app, () => {
-										void (async () => {
-											this.plugin.settings.styles = getDefaultStyles();
-											this.plugin.settings.defaultStyleId = 1;
-											const validStyleIds = new Set(this.plugin.settings.styles.map((s) => s.id));
-											for (const fg of this.plugin.settings.folderGoals) {
-												if (fg.styleId !== undefined && !validStyleIds.has(fg.styleId)) {
-													fg.styleId = undefined;
+									new ConfirmModal(this.app, {
+										message: t('SETTINGS_STYLE_RESET_ALL_CONFIRM'),
+										confirmText: t('MODAL_CONFIRM_OK'),
+										isWarning: true,
+										onConfirm: () => {
+											void (async () => {
+												this.plugin.settings.styles = getDefaultStyles();
+												this.plugin.settings.defaultStyleId = 1;
+												const validStyleIds = new Set(this.plugin.settings.styles.map((s) => s.id));
+												for (const fg of this.plugin.settings.folderGoals) {
+													if (fg.styleId !== undefined && !validStyleIds.has(fg.styleId)) {
+														fg.styleId = undefined;
+													}
 												}
-											}
-											await this.plugin.saveSettings();
-											this.plugin.refreshBadgeUI();
-											renderStylesList();
-											updateAllStyleDropdowns();
-										})();
+												await this.plugin.saveSettings();
+												this.plugin.refreshBadgeUI();
+												renderStylesList();
+												updateAllStyleDropdowns();
+											})();
+										},
 									}).open();
 								});
 							};
@@ -1828,7 +2001,1014 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 				],
 			},
 
-			// Group 8: Folder Goals
+			// Group 8: Date Goals & Deadlines
+			{
+				type: 'group',
+				heading: t('SETTINGS_HEADING_DATE'),
+				items: [
+					{
+						name: t('SETTINGS_DATE_SHOW'),
+						desc: t('SETTINGS_DATE_SHOW_DESC'),
+						render: (setting: Setting) => {
+							this.attachHeadingIcon(setting, 'calendar');
+							setting
+								.setName(t('SETTINGS_DATE_SHOW'))
+								.setDesc(t('SETTINGS_DATE_SHOW_DESC'))
+								.addToggle((toggle) =>
+									toggle.setValue(this.plugin.settings.showDateProgress).onChange(async (val) => {
+										this.plugin.settings.showDateProgress = val;
+										await this.plugin.saveSettings();
+										this.plugin.refreshBadgeUI();
+										this.updateGroupVisibility(setting.settingEl);
+									}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_DATE_WHEN_UNSET'),
+						desc: t('SETTINGS_DATE_WHEN_UNSET_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-date');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showDateProgress);
+							setting.settingEl.style.setProperty(
+								'display',
+								this.plugin.settings.showDateProgress ? '' : 'none',
+								'important',
+							);
+							setting
+								.setName(t('SETTINGS_DATE_WHEN_UNSET'))
+								.setDesc(t('SETTINGS_DATE_WHEN_UNSET_DESC'))
+								.addToggle((toggle) =>
+									toggle.setValue(this.plugin.settings.showDateWhenUnset).onChange(async (val) => {
+										this.plugin.settings.showDateWhenUnset = val;
+										await this.plugin.saveSettings();
+										this.plugin.refreshBadgeUI();
+									}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_DATE_POSITION_MODE'),
+						desc: t('SETTINGS_DATE_POSITION_MODE_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-date');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showDateProgress);
+							setting.settingEl.style.setProperty(
+								'display',
+								this.plugin.settings.showDateProgress ? '' : 'none',
+								'important',
+							);
+							setting
+								.setName(t('SETTINGS_DATE_POSITION_MODE'))
+								.setDesc(t('SETTINGS_DATE_POSITION_MODE_DESC'))
+								.addDropdown((dropdown) =>
+									dropdown
+										.addOptions({
+											left: t('SETTINGS_DATE_POS_LEFT'),
+											custom: t('SETTINGS_DATE_POS_CUSTOM'),
+										})
+										.setValue(this.plugin.settings.datePositionMode === 'custom' ? 'custom' : 'left')
+										.onChange(async (val) => {
+											this.plugin.settings.datePositionMode = val === 'custom' ? 'custom' : 'left';
+											await this.plugin.saveSettings();
+											this.plugin.updateBadgePosition();
+											this.plugin.refreshBadgeUI();
+											this.updateGroupVisibility(setting.settingEl);
+										}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_DATE_BADGE_POS'),
+						desc: t('SETTINGS_DATE_BADGE_POS_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-date');
+							setting.settingEl.addClass('sgb-group-date-custom');
+							const isVisible =
+								this.plugin.settings.showDateProgress &&
+								this.plugin.settings.datePositionMode === 'custom';
+							setting.settingEl.classList.toggle('sgb-is-hidden', !isVisible);
+							setting.settingEl.style.setProperty('display', isVisible ? '' : 'none', 'important');
+							setting
+								.setName(t('SETTINGS_DATE_BADGE_POS'))
+								.setDesc(t('SETTINGS_DATE_BADGE_POS_DESC'))
+								.addDropdown((dropdown) =>
+									dropdown
+										.addOptions({
+											'top-left': t('POS_TOP_LEFT'),
+											'top-right': t('POS_TOP_RIGHT'),
+											'bottom-left': t('POS_BOTTOM_LEFT'),
+											'bottom-right': t('POS_BOTTOM_RIGHT'),
+										})
+										.setValue(this.plugin.settings.dateBadgePosition || 'top-left')
+										.onChange(async (val) => {
+											this.plugin.settings.dateBadgePosition = val as BadgePositionPreset;
+											await this.plugin.saveSettings();
+											this.plugin.updateBadgePosition();
+										}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_DATE_FONT_SIZE'),
+						desc: t('SETTINGS_DATE_FONT_SIZE_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-date');
+							setting.settingEl.addClass('sgb-group-date-custom');
+							const isVisible =
+								this.plugin.settings.showDateProgress &&
+								this.plugin.settings.datePositionMode === 'custom';
+							setting.settingEl.classList.toggle('sgb-is-hidden', !isVisible);
+							setting.settingEl.style.setProperty('display', isVisible ? '' : 'none', 'important');
+							setting
+								.setName(t('SETTINGS_DATE_FONT_SIZE'))
+								.setDesc(t('SETTINGS_DATE_FONT_SIZE_DESC'))
+								.addSlider((slider) =>
+									slider
+										.setLimits(8, 64, 1)
+										.setValue(this.plugin.settings.dateFontSize || DEFAULT_FONT_SIZE_PX)
+										.setDynamicTooltip()
+										.onChange(async (val) => {
+											this.plugin.settings.dateFontSize = val;
+											await this.plugin.saveSettings();
+											this.plugin.updateBadgePosition();
+										}),
+								)
+								.addExtraButton((btn) =>
+									btn
+										.setIcon('rotate-ccw')
+										.setTooltip(t('SETTINGS_RESET_DEFAULT'))
+										.onClick(async () => {
+											this.plugin.settings.dateFontSize = DEFAULT_SETTINGS.dateFontSize;
+											await this.plugin.saveSettings();
+											this.plugin.updateBadgePosition();
+											const sliderInput = setting.controlEl.querySelector<HTMLInputElement>(
+												'input.slider, input[type="range"]',
+											);
+											if (sliderInput) {
+												sliderInput.value = String(DEFAULT_SETTINGS.dateFontSize);
+												sliderInput.dispatchEvent(new Event('input', { bubbles: true }));
+											}
+										}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_DATE_OPACITY'),
+						desc: t('SETTINGS_DATE_OPACITY_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-date');
+							setting.settingEl.addClass('sgb-group-date-custom');
+							const isVisible =
+								this.plugin.settings.showDateProgress &&
+								this.plugin.settings.datePositionMode === 'custom';
+							setting.settingEl.classList.toggle('sgb-is-hidden', !isVisible);
+							setting.settingEl.style.setProperty('display', isVisible ? '' : 'none', 'important');
+							setting
+								.setName(t('SETTINGS_DATE_OPACITY'))
+								.setDesc(t('SETTINGS_DATE_OPACITY_DESC'))
+								.addSlider((slider) =>
+									slider
+										.setLimits(0.1, 1.0, 0.05)
+										.setValue(this.plugin.settings.dateBadgeOpacity ?? DEFAULT_SETTINGS.dateBadgeOpacity)
+										.setDynamicTooltip()
+										.onChange(async (val) => {
+											this.plugin.settings.dateBadgeOpacity = val;
+											await this.plugin.saveSettings();
+											this.plugin.updateBadgePosition();
+										}),
+								)
+								.addExtraButton((btn) =>
+									btn
+										.setIcon('rotate-ccw')
+										.setTooltip(t('SETTINGS_RESET_DEFAULT'))
+										.onClick(async () => {
+											this.plugin.settings.dateBadgeOpacity = DEFAULT_SETTINGS.dateBadgeOpacity;
+											await this.plugin.saveSettings();
+											this.plugin.updateBadgePosition();
+											const sliderInput = setting.controlEl.querySelector<HTMLInputElement>(
+												'input.slider, input[type="range"]',
+											);
+											if (sliderInput) {
+												sliderInput.value = String(DEFAULT_SETTINGS.dateBadgeOpacity);
+												sliderInput.dispatchEvent(new Event('input', { bubbles: true }));
+											}
+										}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_DATE_OFFSET_X'),
+						desc: t('SETTINGS_DATE_OFFSET_X_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-date');
+							setting.settingEl.addClass('sgb-group-date-custom');
+							const isVisible =
+								this.plugin.settings.showDateProgress &&
+								this.plugin.settings.datePositionMode === 'custom';
+							setting.settingEl.classList.toggle('sgb-is-hidden', !isVisible);
+							setting.settingEl.style.setProperty('display', isVisible ? '' : 'none', 'important');
+							setting
+								.setName(t('SETTINGS_DATE_OFFSET_X'))
+								.setDesc(t('SETTINGS_DATE_OFFSET_X_DESC'))
+								.addText((text) => {
+									text.inputEl.type = 'number';
+									text.setPlaceholder(String(DEFAULT_SETTINGS.dateOffsetX));
+									text.setValue(String(this.plugin.settings.dateOffsetX ?? DEFAULT_SETTINGS.dateOffsetX));
+									text.onChange(async (newVal) => {
+										const num = parseFloat(newVal);
+										this.plugin.settings.dateOffsetX = !isNaN(num) ? num : DEFAULT_SETTINGS.dateOffsetX;
+										await this.plugin.saveSettings();
+										this.plugin.updateBadgePosition();
+									});
+								});
+						},
+					},
+					{
+						name: t('SETTINGS_DATE_OFFSET_Y'),
+						desc: t('SETTINGS_DATE_OFFSET_Y_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-date');
+							setting.settingEl.addClass('sgb-group-date-custom');
+							const isVisible =
+								this.plugin.settings.showDateProgress &&
+								this.plugin.settings.datePositionMode === 'custom';
+							setting.settingEl.classList.toggle('sgb-is-hidden', !isVisible);
+							setting.settingEl.style.setProperty('display', isVisible ? '' : 'none', 'important');
+							setting
+								.setName(t('SETTINGS_DATE_OFFSET_Y'))
+								.setDesc(t('SETTINGS_DATE_OFFSET_Y_DESC'))
+								.addText((text) => {
+									text.inputEl.type = 'number';
+									text.setPlaceholder(String(DEFAULT_SETTINGS.dateOffsetY));
+									text.setValue(String(this.plugin.settings.dateOffsetY ?? DEFAULT_SETTINGS.dateOffsetY));
+									text.onChange(async (newVal) => {
+										const num = parseFloat(newVal);
+										this.plugin.settings.dateOffsetY = !isNaN(num) ? num : DEFAULT_SETTINGS.dateOffsetY;
+										await this.plugin.saveSettings();
+										this.plugin.updateBadgePosition();
+									});
+								});
+						},
+					},
+					{
+						name: t('SETTINGS_DATE_HOURS_ALWAYS'),
+						desc: t('SETTINGS_DATE_HOURS_ALWAYS_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-date');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showDateProgress);
+							setting.settingEl.style.setProperty(
+								'display',
+								this.plugin.settings.showDateProgress ? '' : 'none',
+								'important',
+							);
+							setting
+								.setName(t('SETTINGS_DATE_HOURS_ALWAYS'))
+								.setDesc(t('SETTINGS_DATE_HOURS_ALWAYS_DESC'))
+								.addToggle((toggle) =>
+									toggle
+										.setValue(this.plugin.settings.showDateHoursAlways)
+										.onChange(async (val) => {
+											this.plugin.settings.showDateHoursAlways = val;
+											await this.plugin.saveSettings();
+											this.plugin.refreshBadgeUI();
+										}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_DEFAULT_START_TIME'),
+						desc: t('SETTINGS_DEFAULT_START_TIME_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-date');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showDateProgress);
+							setting.settingEl.style.setProperty(
+								'display',
+								this.plugin.settings.showDateProgress ? '' : 'none',
+								'important',
+							);
+							setting
+								.setName(t('SETTINGS_DEFAULT_START_TIME'))
+								.setDesc(t('SETTINGS_DEFAULT_START_TIME_DESC'));
+							let textComponent: TextComponent | undefined;
+							const nativeTimePicker = setting.controlEl.createEl('input', {
+								type: 'time',
+								cls: 'sgb-native-date-picker',
+								value: this.plugin.settings.defaultStartTime || DEFAULT_SETTINGS.defaultStartTime,
+							});
+							nativeTimePicker.addEventListener('change', () => {
+								void (async () => {
+									const val = nativeTimePicker.value.trim();
+									if (val) {
+										textComponent?.setValue(val);
+										this.plugin.settings.defaultStartTime = val;
+										await this.plugin.saveSettings();
+										this.plugin.refreshBadgeUI();
+									}
+								})();
+							});
+							setting
+								.addText((text) => {
+									textComponent = text;
+									text.setPlaceholder(DEFAULT_SETTINGS.defaultStartTime);
+									text.setValue(this.plugin.settings.defaultStartTime || DEFAULT_SETTINGS.defaultStartTime);
+									text.inputEl.addClass('sgb-time-setting-text-input');
+									text.onChange(async (val) => {
+										const trimmed = val.trim();
+										if (/^([01]?\d|2[0-3]):[0-5]\d$/.test(trimmed)) {
+											this.plugin.settings.defaultStartTime = trimmed;
+											nativeTimePicker.value = trimmed;
+											await this.plugin.saveSettings();
+											this.plugin.refreshBadgeUI();
+										} else if (!trimmed) {
+											this.plugin.settings.defaultStartTime = DEFAULT_SETTINGS.defaultStartTime;
+											nativeTimePicker.value = DEFAULT_SETTINGS.defaultStartTime;
+											await this.plugin.saveSettings();
+											this.plugin.refreshBadgeUI();
+										}
+									});
+									text.inputEl.addEventListener('blur', () => {
+										void (async () => {
+											const trimmed = text.inputEl.value.trim();
+											const norm = normalizeTimeInput(trimmed);
+											if (norm) {
+												this.plugin.settings.defaultStartTime = norm;
+												text.setValue(norm);
+												nativeTimePicker.value = norm;
+												await this.plugin.saveSettings();
+												this.plugin.refreshBadgeUI();
+											} else {
+												text.setValue(this.plugin.settings.defaultStartTime || DEFAULT_SETTINGS.defaultStartTime);
+												nativeTimePicker.value = this.plugin.settings.defaultStartTime || DEFAULT_SETTINGS.defaultStartTime;
+											}
+										})();
+									});
+								})
+								.addExtraButton((btn) =>
+									btn
+										.setIcon('clock')
+										.setTooltip(t('MODAL_TIME_PICKER_TOOLTIP'))
+										.onClick(() => {
+											const currentVal = textComponent?.getValue().trim();
+											const normTime = normalizeTimeInput(currentVal ?? '');
+											nativeTimePicker.value = normTime || this.plugin.settings.defaultStartTime || DEFAULT_SETTINGS.defaultStartTime;
+											try {
+												if (typeof nativeTimePicker.showPicker === 'function') {
+													nativeTimePicker.showPicker();
+												} else {
+													nativeTimePicker.click();
+												}
+											} catch {
+												nativeTimePicker.click();
+											}
+										}),
+								)
+								.addExtraButton((btn) =>
+									btn
+										.setIcon('rotate-ccw')
+										.setTooltip(t('SETTINGS_RESET_DEFAULT'))
+										.onClick(async () => {
+											this.plugin.settings.defaultStartTime = DEFAULT_SETTINGS.defaultStartTime;
+											nativeTimePicker.value = DEFAULT_SETTINGS.defaultStartTime;
+											await this.plugin.saveSettings();
+											this.plugin.refreshBadgeUI();
+											textComponent?.setValue(DEFAULT_SETTINGS.defaultStartTime);
+										}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_DEFAULT_TARGET_TIME'),
+						desc: t('SETTINGS_DEFAULT_TARGET_TIME_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-date');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showDateProgress);
+							setting.settingEl.style.setProperty(
+								'display',
+								this.plugin.settings.showDateProgress ? '' : 'none',
+								'important',
+							);
+							setting
+								.setName(t('SETTINGS_DEFAULT_TARGET_TIME'))
+								.setDesc(t('SETTINGS_DEFAULT_TARGET_TIME_DESC'));
+							let textComponent: TextComponent | undefined;
+							const nativeTimePicker = setting.controlEl.createEl('input', {
+								type: 'time',
+								cls: 'sgb-native-date-picker',
+								value: this.plugin.settings.defaultTargetTime || DEFAULT_SETTINGS.defaultTargetTime,
+							});
+							nativeTimePicker.addEventListener('change', () => {
+								void (async () => {
+									const val = nativeTimePicker.value.trim();
+									if (val) {
+										textComponent?.setValue(val);
+										this.plugin.settings.defaultTargetTime = val;
+										await this.plugin.saveSettings();
+										this.plugin.refreshBadgeUI();
+									}
+								})();
+							});
+							setting
+								.addText((text) => {
+									textComponent = text;
+									text.setPlaceholder(DEFAULT_SETTINGS.defaultTargetTime);
+									text.setValue(this.plugin.settings.defaultTargetTime || DEFAULT_SETTINGS.defaultTargetTime);
+									text.inputEl.addClass('sgb-time-setting-text-input');
+									text.onChange(async (val) => {
+										const trimmed = val.trim();
+										if (/^([01]?\d|2[0-3]):[0-5]\d$/.test(trimmed)) {
+											this.plugin.settings.defaultTargetTime = trimmed;
+											nativeTimePicker.value = trimmed;
+											await this.plugin.saveSettings();
+											this.plugin.refreshBadgeUI();
+										} else if (!trimmed) {
+											this.plugin.settings.defaultTargetTime = DEFAULT_SETTINGS.defaultTargetTime;
+											nativeTimePicker.value = DEFAULT_SETTINGS.defaultTargetTime;
+											await this.plugin.saveSettings();
+											this.plugin.refreshBadgeUI();
+										}
+									});
+									text.inputEl.addEventListener('blur', () => {
+										void (async () => {
+											const trimmed = text.inputEl.value.trim();
+											const norm = normalizeTimeInput(trimmed);
+											if (norm) {
+												this.plugin.settings.defaultTargetTime = norm;
+												text.setValue(norm);
+												nativeTimePicker.value = norm;
+												await this.plugin.saveSettings();
+												this.plugin.refreshBadgeUI();
+											} else {
+												text.setValue(this.plugin.settings.defaultTargetTime || DEFAULT_SETTINGS.defaultTargetTime);
+												nativeTimePicker.value = this.plugin.settings.defaultTargetTime || DEFAULT_SETTINGS.defaultTargetTime;
+											}
+										})();
+									});
+								})
+								.addExtraButton((btn) =>
+									btn
+										.setIcon('clock')
+										.setTooltip(t('MODAL_TIME_PICKER_TOOLTIP'))
+										.onClick(() => {
+											const currentVal = textComponent?.getValue().trim();
+											const normTime = normalizeTimeInput(currentVal ?? '');
+											nativeTimePicker.value = normTime || this.plugin.settings.defaultTargetTime || DEFAULT_SETTINGS.defaultTargetTime;
+											try {
+												if (typeof nativeTimePicker.showPicker === 'function') {
+													nativeTimePicker.showPicker();
+												} else {
+													nativeTimePicker.click();
+												}
+											} catch {
+												nativeTimePicker.click();
+											}
+										}),
+								)
+								.addExtraButton((btn) =>
+									btn
+										.setIcon('rotate-ccw')
+										.setTooltip(t('SETTINGS_RESET_DEFAULT'))
+										.onClick(async () => {
+											this.plugin.settings.defaultTargetTime = DEFAULT_SETTINGS.defaultTargetTime;
+											nativeTimePicker.value = DEFAULT_SETTINGS.defaultTargetTime;
+											await this.plugin.saveSettings();
+											this.plugin.refreshBadgeUI();
+											textComponent?.setValue(DEFAULT_SETTINGS.defaultTargetTime);
+										}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_DATE_REFERENCE'),
+						desc: t('SETTINGS_DATE_REFERENCE_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-date');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showDateProgress);
+							setting.settingEl.style.setProperty(
+								'display',
+								this.plugin.settings.showDateProgress ? '' : 'none',
+								'important',
+							);
+							setting
+								.setName(t('SETTINGS_DATE_REFERENCE'))
+								.setDesc(t('SETTINGS_DATE_REFERENCE_DESC'))
+								.addDropdown((dropdown) => {
+									dropdown
+										.addOption('none', t('SETTINGS_DATE_REFERENCE_NONE'))
+										.addOption('parent', t('SETTINGS_DATE_REFERENCE_PARENT'))
+										.addOption('note', t('SETTINGS_DATE_REFERENCE_NOTE'))
+										.setValue(this.plugin.settings.defaultDateReference ?? 'parent')
+										.onChange(async (val) => {
+											this.plugin.settings.defaultDateReference = val as DateReferenceMode;
+											await this.plugin.saveSettings();
+											this.plugin.refreshBadgeUI();
+										});
+								});
+						},
+					},
+					{
+						name: t('SETTINGS_DATE_CYCLE'),
+						desc: t('SETTINGS_DATE_CYCLE_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-date');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showDateProgress);
+							setting.settingEl.style.setProperty(
+								'display',
+								this.plugin.settings.showDateProgress ? '' : 'none',
+								'important',
+							);
+							setting
+								.setName(t('SETTINGS_DATE_CYCLE'))
+								.setDesc(t('SETTINGS_DATE_CYCLE_DESC'));
+
+							const parsedCycle = parseCycle(this.plugin.settings.defaultDateCycle);
+
+							const cycleControl = setting.controlEl.createDiv({ cls: 'sgb-setting-cycle-control' });
+							const cycleNumInput = cycleControl.createEl('input', {
+								type: 'number',
+								cls: 'sgb-folder-number-input sgb-folder-cycle-num-input',
+								value: parsedCycle ? String(parsedCycle.value) : '1',
+								attr: { min: '1', step: '1' },
+							});
+							const cycleUnitSelect = cycleControl.createEl('select', {
+								cls: 'dropdown sgb-folder-style-select',
+							});
+							cycleUnitSelect.createEl('option', {
+								value: 'none',
+								text: t('MODAL_DATE_CYCLE_NONE'),
+							});
+							cycleUnitSelect.createEl('option', {
+								value: 'day',
+								text: t('MODAL_DATE_CYCLE_DAY'),
+							});
+							cycleUnitSelect.createEl('option', {
+								value: 'week',
+								text: t('MODAL_DATE_CYCLE_WEEK'),
+							});
+							cycleUnitSelect.createEl('option', {
+								value: 'month',
+								text: t('MODAL_DATE_CYCLE_MONTH'),
+							});
+							cycleUnitSelect.createEl('option', {
+								value: 'year',
+								text: t('MODAL_DATE_CYCLE_YEAR'),
+							});
+							if (parsedCycle) {
+								cycleUnitSelect.value = parsedCycle.unit;
+							} else {
+								cycleUnitSelect.value = 'none';
+							}
+							const updateCycleVisibility = () => {
+								cycleNumInput.style.display =
+									cycleUnitSelect.value && cycleUnitSelect.value !== 'none' ? '' : 'none';
+							};
+							updateCycleVisibility();
+
+							const updateCycleConfig = async () => {
+								const unit = cycleUnitSelect.value;
+								if (!unit || unit === 'none') {
+									this.plugin.settings.defaultDateCycle = '';
+								} else {
+									const val = parseInt(cycleNumInput.value, 10);
+									this.plugin.settings.defaultDateCycle = formatCycle({
+										value: !isNaN(val) && val > 0 ? val : 1,
+										unit: unit as DateCycle['unit'],
+									});
+								}
+								await this.plugin.saveSettings();
+								this.plugin.refreshBadgeUI();
+								this.plugin.recalculateCounts();
+							};
+							cycleNumInput.addEventListener('change', () => {
+								void updateCycleConfig();
+							});
+							cycleUnitSelect.addEventListener('change', () => {
+								updateCycleVisibility();
+								void updateCycleConfig();
+							});
+
+							setting.addExtraButton((btn) =>
+								btn
+									.setIcon('rotate-ccw')
+									.setTooltip(t('SETTINGS_RESET_DEFAULT'))
+									.onClick(async () => {
+										this.plugin.settings.defaultDateCycle = '';
+										cycleUnitSelect.value = 'none';
+										cycleNumInput.value = '1';
+										updateCycleVisibility();
+										await this.plugin.saveSettings();
+										this.plugin.refreshBadgeUI();
+										this.plugin.recalculateCounts();
+									}),
+							);
+						},
+					},
+					{
+						name: t('SETTINGS_DATE_PROGRESS_BAR'),
+						desc: t('SETTINGS_DATE_PROGRESS_BAR_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-date');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showDateProgress);
+							setting.settingEl.style.setProperty(
+								'display',
+								this.plugin.settings.showDateProgress ? '' : 'none',
+								'important',
+							);
+							setting
+								.setName(t('SETTINGS_DATE_PROGRESS_BAR'))
+								.setDesc(t('SETTINGS_DATE_PROGRESS_BAR_DESC'))
+								.addToggle((toggle) =>
+									toggle.setValue(this.plugin.settings.showDateProgressBar).onChange(async (val) => {
+										this.plugin.settings.showDateProgressBar = val;
+										await this.plugin.saveSettings();
+										this.plugin.refreshBadgeUI();
+										this.updateGroupVisibility(setting.settingEl);
+									}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_DATE_ICON'),
+						desc: t('SETTINGS_DATE_ICON_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-date');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showDateProgress);
+							setting.settingEl.style.setProperty(
+								'display',
+								this.plugin.settings.showDateProgress ? '' : 'none',
+								'important',
+							);
+							setting
+								.setName(t('SETTINGS_DATE_ICON'))
+								.setDesc(t('SETTINGS_DATE_ICON_DESC'))
+								.addToggle((toggle) =>
+									toggle.setValue(this.plugin.settings.showDateIcon).onChange(async (val) => {
+										this.plugin.settings.showDateIcon = val;
+										await this.plugin.saveSettings();
+										this.plugin.refreshBadgeUI();
+									}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_DATE_LABEL'),
+						desc: t('SETTINGS_DATE_LABEL_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-date');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showDateProgress);
+							setting.settingEl.style.setProperty(
+								'display',
+								this.plugin.settings.showDateProgress ? '' : 'none',
+								'important',
+							);
+							setting
+								.setName(t('SETTINGS_DATE_LABEL'))
+								.setDesc(t('SETTINGS_DATE_LABEL_DESC'))
+								.addText((text) =>
+									text
+										.setPlaceholder(t('BADGE_DATE_LABEL'))
+										.setValue(this.plugin.settings.dateLabel ?? '')
+										.onChange(async (val) => {
+											this.plugin.settings.dateLabel = val;
+											await this.plugin.saveSettings();
+											this.plugin.refreshBadgeUI();
+										}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_DATE_OVERDUE_LABEL'),
+						desc: t('SETTINGS_DATE_OVERDUE_LABEL_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-date');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showDateProgress);
+							setting.settingEl.style.setProperty(
+								'display',
+								this.plugin.settings.showDateProgress ? '' : 'none',
+								'important',
+							);
+							setting
+								.setName(t('SETTINGS_DATE_OVERDUE_LABEL'))
+								.setDesc(t('SETTINGS_DATE_OVERDUE_LABEL_DESC'))
+								.addText((text) =>
+									text
+										.setPlaceholder(t('BADGE_DATE_OVERDUE_LABEL'))
+										.setValue(this.plugin.settings.dateOverdueLabel ?? '')
+										.onChange(async (val) => {
+											this.plugin.settings.dateOverdueLabel = val;
+											await this.plugin.saveSettings();
+											this.plugin.refreshBadgeUI();
+										}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_DATE_UNIT_DAYS'),
+						desc: t('SETTINGS_DATE_UNIT_DAYS_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-date');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showDateProgress);
+							setting.settingEl.style.setProperty(
+								'display',
+								this.plugin.settings.showDateProgress ? '' : 'none',
+								'important',
+							);
+							setting
+								.setName(t('SETTINGS_DATE_UNIT_DAYS'))
+								.setDesc(t('SETTINGS_DATE_UNIT_DAYS_DESC'))
+								.addText((text) =>
+									text
+										.setPlaceholder(t('BADGE_DAYS_UNIT'))
+										.setValue(this.plugin.settings.dateUnitDays ?? '')
+										.onChange(async (val) => {
+											this.plugin.settings.dateUnitDays = val;
+											await this.plugin.saveSettings();
+											this.plugin.refreshBadgeUI();
+										}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_DATE_UNIT_HOURS'),
+						desc: t('SETTINGS_DATE_UNIT_HOURS_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-date');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showDateProgress);
+							setting.settingEl.style.setProperty(
+								'display',
+								this.plugin.settings.showDateProgress ? '' : 'none',
+								'important',
+							);
+							setting
+								.setName(t('SETTINGS_DATE_UNIT_HOURS'))
+								.setDesc(t('SETTINGS_DATE_UNIT_HOURS_DESC'))
+								.addText((text) =>
+									text
+										.setPlaceholder(t('BADGE_HOURS_UNIT'))
+										.setValue(this.plugin.settings.dateUnitHours ?? '')
+										.onChange(async (val) => {
+											this.plugin.settings.dateUnitHours = val;
+											await this.plugin.saveSettings();
+											this.plugin.refreshBadgeUI();
+										}),
+								);
+						},
+					},
+					{
+						name: t('SETTINGS_DATE_THRESHOLD_WARN'),
+						desc: t('SETTINGS_DATE_THRESHOLD_WARN_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-date');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showDateProgress);
+							setting.settingEl.style.setProperty(
+								'display',
+								this.plugin.settings.showDateProgress ? '' : 'none',
+								'important',
+							);
+							setting
+								.setName(t('SETTINGS_DATE_THRESHOLD_WARN'))
+								.setDesc(t('SETTINGS_DATE_THRESHOLD_WARN_DESC'));
+							const circle = createSpan({ cls: 'sgb-color-preview-circle sgb-date-swatch-warn' });
+							circle.style.backgroundColor =
+								this.plugin.settings.dateColorWarn || DEFAULT_SETTINGS.dateColorWarn;
+							setting.nameEl.prepend(circle);
+							setting.addText((text) => {
+								text.inputEl.type = 'number';
+								text.setPlaceholder(String(DEFAULT_SETTINGS.dateThresholdWarn));
+								text.setValue(String(this.plugin.settings.dateThresholdWarn ?? 50));
+								text.onChange(async (newVal) => {
+									const num = parseFloat(newVal);
+									this.plugin.settings.dateThresholdWarn = !isNaN(num)
+										? num
+										: DEFAULT_SETTINGS.dateThresholdWarn;
+									await this.plugin.saveSettings();
+									this.plugin.refreshBadgeUI();
+								});
+							});
+						},
+					},
+					{
+						name: t('SETTINGS_DATE_THRESHOLD_URGENT'),
+						desc: t('SETTINGS_DATE_THRESHOLD_URGENT_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-date');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showDateProgress);
+							setting.settingEl.style.setProperty(
+								'display',
+								this.plugin.settings.showDateProgress ? '' : 'none',
+								'important',
+							);
+							setting
+								.setName(t('SETTINGS_DATE_THRESHOLD_URGENT'))
+								.setDesc(t('SETTINGS_DATE_THRESHOLD_URGENT_DESC'));
+							const circle = createSpan({ cls: 'sgb-color-preview-circle sgb-date-swatch-urgent' });
+							circle.style.backgroundColor =
+								this.plugin.settings.dateColorUrgent || DEFAULT_SETTINGS.dateColorUrgent;
+							setting.nameEl.prepend(circle);
+							setting.addText((text) => {
+								text.inputEl.type = 'number';
+								text.setPlaceholder(String(DEFAULT_SETTINGS.dateThresholdUrgent));
+								text.setValue(String(this.plugin.settings.dateThresholdUrgent ?? 75));
+								text.onChange(async (newVal) => {
+									const num = parseFloat(newVal);
+									this.plugin.settings.dateThresholdUrgent = !isNaN(num)
+										? num
+										: DEFAULT_SETTINGS.dateThresholdUrgent;
+									await this.plugin.saveSettings();
+									this.plugin.refreshBadgeUI();
+								});
+							});
+						},
+					},
+					{
+						name: t('SETTINGS_DATE_THRESHOLD_OVERDUE'),
+						desc: t('SETTINGS_DATE_THRESHOLD_OVERDUE_DESC'),
+						render: (setting: Setting) => {
+							setting.settingEl.addClass('sgb-group-date');
+							setting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showDateProgress);
+							setting.settingEl.style.setProperty(
+								'display',
+								this.plugin.settings.showDateProgress ? '' : 'none',
+								'important',
+							);
+							setting
+								.setName(t('SETTINGS_DATE_THRESHOLD_OVERDUE'))
+								.setDesc(t('SETTINGS_DATE_THRESHOLD_OVERDUE_DESC'));
+							const circle = createSpan({ cls: 'sgb-color-preview-circle sgb-date-swatch-overdue' });
+							circle.style.backgroundColor =
+								this.plugin.settings.dateColorOverdue || DEFAULT_SETTINGS.dateColorOverdue;
+							setting.nameEl.prepend(circle);
+							setting.addText((text) => {
+								text.inputEl.type = 'number';
+								text.setPlaceholder(String(DEFAULT_SETTINGS.dateThresholdOverdue));
+								text.setValue(String(this.plugin.settings.dateThresholdOverdue ?? 100));
+								text.onChange(async (newVal) => {
+									const num = parseFloat(newVal);
+									this.plugin.settings.dateThresholdOverdue = !isNaN(num)
+										? num
+										: DEFAULT_SETTINGS.dateThresholdOverdue;
+									await this.plugin.saveSettings();
+									this.plugin.refreshBadgeUI();
+								});
+							});
+						},
+					},
+					{
+						render: (colorsSetting: Setting) => {
+							colorsSetting.settingEl.addClass('sgb-group-date');
+							colorsSetting.settingEl.addClass('sgb-group-date-colors');
+							colorsSetting.settingEl.classList.toggle('sgb-is-hidden', !this.plugin.settings.showDateProgress);
+							colorsSetting.settingEl.style.setProperty(
+								'display',
+								this.plugin.settings.showDateProgress ? '' : 'none',
+								'important',
+							);
+							colorsSetting.infoEl.remove();
+
+							const cardEl = colorsSetting.controlEl.createDiv({ cls: 'sgb-style-card sgb-date-colors-card' });
+
+							// Card Header: Label & Reset Button
+							const headerEl = cardEl.createDiv({ cls: 'sgb-style-card-header' });
+							const nameWrapper = headerEl.createDiv({ cls: 'sgb-style-name-wrapper' });
+							nameWrapper.createSpan({
+								cls: 'sgb-style-name-label',
+								text: t('SETTINGS_DATE_COLORS'),
+							});
+
+							const updateFns: Array<() => void> = [];
+
+							const actionsEl = headerEl.createDiv({ cls: 'sgb-style-card-actions' });
+							const resetBtn = actionsEl.createEl('button', {
+								cls: 'clickable-icon sgb-style-action-btn',
+								title: t('SETTINGS_RESET_DEFAULT'),
+							});
+							setIcon(resetBtn, 'rotate-ccw');
+							resetBtn.addEventListener('click', () => {
+								void (async () => {
+									this.plugin.settings.dateColorNormal = DEFAULT_SETTINGS.dateColorNormal;
+									this.plugin.settings.dateColorWarn = DEFAULT_SETTINGS.dateColorWarn;
+									this.plugin.settings.dateColorUrgent = DEFAULT_SETTINGS.dateColorUrgent;
+									this.plugin.settings.dateColorOverdue = DEFAULT_SETTINGS.dateColorOverdue;
+									await this.plugin.saveSettings();
+									this.plugin.refreshBadgeUI();
+									for (const fn of updateFns) {
+										fn();
+									}
+								})();
+							});
+
+							const gridEl = cardEl.createDiv({
+								cls: 'sgb-style-colors-grid sgb-date-colors-grid',
+							});
+
+							const colorKeys: Array<{
+								key: 'dateColorNormal' | 'dateColorWarn' | 'dateColorUrgent' | 'dateColorOverdue';
+								label: string;
+								defaultColor: string;
+								swatchClass?: string;
+							}> = [
+									{
+										key: 'dateColorNormal',
+										label: t('SETTINGS_DATE_COLOR_NORMAL'),
+										defaultColor: DEFAULT_SETTINGS.dateColorNormal,
+									},
+									{
+										key: 'dateColorWarn',
+										label: t('SETTINGS_DATE_COLOR_WARN'),
+										defaultColor: DEFAULT_SETTINGS.dateColorWarn,
+										swatchClass: 'sgb-date-swatch-warn',
+									},
+									{
+										key: 'dateColorUrgent',
+										label: t('SETTINGS_DATE_COLOR_URGENT'),
+										defaultColor: DEFAULT_SETTINGS.dateColorUrgent,
+										swatchClass: 'sgb-date-swatch-urgent',
+									},
+									{
+										key: 'dateColorOverdue',
+										label: t('SETTINGS_DATE_COLOR_OVERDUE'),
+										defaultColor: DEFAULT_SETTINGS.dateColorOverdue,
+										swatchClass: 'sgb-date-swatch-overdue',
+									},
+								];
+
+							const root = this.getTabRoot(colorsSetting.settingEl);
+
+							for (const item of colorKeys) {
+								const colorItemEl = gridEl.createDiv({ cls: 'sgb-style-color-item' });
+								colorItemEl.createSpan({ cls: 'sgb-style-color-label', text: item.label });
+
+								const colorPickerWrapper = colorItemEl.createDiv({
+									cls: 'sgb-style-color-picker-wrapper',
+								});
+								const colorInput = colorPickerWrapper.createEl('input', {
+									type: 'color',
+									cls: 'sgb-style-color-input',
+									value: this.plugin.settings[item.key] || item.defaultColor,
+								});
+								const hexInput = colorPickerWrapper.createEl('input', {
+									type: 'text',
+									cls: 'sgb-style-hex-input',
+									value: this.plugin.settings[item.key] || item.defaultColor,
+									placeholder: item.defaultColor,
+								});
+
+								const updateSwatch = (colorVal: string) => {
+									if (item.swatchClass) {
+										root.querySelectorAll<HTMLElement>(`.${item.swatchClass}`).forEach((swatchEl) => {
+											swatchEl.style.backgroundColor = colorVal;
+										});
+									}
+								};
+
+								colorInput.addEventListener('input', () => {
+									void (async () => {
+										const val = colorInput.value;
+										this.plugin.settings[item.key] = val;
+										hexInput.value = val;
+										updateSwatch(val);
+										await this.plugin.saveSettings();
+										this.plugin.refreshBadgeUI();
+									})();
+								});
+
+								const handleHexChange = () => {
+									void (async () => {
+										let val = hexInput.value.trim();
+										if (!val.startsWith('#') && /^[0-9a-fA-F]{3,6}$/.test(val)) {
+											val = '#' + val;
+										}
+										if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(val)) {
+											if (val.length === 4) {
+												val = `#${val[1]}${val[1]}${val[2]}${val[2]}${val[3]}${val[3]}`;
+											}
+											this.plugin.settings[item.key] = val;
+											colorInput.value = val;
+											hexInput.value = val;
+											updateSwatch(val);
+											await this.plugin.saveSettings();
+											this.plugin.refreshBadgeUI();
+										} else {
+											hexInput.value = this.plugin.settings[item.key] || item.defaultColor;
+										}
+									})();
+								};
+
+								hexInput.addEventListener('change', handleHexChange);
+								hexInput.addEventListener('blur', handleHexChange);
+
+								updateFns.push(() => {
+									colorInput.value = item.defaultColor;
+									hexInput.value = item.defaultColor;
+									updateSwatch(item.defaultColor);
+								});
+							}
+						},
+					},
+				],
+			},
+
+			// Group 9: Folder Goals
 			{
 				type: 'group',
 				heading: t('SETTINGS_HEADING_FOLDER_GOALS'),
@@ -1955,6 +3135,13 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 													this.plugin.recalculateCounts();
 												})();
 											});
+
+											// Section Header: Word Count Goals
+											const countSectionHeader = bodyEl.createDiv({ cls: 'sgb-folder-section-header' });
+											const countTitle = countSectionHeader.createSpan({ cls: 'sgb-folder-section-title' });
+											const countIcon = countTitle.createSpan();
+											setIcon(countIcon, 'file-text');
+											countTitle.createSpan({ text: t('SETTINGS_FOLDER_SECTION_COUNT') });
 
 											// 2. Note Total Goal
 											const totalRow = bodyEl.createDiv({ cls: 'sgb-folder-card-row' });
@@ -2110,6 +3297,313 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 													this.plugin.recalculateCounts();
 												})();
 											});
+
+											// Section Header: Date Goals
+											const dateSectionHeader = bodyEl.createDiv({ cls: 'sgb-folder-section-header' });
+											const dateTitle = dateSectionHeader.createSpan({ cls: 'sgb-folder-section-title' });
+											const dateIcon = dateTitle.createSpan();
+											setIcon(dateIcon, 'calendar');
+											dateTitle.createSpan({ text: t('SETTINGS_FOLDER_SECTION_DATE') });
+
+											// 6. Default Date Reference
+											const refRow = bodyEl.createDiv({ cls: 'sgb-folder-card-row' });
+											refRow.createSpan({
+												cls: 'sgb-folder-row-label',
+												text: t('SETTINGS_DATE_REFERENCE'),
+											});
+											const refSelect = refRow.createEl('select', {
+												cls: 'dropdown sgb-folder-style-select',
+											});
+											refSelect.createEl('option', {
+												value: '',
+												text: t('SETTINGS_FOLDER_DATE_REF_INHERIT'),
+											});
+											refSelect.createEl('option', {
+												value: 'none',
+												text: t('SETTINGS_DATE_REFERENCE_NONE'),
+											});
+											refSelect.createEl('option', {
+												value: 'parent',
+												text: t('SETTINGS_DATE_REFERENCE_PARENT'),
+											});
+											refSelect.createEl('option', {
+												value: 'note',
+												text: t('SETTINGS_DATE_REFERENCE_NOTE'),
+											});
+											refSelect.value = folderConfig.defaultDateReference ?? '';
+											refSelect.addEventListener('change', () => {
+												void (async () => {
+													if (!refSelect.value) {
+														delete folderConfig.defaultDateReference;
+													} else {
+														folderConfig.defaultDateReference = refSelect.value as DateReferenceMode;
+													}
+													await this.plugin.saveSettings();
+													this.plugin.refreshBadgeUI();
+													this.plugin.recalculateCounts();
+												})();
+											});
+
+											// 7. Relative Date Calculation (Cycle)
+											const cycleRow = bodyEl.createDiv({ cls: 'sgb-folder-card-row' });
+											cycleRow.createSpan({
+												cls: 'sgb-folder-row-label',
+												text: t('SETTINGS_FOLDER_CYCLE_LABEL'),
+											});
+											const cycleControl = cycleRow.createDiv({ cls: 'sgb-folder-cycle-control' });
+											const parsedCycle = parseCycle(folderConfig.defaultCycle);
+											const cycleNumInput = cycleControl.createEl('input', {
+												type: 'number',
+												cls: 'sgb-folder-number-input sgb-folder-cycle-num-input',
+												value: parsedCycle ? String(parsedCycle.value) : '1',
+												attr: { min: '1', step: '1' },
+											});
+											const cycleUnitSelect = cycleControl.createEl('select', {
+												cls: 'dropdown sgb-folder-style-select',
+											});
+											cycleUnitSelect.createEl('option', {
+												value: '',
+												text: t('SETTINGS_FOLDER_DATE_REF_INHERIT'),
+											});
+											cycleUnitSelect.createEl('option', {
+												value: 'none',
+												text: t('MODAL_DATE_CYCLE_NONE'),
+											});
+											cycleUnitSelect.createEl('option', {
+												value: 'day',
+												text: t('MODAL_DATE_CYCLE_DAY'),
+											});
+											cycleUnitSelect.createEl('option', {
+												value: 'week',
+												text: t('MODAL_DATE_CYCLE_WEEK'),
+											});
+											cycleUnitSelect.createEl('option', {
+												value: 'month',
+												text: t('MODAL_DATE_CYCLE_MONTH'),
+											});
+											cycleUnitSelect.createEl('option', {
+												value: 'year',
+												text: t('MODAL_DATE_CYCLE_YEAR'),
+											});
+											if (folderConfig.defaultCycle === 'none') {
+												cycleUnitSelect.value = 'none';
+											} else if (parsedCycle) {
+												cycleUnitSelect.value = parsedCycle.unit;
+											} else {
+												cycleUnitSelect.value = '';
+											}
+											const updateCycleVisibility = () => {
+												cycleNumInput.style.display =
+													cycleUnitSelect.value && cycleUnitSelect.value !== 'none' ? '' : 'none';
+											};
+											updateCycleVisibility();
+
+											const updateCycleConfig = async () => {
+												const unit = cycleUnitSelect.value;
+												if (!unit) {
+													delete folderConfig.defaultCycle;
+												} else if (unit === 'none') {
+													folderConfig.defaultCycle = 'none';
+												} else {
+													const val = parseInt(cycleNumInput.value, 10);
+													folderConfig.defaultCycle = formatCycle({
+														value: !isNaN(val) && val > 0 ? val : 1,
+														unit: unit as DateCycle['unit'],
+													});
+												}
+												await this.plugin.saveSettings();
+												this.plugin.refreshBadgeUI();
+												this.plugin.recalculateCounts();
+											};
+											cycleNumInput.addEventListener('change', () => {
+												void updateCycleConfig();
+											});
+											cycleUnitSelect.addEventListener('change', () => {
+												updateCycleVisibility();
+												void updateCycleConfig();
+											});
+
+											// 8. Start Time
+											const startRow = bodyEl.createDiv({ cls: 'sgb-folder-card-row' });
+											startRow.createSpan({
+												cls: 'sgb-folder-row-label',
+												text: t('SETTINGS_DEFAULT_START_TIME'),
+											});
+											const startControl = startRow.createDiv({ cls: 'sgb-folder-time-control' });
+											const startInput = startControl.createEl('input', {
+												type: 'text',
+												cls: 'sgb-folder-time-input',
+												value: folderConfig.defaultStartTime ?? '',
+												placeholder: this.plugin.settings.defaultStartTime || '00:00',
+											});
+											const nativeStartPicker = startControl.createEl('input', {
+												type: 'time',
+												cls: 'sgb-native-date-picker',
+												value: folderConfig.defaultStartTime || this.plugin.settings.defaultStartTime || '00:00',
+											});
+											const startClockBtn = startControl.createEl('button', {
+												cls: 'clickable-icon sgb-folder-time-btn',
+												attr: { type: 'button', 'aria-label': t('MODAL_TIME_PICKER_TOOLTIP') },
+											});
+											setIcon(startClockBtn, 'clock');
+											setTooltip(startClockBtn, t('MODAL_TIME_PICKER_TOOLTIP'));
+
+											const startResetBtn = startControl.createEl('button', {
+												cls: 'clickable-icon sgb-folder-time-btn',
+												attr: { type: 'button', 'aria-label': t('SETTINGS_RESET_DEFAULT') },
+											});
+											setIcon(startResetBtn, 'rotate-ccw');
+											setTooltip(startResetBtn, t('SETTINGS_RESET_DEFAULT'));
+
+											const saveStartTime = async () => {
+												const trimmed = startInput.value.trim();
+												const normalized = normalizeTimeInput(trimmed);
+												if (normalized) {
+													startInput.value = normalized;
+													folderConfig.defaultStartTime = normalized;
+													nativeStartPicker.value = normalized;
+												} else if (!trimmed) {
+													startInput.value = '';
+													delete folderConfig.defaultStartTime;
+													nativeStartPicker.value = this.plugin.settings.defaultStartTime || '00:00';
+												} else {
+													startInput.value = folderConfig.defaultStartTime ?? '';
+													nativeStartPicker.value = folderConfig.defaultStartTime || this.plugin.settings.defaultStartTime || '00:00';
+													return;
+												}
+												await this.plugin.saveSettings();
+												this.plugin.refreshBadgeUI();
+												this.plugin.recalculateCounts();
+											};
+											startInput.addEventListener('change', () => {
+												void saveStartTime();
+											});
+											startInput.addEventListener('blur', () => {
+												void saveStartTime();
+											});
+											startClockBtn.addEventListener('click', (e) => {
+												e.preventDefault();
+												const norm = normalizeTimeInput(startInput.value.trim());
+												nativeStartPicker.value = norm || this.plugin.settings.defaultStartTime || '00:00';
+												try {
+													if (typeof nativeStartPicker.showPicker === 'function') {
+														nativeStartPicker.showPicker();
+													} else {
+														nativeStartPicker.click();
+													}
+												} catch {
+													nativeStartPicker.click();
+												}
+											});
+											nativeStartPicker.addEventListener('change', () => {
+												const val = nativeStartPicker.value.trim();
+												if (val) {
+													startInput.value = val;
+													void saveStartTime();
+												}
+											});
+											startResetBtn.addEventListener('click', (e) => {
+												e.preventDefault();
+												startInput.value = '';
+												delete folderConfig.defaultStartTime;
+												nativeStartPicker.value = this.plugin.settings.defaultStartTime || '00:00';
+												void (async () => {
+													await this.plugin.saveSettings();
+													this.plugin.refreshBadgeUI();
+													this.plugin.recalculateCounts();
+												})();
+											});
+
+											// 9. Target Time
+											const targetRow = bodyEl.createDiv({ cls: 'sgb-folder-card-row' });
+											targetRow.createSpan({
+												cls: 'sgb-folder-row-label',
+												text: t('SETTINGS_DEFAULT_TARGET_TIME'),
+											});
+											const targetControl = targetRow.createDiv({ cls: 'sgb-folder-time-control' });
+											const targetInput = targetControl.createEl('input', {
+												type: 'text',
+												cls: 'sgb-folder-time-input',
+												value: folderConfig.defaultTargetTime ?? '',
+												placeholder: this.plugin.settings.defaultTargetTime || '23:59',
+											});
+											const nativeTargetPicker = targetControl.createEl('input', {
+												type: 'time',
+												cls: 'sgb-native-date-picker',
+												value: folderConfig.defaultTargetTime || this.plugin.settings.defaultTargetTime || '23:59',
+											});
+											const targetClockBtn = targetControl.createEl('button', {
+												cls: 'clickable-icon sgb-folder-time-btn',
+												attr: { type: 'button', 'aria-label': t('MODAL_TIME_PICKER_TOOLTIP') },
+											});
+											setIcon(targetClockBtn, 'clock');
+											setTooltip(targetClockBtn, t('MODAL_TIME_PICKER_TOOLTIP'));
+
+											const targetResetBtn = targetControl.createEl('button', {
+												cls: 'clickable-icon sgb-folder-time-btn',
+												attr: { type: 'button', 'aria-label': t('SETTINGS_RESET_DEFAULT') },
+											});
+											setIcon(targetResetBtn, 'rotate-ccw');
+											setTooltip(targetResetBtn, t('SETTINGS_RESET_DEFAULT'));
+
+											const saveTargetTime = async () => {
+												const trimmed = targetInput.value.trim();
+												const normalized = normalizeTimeInput(trimmed);
+												if (normalized) {
+													targetInput.value = normalized;
+													folderConfig.defaultTargetTime = normalized;
+													nativeTargetPicker.value = normalized;
+												} else if (!trimmed) {
+													targetInput.value = '';
+													delete folderConfig.defaultTargetTime;
+													nativeTargetPicker.value = this.plugin.settings.defaultTargetTime || '23:59';
+												} else {
+													targetInput.value = folderConfig.defaultTargetTime ?? '';
+													nativeTargetPicker.value = folderConfig.defaultTargetTime || this.plugin.settings.defaultTargetTime || '23:59';
+													return;
+												}
+												await this.plugin.saveSettings();
+												this.plugin.refreshBadgeUI();
+												this.plugin.recalculateCounts();
+											};
+											targetInput.addEventListener('change', () => {
+												void saveTargetTime();
+											});
+											targetInput.addEventListener('blur', () => {
+												void saveTargetTime();
+											});
+											targetClockBtn.addEventListener('click', (e) => {
+												e.preventDefault();
+												const norm = normalizeTimeInput(targetInput.value.trim());
+												nativeTargetPicker.value = norm || this.plugin.settings.defaultTargetTime || '23:59';
+												try {
+													if (typeof nativeTargetPicker.showPicker === 'function') {
+														nativeTargetPicker.showPicker();
+													} else {
+														nativeTargetPicker.click();
+													}
+												} catch {
+													nativeTargetPicker.click();
+												}
+											});
+											nativeTargetPicker.addEventListener('change', () => {
+												const val = nativeTargetPicker.value.trim();
+												if (val) {
+													targetInput.value = val;
+													void saveTargetTime();
+												}
+											});
+											targetResetBtn.addEventListener('click', (e) => {
+												e.preventDefault();
+												targetInput.value = '';
+												delete folderConfig.defaultTargetTime;
+												nativeTargetPicker.value = this.plugin.settings.defaultTargetTime || '23:59';
+												void (async () => {
+													await this.plugin.saveSettings();
+													this.plugin.refreshBadgeUI();
+													this.plugin.recalculateCounts();
+												})();
+											});
 										}
 									});
 								}
@@ -2164,7 +3658,7 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 				],
 			},
 
-			// Group 9: Support
+			// Group: Support
 			{
 				type: 'group',
 				heading: t('SETTINGS_HEADING_SUPPORT'),
@@ -2197,89 +3691,4 @@ export class SectionGoalsBadgeSettingTab extends PluginSettingTab {
 	}
 }
 
-/**
- * Confirmation dialog modal for resetting all color styles.
- */
-class ConfirmResetStylesModal extends Modal {
-	constructor(
-		app: App,
-		private onConfirm: () => void,
-	) {
-		super(app);
-	}
-
-	onOpen(): void {
-		const { contentEl } = this;
-		contentEl.empty();
-		contentEl.addClass('sgb-confirm-modal');
-
-		contentEl.createEl('p', { text: t('SETTINGS_STYLE_RESET_ALL_CONFIRM') });
-
-		const buttonContainer = contentEl.createDiv({ cls: 'sgb-confirm-buttons' });
-
-		const cancelBtn = buttonContainer.createEl('button', {
-			text: t('MODAL_CONFIRM_CANCEL'),
-		});
-		cancelBtn.addEventListener('click', () => {
-			this.close();
-		});
-
-		const confirmBtn = buttonContainer.createEl('button', {
-			cls: 'mod-warning',
-			text: t('MODAL_CONFIRM_OK'),
-		});
-		confirmBtn.addEventListener('click', () => {
-			this.close();
-			this.onConfirm();
-		});
-	}
-
-	onClose(): void {
-		const { contentEl } = this;
-		contentEl.empty();
-	}
-}
-
-/**
- * Confirmation dialog modal for auto-generating intermediate colors.
- */
-class ConfirmAutoGradientModal extends Modal {
-	constructor(
-		app: App,
-		private onConfirm: () => void,
-	) {
-		super(app);
-	}
-
-	onOpen(): void {
-		const { contentEl } = this;
-		contentEl.empty();
-		contentEl.addClass('sgb-confirm-modal');
-
-		contentEl.createEl('p', { text: t('SETTINGS_STYLE_AUTO_GRADIENT_CONFIRM') });
-
-		const buttonContainer = contentEl.createDiv({ cls: 'sgb-confirm-buttons' });
-
-		const cancelBtn = buttonContainer.createEl('button', {
-			text: t('MODAL_CONFIRM_CANCEL'),
-		});
-		cancelBtn.addEventListener('click', () => {
-			this.close();
-		});
-
-		const confirmBtn = buttonContainer.createEl('button', {
-			cls: 'mod-cta',
-			text: t('MODAL_CONFIRM_OK'),
-		});
-		confirmBtn.addEventListener('click', () => {
-			this.close();
-			this.onConfirm();
-		});
-	}
-
-	onClose(): void {
-		const { contentEl } = this;
-		contentEl.empty();
-	}
-}
 

@@ -64,6 +64,7 @@ export default defineConfig([
 					],
 					acronyms: ['H1', 'H2', 'H3', 'H4', 'H5', 'H6'],
 					ignoreWords: ['Japanese'],
+					ignoreRegex: ['^[dh]$'],
 				},
 			],
 		},
