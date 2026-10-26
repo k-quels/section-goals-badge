@@ -1,7 +1,7 @@
 {
   "name": "section-goals-badge",
-  "version": "1.3.0",
-  "description": "Mobile-friendly floating character counter to set and track writing goals per section.",
+  "version": "1.4.0",
+  "description": "Mobile-friendly floating character counter and target date tracker per section.",
   "main": "main.js",
   "type": "module",
   "scripts": {
