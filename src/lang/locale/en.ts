@@ -272,7 +272,7 @@ export default {
 	SETTINGS_DATE_REFERENCE_DESC: 'Inheritance source for section deadlines without individual settings.',
 	SETTINGS_DATE_REFERENCE_NONE: 'None',
 	SETTINGS_DATE_REFERENCE_PARENT: 'Parent section',
-	SETTINGS_DATE_REFERENCE_NOTE: 'Note total',
+	SETTINGS_DATE_REFERENCE_NOTE: 'Note',
 	SETTINGS_DATE_UNIT_DAYS: 'Days unit label',
 	SETTINGS_DATE_UNIT_DAYS_DESC: 'Unit displayed after remaining days.',
 	SETTINGS_DATE_UNIT_HOURS: 'Hours unit label',

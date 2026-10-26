@@ -67,7 +67,7 @@ Enter target goals for each item (automatically saved to Frontmatter).<br>
   <img src="./doc/images/goal-modal-date-en.png" width="450">
   - **Note Total Goal**: Target date and time for the entire note.
   - **Default Section Goals**
-    - **Reference**: Inherit recurring schedules or deadlines from note total or parent sections.
+    - **Reference**: Inherit recurring schedules or deadlines from note or parent sections.
     - **Recurring Schedule**: Automatically calculate deadlines by adding duration (days, weeks, months, etc.) to the preceding section.
   - **Individual Section Goals**: Set individual target dates/times or custom recurring schedules for each heading.
 
