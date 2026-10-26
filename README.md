@@ -59,12 +59,14 @@ Enter target goals for each item (automatically saved to Frontmatter).<br>
 
 - Word / Character Count Goals<br>
   <img src="./doc/images/goal-modal-en.png" width="450">
+  
   - **Note Total Goal**: Target count for the entire note being edited.
   - **Section Goal**: Default target count applied to headings without individual goals.
   - **Heading Level Goals**: Set default target counts for each heading level (H1–H6).
   - **Individual Section Goals**: Enter specific target counts for each row in the heading list.
 - Target Date Goals<br>
   <img src="./doc/images/goal-modal-date-en.png" width="450">
+  
   - **Note Total Goal**: Target date and time for the entire note.
   - **Default Section Goals**
     - **Reference**: Inherit recurring schedules or deadlines from note or parent sections.
